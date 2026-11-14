@@ -8,6 +8,8 @@
 import researchChunksRaw from "../data/researchChunks.json";
 import officialNasaGuidesRaw from "../data/officialNasaGuides.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
+import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator";
+import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore";
 import type { LibraryGuide, GuideCategory, NasaMediaItem } from "../types/library";
 import { getImportedHuaweiMeasurements } from "./healthImportStorage";
 import type {
@@ -209,37 +211,38 @@ export async function fetchAstronaut(astronautId: string): Promise<Astronaut> {
 
 export async function fetchMeasurements(
   astronautId: string,
-  windowHours = 336,
-  maxPoints = 1000
+  windowHours = 4320,
+  maxPoints = 20000
 ): Promise<Measurement[]> {
-  const [seed, importedHuawei] = await Promise.all([
-    loadSeedData(),
-    getImportedHuaweiMeasurements(astronautId),
+  const [importedHuawei] = await Promise.all([
+    getImportedHuaweiMeasurements(astronautId).catch(() => [] as Measurement[]),
   ]);
-  const records = seed.measurements[astronautId] ?? seed.measurements["ASTRO-01"] ?? [];
 
-  let seedResult = records;
-  if (records.length > 0 && (records.length > maxPoints || windowHours < 336)) {
-    const newestTime = new Date(records[records.length - 1].timestamp).getTime();
-    const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
+  const records = generate180DayTelemetry({
+    astronautId,
+    nowMs: Date.now(),
+    durationDays: 180,
+  });
 
-    const filtered = records.filter(
-      (m) => new Date(m.timestamp).getTime() >= cutoffTime
-    );
+  if (records.length === 0) return importedHuawei;
+  const newestTime = new Date(records[records.length - 1].timestamp).getTime();
+  const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
 
-    if (filtered.length <= maxPoints) {
-      seedResult = filtered;
-    } else {
-      const step = Math.ceil(filtered.length / maxPoints);
-      const downsampled: Measurement[] = [];
-      for (let i = 0; i < filtered.length; i += step) {
-        downsampled.push(filtered[i]);
-      }
-      seedResult = downsampled;
+  const filtered = records.filter(
+    (m) => new Date(m.timestamp).getTime() >= cutoffTime
+  );
+
+  let result = filtered;
+  if (filtered.length > maxPoints) {
+    const step = Math.ceil(filtered.length / maxPoints);
+    const downsampled: Measurement[] = [];
+    for (let i = 0; i < filtered.length; i += step) {
+      downsampled.push(filtered[i]);
     }
+    result = downsampled;
   }
 
-  return importedHuawei.length > 0 ? [...seedResult, ...importedHuawei] : seedResult;
+  return importedHuawei.length > 0 ? [...result, ...importedHuawei] : result;
 }
 
 export async function fetchBaselines(astronautId: string): Promise<Baselines> {
@@ -252,10 +255,11 @@ export async function fetchEvents(
   astronautId?: string,
   severity?: SeverityLevel
 ): Promise<HealthEvent[]> {
-  const seed = await loadSeedData();
+  const activeTimeMs = getActiveMissionTimeMs();
   const storedReviews = getStoredReviews();
+  const liveEvents = generate180DayEvents(astronautId || "ASTRO-01", activeTimeMs);
 
-  let events = seed.events.map((evt) => {
+  let events = liveEvents.map((evt) => {
     const review = storedReviews[evt.event_id];
     if (review) {
       return {
@@ -332,6 +336,13 @@ export async function fetchSymptoms(astronautId?: string): Promise<SymptomReport
     );
   }
 
+  // When in simulation mode, filter symptoms up to the current synchronized mission clock
+  const { mode } = useMissionStore.getState();
+  if (mode === "simulation") {
+    const activeTimeMs = getActiveMissionTimeMs();
+    list = list.filter((s) => new Date(s.occurred_at).getTime() <= activeTimeMs);
+  }
+
   // Sort newest first
   list.sort(
     (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
@@ -340,7 +351,8 @@ export async function fetchSymptoms(astronautId?: string): Promise<SymptomReport
 }
 
 export async function submitSymptom(payload: SymptomReportRequest): Promise<SymptomReport> {
-  const now = new Date().toISOString();
+  const activeTimeMs = getActiveMissionTimeMs();
+  const now = new Date(activeTimeMs).toISOString();
   const report: SymptomReport = {
     report_id: generateUuid(),
     astronaut_id: payload.astronaut_id,

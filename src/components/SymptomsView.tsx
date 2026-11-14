@@ -29,18 +29,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { acknowledgeSymptom, fetchSymptoms, submitSymptom } from "../services/api";
 import type { SymptomReport } from "../types/api";
 import { titleCase } from "../lib/format";
+import { useAssistantStore } from "../stores/assistantStore";
+import { PhysiologicalCards } from "../features/biometrics";
+import { ISS_14_MODULES, useStationLocationStore } from "../features/topology";
+import { useActiveMissionTime } from "../stores/missionStore";
 import { useRoleStore } from "../stores/roleStore";
 import { HealthReportModal } from "../features/health-report";
 
 const SYMPTOM_CODES = ["HEADACHE", "FATIGUE", "DIZZINESS", "NAUSEA"] as const;
-const CABIN_MODULES = [
-  "Node 2 (Harmony)",
-  "US Lab (Destiny)",
-  "Columbus Orbital Facility",
-  "JEM Kibo",
-  "Node 1 (Unity)",
-  "Cupola",
-] as const;
 
 interface LocalSymptomEntry {
   id: string;
@@ -110,11 +106,11 @@ interface SymptomsViewProps {
 }
 
 export function SymptomsView({ astronautId }: SymptomsViewProps) {
+  const { isSimulation, currentMissionDay, utcString } = useActiveMissionTime();
   const role = useRoleStore((state) => state.role);
   const isFlightSurgeon = role === "flight_surgeon";
   const [crewFilter, setCrewFilter] = useState<string>("ALL");
   const [manualAstronautId, setManualAstronautId] = useState<string>(astronautId || "ASTRO-01");
-
   const [viewMode, setViewMode] = useState<"history" | "manual">("history");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("ALL");
@@ -123,8 +119,15 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   // Manual Form States
   const [symptomCode, setSymptomCode] = useState<(typeof SYMPTOM_CODES)[number]>("HEADACHE");
   const [severity, setSeverity] = useState(2);
-  const [cabinModule, setCabinModule] = useState<string>("Node 2 (Harmony)");
+  const { selectedModuleId, selectedLocation } = useStationLocationStore();
+  const currentStationMod = ISS_14_MODULES.find((m) => m.id === selectedModuleId);
+  const defaultCabinLocation = `${currentStationMod?.name ?? selectedModuleId} (${selectedLocation})`;
+  const [cabinModule, setCabinModule] = useState<string>(defaultCabinLocation);
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setCabinModule(`${currentStationMod?.name ?? selectedModuleId} (${selectedLocation})`);
+  }, [selectedModuleId, selectedLocation, currentStationMod]);
 
   const [reports, setReports] = useState<SymptomReport[]>([]);
   const [localDiary, setLocalDiary] = useState<LocalSymptomEntry[]>(() => {
@@ -163,7 +166,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
   // Reactive listener when the unified Assistant records or acknowledges a symptom
   useEffect(() => {
-    const handleSymptomLogged = (_event: Event) => {
+    const handleSymptomLogged = (_event?: Event) => {
       try {
         const saved = localStorage.getItem("habitrack_symptom_diary_v3");
         if (saved) {
@@ -235,7 +238,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, isSimulation, currentMissionDay]);
 
   const submitManual = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +270,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         callsign: targetCallsign,
         symptom: titleCase(symptomCode),
         severity: severity >= 4 ? "Severe" : severity >= 2 ? "Moderate" : "Mild",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
+        time: isSimulation
+          ? `Day ${currentMissionDay} · ${utcString.slice(11, 19)} UTC`
+          : new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         location: cabinModule,
         duration: "30 mins",
         description: notes.trim() || `Reported during mission tasks in ${cabinModule}.`,
@@ -320,23 +325,23 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localDiary, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `astronaut_symptom_diary_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute("download", `habitrack_symptom_diary_${astronautId}_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
   const handleClearDiary = () => {
-    setLocalDiary([]);
-    setNotice("Symptom diary cleared.");
-    setTimeout(() => setNotice(null), 2500);
+    if (window.confirm("Clear all locally recorded symptom entries from this browser?")) {
+      setLocalDiary([]);
+      localStorage.removeItem("habitrack_symptom_diary_v3");
+    }
   };
 
-  const handleLoadSample = () => {
+  const handleLoadSamples = () => {
     setLocalDiary(SAMPLE_NASA_DIARY);
-    setNotice("NASA Sample Case Study loaded.");
-    setTimeout(() => setNotice(null), 2500);
   };
+  const handleLoadSample = handleLoadSamples;
 
   const filteredDiary = localDiary.filter((item) => {
     // If astronaut, lock to astronautId
@@ -366,52 +371,68 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     return matchesSearch && matchesSeverity && matchesStatus;
   });
 
+  const openDrawer = useAssistantStore((s) => s.openDrawer);
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Mode Switcher */}
       <div className="p-5 sm:p-6 glass-panel rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Stethoscope className="w-3.5 h-3.5 text-sky-600" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
-              Crew Symptom &amp; Health Log
+          <div className="flex items-center gap-2 mb-1.5">
+            <Stethoscope className="w-4 h-4 text-sky-600" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">
+              Flight Medicine · Crew Health Logging
             </span>
-            <span className="text-[11px] font-mono text-muted">{astronautId}</span>
           </div>
-          <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-            Astronaut Symptom Reporting &amp; Diagnostics
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+            Symptom Diary &amp; Clinical Concordance
           </h2>
-          <p className="text-xs text-muted mt-0.5">
-            Log physical discomfort, review historical diaries, or run interactive 5-factor clinical triage
+          <p className="text-xs text-muted mt-1">
+            Subjective symptoms logged here immediately correlate with active ECLSS telemetry, 
+            circadian envelopes, and NASA flight rules.
           </p>
         </div>
 
-        {/* 2-Mode View Switcher */}
-        <div className="flex flex-wrap items-center glass-panel-subtle rounded-xl p-1.5 text-xs self-start md:self-auto gap-1">
+        {/* View Mode Switcher + AI Assistant Launcher */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Direct Trigger to Unified Standby Assistant */}
           <button
-            onClick={() => setViewMode("history")}
-            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
-              viewMode === "history"
-                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
-                : "border-transparent text-muted hover:text-foreground"
-            }`}
+            onClick={() => openDrawer("chat")}
+            className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
-            <ClipboardList className="w-3.5 h-3.5" />
-            <span>Symptom Diary ({localDiary.length})</span>
+            <Sparkles className="w-3.5 h-3.5 text-white" />
+            <span>Launch AI Symptom Triage</span>
           </button>
-          <button
-            onClick={() => setViewMode("manual")}
-            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
-              viewMode === "manual"
-                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
-                : "border-transparent text-muted hover:text-foreground"
-            }`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Manual Fast-Log</span>
-          </button>
+
+          <div className="flex items-center glass-panel-subtle rounded-xl p-1 text-xs">
+            <button
+              onClick={() => setViewMode("history")}
+              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                viewMode === "history"
+                  ? "bg-white text-sky-700 border-sky-200 shadow-xs"
+                  : "border-transparent text-muted hover:text-foreground"
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Symptom Diary ({localDiary.length})</span>
+            </button>
+            <button
+              onClick={() => setViewMode("manual")}
+              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                viewMode === "manual"
+                  ? "bg-white text-sky-700 border-sky-200 shadow-xs"
+                  : "border-transparent text-muted hover:text-foreground"
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Manual Fast-Log</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
+      <PhysiologicalCards astronautId={astronautId} />
 
       {notice && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
@@ -475,25 +496,25 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                   <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search symptoms or module..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-4 py-2 rounded-lg bg-white border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-accent"
+                    placeholder="Search symptoms, locations, notes…"
+                    className="pl-9 pr-4 py-2 text-xs rounded-lg bg-surface-elevated border border-border text-foreground placeholder:text-muted focus:outline-none focus:border-accent-light w-56 sm:w-64"
                   />
                 </div>
 
-                <div className="flex items-center gap-1 glass-panel-subtle p-1 rounded-lg text-xs font-mono">
-                  {["ALL", "MILD", "MODERATE", "SEVERE"].map((sev) => (
+                <div className="flex items-center gap-1 glass-panel-subtle rounded-lg p-1 text-[11px] font-mono">
+                  {["ALL", "MILD", "MODERATE", "SEVERE"].map((s) => (
                     <button
-                      key={sev}
-                      onClick={() => setFilterSeverity(sev)}
-                      className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors ${
-                        filterSeverity === sev
-                          ? "bg-white text-sky-700 border-sky-200 shadow-sm"
-                          : "border-transparent text-muted hover:text-foreground"
+                      key={s}
+                      onClick={() => setFilterSeverity(s)}
+                      className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                        filterSeverity === s
+                          ? "bg-white text-foreground shadow-2xs font-semibold"
+                          : "text-muted hover:text-foreground"
                       }`}
                     >
-                      {sev}
+                      {s}
                     </button>
                   ))}
                 </div>
@@ -550,8 +571,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                   type="button"
                   onClick={handleExportJSON}
                   className="px-3.5 py-2 rounded-lg bg-white border border-border hover:bg-slate-50 text-secondary text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Export local diary as JSON for offline clinician review"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-sky-600" />
                   <span>Export JSON</span>
                 </button>
                 <button
@@ -566,16 +588,34 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             </div>
 
             {/* Symptom Cards Grid */}
-            <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredDiary.length === 0 ? (
-                <div className="p-8 text-center text-muted text-xs border border-dashed border-border rounded-xl">
-                  No symptom reports match your query.
+                <div className="col-span-full py-12 text-center text-muted text-xs border border-dashed border-border rounded-xl">
+                  <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-40 text-sky-600" />
+                  <p className="font-medium text-foreground">No symptom entries matching query</p>
+                  <p className="mt-1">
+                    Log an incident using{" "}
+                    <button
+                      onClick={() => setViewMode("manual")}
+                      className="text-sky-700 font-semibold underline underline-offset-2"
+                    >
+                      Manual Fast-Log
+                    </button>{" "}
+                    or launch{" "}
+                    <button
+                      onClick={() => openDrawer("chat")}
+                      className="text-sky-700 font-semibold underline underline-offset-2"
+                    >
+                      AI Symptom Triage
+                    </button>
+                    .
+                  </p>
                 </div>
               ) : (
                 filteredDiary.map((item) => (
                   <div
                     key={item.id}
-                    className="p-5 rounded-xl glass-panel-subtle glass-card-hover space-y-2"
+                    className="p-4 rounded-xl border border-border bg-white shadow-2xs hover:shadow-xs transition-shadow space-y-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-2.5">
@@ -604,7 +644,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
-                            <Clock className="w-3 h-3 text-amber-600" />
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
                             <span>Pending Review</span>
                           </span>
                         )}
@@ -741,9 +781,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                 onChange={(e) => setCabinModule(e.target.value)}
                 className="w-full h-10 px-3.5 rounded-lg bg-white border border-border text-foreground text-xs focus:outline-none focus:border-accent cursor-pointer"
               >
-                {CABIN_MODULES.map((m) => (
-                  <option key={m} value={m} className="bg-surface text-foreground">
-                    {m}
+                {ISS_14_MODULES.map((m) => (
+                  <option key={m.id} value={`${m.name} (${m.sensorLocations[0]})`} className="bg-surface text-foreground">
+                    {m.name} · {m.segment}
                   </option>
                 ))}
               </select>

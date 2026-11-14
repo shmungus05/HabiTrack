@@ -14,14 +14,13 @@ import {
   Check,
   AlertCircle,
   AlertTriangle,
-  Activity,
-  Wind,
-  Thermometer,
-  Heart,
-  Sparkles,
-  RotateCcw,
   RefreshCw,
-  Zap,
+  X,
+  Wind,
+  Heart,
+  Activity,
+  Thermometer,
+  RotateCcw,
 } from "lucide-react";
 import {
   fetchBaselines,
@@ -33,6 +32,13 @@ import { useCohortStore } from "../../stores/cohortStore";
 import { useSimulationSandbox } from "../simulation";
 import { parseEventRationale } from "../../components/EventRationaleDisplay";
 import { useBiomedicalSettings } from "../settings";
+import { PhysiologicalCards, usePhysiologicalTelemetry } from "../biometrics";
+import { useActiveMissionTime } from "../../stores/missionStore";
+import {
+  computeModuleTelemetry,
+  getAstronautDetectedLocation,
+  useStationLocationStore,
+} from "../topology";
 import type {
   Baselines,
   HealthEvent,
@@ -94,6 +100,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     state.astronauts.find((a) => a.astronaut_id === activeAstronautId)
   );
 
+  const { isSimulation, currentMissionDay, utcString, currentTimeMs } = useActiveMissionTime();
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
   const { settings } = useBiomedicalSettings();
@@ -155,41 +162,63 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     void loadData();
     const interval = window.setInterval(loadData, 12000);
     return () => window.clearInterval(interval);
-  }, [activeAstronautId]);
+  }, [activeAstronautId, isSimulation, currentMissionDay]);
 
-  // Extract latest measurements
+  // Extract latest measurements with synchronized simulation overrides & clean nominal defaults
+  const activeScenarios = simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
+  const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
+  const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
+  const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
+  const isNominal = !hasCo2 && !hasThermal && !hasSaa;
+
+  const detectedStation = getAstronautDetectedLocation(activeAstronautId);
+  const { selectedModuleId, selectedLocation } = useStationLocationStore();
+
+  const envTelemetry = computeModuleTelemetry(
+    detectedStation.moduleId || selectedModuleId,
+    detectedStation.location || selectedLocation,
+    activeScenarios,
+    activeScenario,
+    currentTimeMs,
+  );
+
+  const vitals = usePhysiologicalTelemetry(activeAstronautId);
+
   const latestTelemetry = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (let i = measurements.length - 1; i >= 0; i--) {
-      const m = measurements[i];
-      if (map[m.stream_id] === undefined) {
-        map[m.stream_id] = m.value;
-      }
+    let co2Ppm = envTelemetry.co2;
+    let tempC = envTelemetry.temp;
+    let radVal = envTelemetry.rad;
+
+    // Apply simulation overrides for any and all active scenarios simultaneously
+    if (hasCo2) {
+      co2Ppm = Math.max(4350, co2Ppm);
+    }
+    if (hasThermal) {
+      tempC = Math.max(27.4, tempC);
+    }
+    if (hasSaa) {
+      radVal = Math.max(0.48, radVal);
     }
 
-    // Apply simulation overrides if active
-    let co2 = map["stream_eda_co2"] ?? 3.0;
-    let temp = map["stream_eda_temp"] ?? 22.8;
-    let hr = map["stream_sim_hr"] ?? activeAstronaut?.resting_hr ?? 65.0;
-    let rmssd = map["stream_sim_hrv"] ?? activeAstronaut?.resting_rmssd ?? 55.0;
-    let spo2 = map["stream_sim_spo2"] ?? activeAstronaut?.resting_spo2 ?? 98.0;
+    const co2MmHg = co2Ppm / 750;
 
-    if (activeScenario === "co2_spike") {
-      co2 = 5.80; // Peak hypercapnia excursion
-      hr = hr + 27.2; // Compensatory tachycardia
-      rmssd = Math.max(18.0, rmssd - 30.5); // Sympathetic strain
-    } else if (activeScenario === "thermal_overheat") {
-      temp = 27.4;
-      hr = hr + 15.0;
-    }
-
-    return { co2, temp, hr, rmssd, spo2 };
-  }, [measurements, activeScenario, activeAstronaut]);
+    return {
+      co2: co2MmHg,
+      co2Ppm,
+      temp: tempC,
+      hr: vitals.hr,
+      rmssd: vitals.rmssd,
+      spo2: vitals.spo2,
+      rad: radVal,
+    };
+  }, [envTelemetry, hasCo2, hasThermal, hasSaa, vitals]);
 
   // Derive real-time alerts by evaluating live telemetry against baselines
   const generatedAlerts = useMemo<RealtimeAlertItem[]>(() => {
     const list: RealtimeAlertItem[] = [];
-    const nowUtc = new Date().toISOString().slice(11, 16) + " UTC";
+    const nowUtc = isSimulation
+      ? `D${currentMissionDay} ${utcString.slice(11, 16)} UTC`
+      : new Date().toISOString().slice(11, 16) + " UTC";
 
     // -------------------------------------------------------------------------
     // 1. Cabin CO2 Real-Time Alert
@@ -199,8 +228,8 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     const deltaCo2 = currentCo2 - baselineCo2;
     const deltaCo2Pct = (deltaCo2 / baselineCo2) * 100;
 
-    if (currentCo2 >= 3.6 || deltaCo2 >= 0.5 || activeScenario === "co2_spike") {
-      const isCritical = currentCo2 >= 4.5;
+    if (hasCo2 || (!isNominal && currentCo2 >= 3.6)) {
+      const isCritical = currentCo2 >= 4.5 || hasCo2;
       const co2Ppm = Math.round(currentCo2 * 750);
       const titleDisplay = isMetric
         ? `Cabin CO₂ Hypercapnia Alert: ${co2Ppm.toLocaleString()} PPM`
@@ -241,14 +270,14 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     }
 
     // -------------------------------------------------------------------------
-    // 2. Autonomic Heart Rate Elevation Alert
+    // 2. Autonomic Heart Rate Elevation Alert (Concordant with CO2 or Heat spike)
     // -------------------------------------------------------------------------
     const baselineHr = activeAstronaut?.resting_hr ?? 65.0;
     const currentHr = latestTelemetry.hr;
     const deltaHr = currentHr - baselineHr;
 
-    if (deltaHr >= 20.0) {
-      const isCritical = deltaHr >= 40.0;
+    if (hasCo2 || hasThermal || deltaHr >= 15.0) {
+      const isCritical = deltaHr >= 25.0 || hasCo2;
       list.push({
         id: `alert-hr-tachycardia`,
         title: `Autonomic Tachycardia: ${currentHr.toFixed(0)} bpm (+${deltaHr.toFixed(0)} bpm above baseline)`,
@@ -264,7 +293,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         flightRuleRef: "FR-EVA-003",
         details: {
           whatHappened: `• Heart rate spiked to ${currentHr.toFixed(0)} bpm (+${deltaHr.toFixed(0)} bpm above baseline).`,
-          whyItMatters: `• Autonomic compensatory response indicates acute physical strain or elevated CO₂.`,
+          whyItMatters: `• Autonomic compensatory response indicates acute physical strain, elevated CO₂, or thermal load.`,
           whatToDo: [
             "• Initiate paced 4-4 diaphragmatic breathing & check SpO₂.",
             "• Stand down from heavy metabolic tasks; monitor telemetry.",
@@ -274,13 +303,13 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     }
 
     // -------------------------------------------------------------------------
-    // 3. HRV / RMSSD Parasympathetic Depression Alert
+    // 3. HRV / RMSSD Parasympathetic Depression Alert (Concordant with CO2 spike)
     // -------------------------------------------------------------------------
     const baselineRmssd = activeAstronaut?.resting_rmssd ?? 55.0;
     const currentRmssd = latestTelemetry.rmssd;
     const deltaRmssd = currentRmssd - baselineRmssd;
 
-    if (deltaRmssd <= -20.0) {
+    if (hasCo2 || deltaRmssd <= -20.0) {
       list.push({
         id: `alert-rmssd-depression`,
         title: `Parasympathetic Suppression: RMSSD Depressed to ${currentRmssd.toFixed(1)} ms`,
@@ -296,7 +325,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         flightRuleRef: "FR-EVA-003",
         details: {
           whatHappened: `• RMSSD dropped to ${currentRmssd.toFixed(1)} ms (${Math.abs(deltaRmssd).toFixed(1)} ms below resting baseline).`,
-          whyItMatters: `• Acute sympathetic dominance signals physical exhaustion or sleep deficit.`,
+          whyItMatters: `• Acute sympathetic dominance signals physical exhaustion or autonomic stress.`,
           whatToDo: [
             "• Direct crew to 20 min restorative resting posture.",
             "• Defer strenuous robotics/EVA until parasympathetic recovery.",
@@ -309,7 +338,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     // 4. Cabin Temperature Alert
     // -------------------------------------------------------------------------
     const currentTemp = latestTelemetry.temp;
-    if (currentTemp >= 25.5 || activeScenario === "thermal_overheat") {
+    if (hasThermal || (!isNominal && currentTemp >= 25.5)) {
       const tempDisplay = isMetric ? `${currentTemp.toFixed(1)} °C` : `${(currentTemp * 1.8 + 32).toFixed(1)} °F`;
       const baseTempDisplay = isMetric ? "22.5 °C" : "72.5 °F";
       const deltaTempDisplay = isMetric
@@ -345,7 +374,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     // -------------------------------------------------------------------------
     // 5. South Atlantic Anomaly (SAA) Radiation Alert
     // -------------------------------------------------------------------------
-    if (activeScenario === "saa_transit") {
+    if (hasSaa) {
       list.push({
         id: `alert-saa-radiation`,
         title: `Space Radiation Alert: South Atlantic Anomaly Transit Active`,
@@ -370,9 +399,9 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     }
 
     // -------------------------------------------------------------------------
-    // 5b. Simulated Clinical Concordance Event for Injected Scenarios
+    // 5b. Simulated Clinical Concordance Events for Injected Scenarios
     // -------------------------------------------------------------------------
-    if (activeScenario === "co2_spike") {
+    if (hasCo2) {
       list.push({
         id: "alert-concordance-co2-spike",
         title: "Clinical Concordance: Hypercapnic Autonomic Discordance",
@@ -401,12 +430,65 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
       });
     }
 
+    if (hasThermal) {
+      list.push({
+        id: "alert-concordance-thermal-overheat",
+        title: "Clinical Concordance: Cabin Thermal Excursion & Metabolic Surge",
+        level: "warning",
+        timestamp: nowUtc,
+        message: isMetric
+          ? "Concordant thermal excursion: Module ambient temperature elevated to 27.4 °C with autonomic compensatory cardiac elevation (+15 bpm)."
+          : "Concordant thermal excursion: Module ambient temperature elevated to 81.3 °F with autonomic compensatory cardiac elevation (+15 bpm).",
+        module: "Node 2 (Harmony)",
+        acknowledged: !!acknowledgedMap["alert-concordance-thermal-overheat"],
+        category: "event",
+        flightRuleRef: "FR-CDRA-002",
+        metricValue: isMetric ? "27.4 °C" : "81.3 °F",
+        baselineValue: isMetric ? "22.8 °C" : "73.0 °F",
+        deltaValue: isMetric ? "+4.6 °C" : "+8.3 °F",
+        details: {
+          whatHappened: "• Ambient cabin temperature surge during crew exercise regimen.",
+          whyItMatters: "• Microgravity thermal accumulation impairs thermoregulation and elevates autonomic strain.",
+          whatToDo: [
+            "• Increase cabin ventilation CFM and replenish hydration fluids.",
+            "• Adjust ITCS coolant loops.",
+          ],
+        },
+      });
+    }
+
+    if (hasSaa) {
+      list.push({
+        id: "alert-concordance-saa-transit",
+        title: "Clinical Concordance: South Atlantic Anomaly Radiation Crossing",
+        level: "warning",
+        timestamp: nowUtc,
+        message: "Radiation dosimeter flux crossed ALARA advisory threshold (0.48 mGy/day) during orbital SAA passage.",
+        module: "US Lab (Destiny)",
+        acknowledged: !!acknowledgedMap["alert-concordance-saa-transit"],
+        category: "event",
+        metricValue: "0.48 mGy/day",
+        baselineValue: "0.19 mGy/day",
+        deltaValue: "+0.29 mGy/day",
+        details: {
+          whatHappened: "• South Atlantic Anomaly traversal elevated localized dosimetric ionizing flux.",
+          whyItMatters: "• Real-time ALARA compliance monitoring is mandatory for orbital radiation accounting.",
+          whatToDo: [
+            "• Verify radiation shields in crew quarters.",
+            "• Log personal dosimeter readings into station health records.",
+          ],
+        },
+      });
+    }
+
     // -------------------------------------------------------------------------
     // 6. Real Health Events from API (e.g. Day 127 Headache & CO2 Concordance)
     // -------------------------------------------------------------------------
     for (const evt of events) {
       const isAck =
-        evt.review_status !== "PENDING" || !!acknowledgedMap[`event-${evt.event_id}`];
+        evt.review_status !== "PENDING" ||
+        isNominal ||
+        !!acknowledgedMap[`event-${evt.event_id}`];
       list.push({
         id: `event-${evt.event_id}`,
         title: `Clinical Concordance: ${evt.event_type.replace(/_/g, " ")}`,
@@ -433,6 +515,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     // -------------------------------------------------------------------------
     for (const sym of symptoms.slice(0, 3)) {
       const symId = `sym-${sym.report_id}`;
+      const reportAgeMs = Date.now() - new Date(sym.reported_at).getTime();
+      const isRecent = !isNaN(reportAgeMs) && reportAgeMs < 15 * 60 * 1000;
+      const isAck =
+        (!isRecent && isNominal) || !!acknowledgedMap[symId];
+
       list.push({
         id: symId,
         title: `Crew Symptom Logged: ${sym.symptom_code} (Severity ${sym.severity}/5)`,
@@ -440,7 +527,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         timestamp: sym.reported_at.slice(11, 16) + " UTC",
         message: `Subjective symptom "${sym.symptom_code}" logged by ${sym.astronaut_id} in ${sym.cabin_module || "Node 2"}.${sym.notes ? ` Note: "${sym.notes}"` : ""}`,
         module: sym.cabin_module || "Node 2 (Harmony)",
-        acknowledged: !!acknowledgedMap[symId],
+        acknowledged: isAck,
         category: "symptom",
         details: {
           whatHappened: `• ${sym.symptom_code.replace(/_/g, " ")} reported at severity ${sym.severity}/5 by ${sym.astronaut_id}.${sym.notes ? ` (${sym.notes})` : ""}`,
@@ -454,7 +541,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     }
 
     return list;
-  }, [latestTelemetry, activeScenario, activeAstronaut, events, symptoms, acknowledgedMap]);
+  }, [latestTelemetry, hasCo2, hasThermal, hasSaa, isNominal, activeAstronaut, events, symptoms, acknowledgedMap]);
 
   const activeAlerts = generatedAlerts.filter((a) => !a.acknowledged);
   const displayedAlerts = filter === "ACTIVE" ? activeAlerts : generatedAlerts;
@@ -527,75 +614,196 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         </div>
       </div>
 
-      {/* Real-time Telemetry Status Ribbon - Unit Synchronized */}
-      <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
+      <div className="mt-4">
+        <PhysiologicalCards astronautId={activeAstronautId} compact />
+      </div>
+
+      {/* Real-time Telemetry Status Ribbon - Unit Synchronized & Fully Interactive */}
+      <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
         <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          {/* Live Cabin CO2 */}
           <div className="flex items-center gap-2">
-            <Wind className={`w-4 h-4 ${latestTelemetry.co2 > 3.5 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
+            <Wind
+              className={`w-4 h-4 ${
+                hasCo2 || latestTelemetry.co2Ppm > 3500
+                  ? "text-amber-600 animate-pulse"
+                  : "text-sky-600"
+              }`}
+            />
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 block">
                 Live Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
               </span>
-              <span className={`font-mono font-bold ${latestTelemetry.co2 > 3.5 ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
-                {isMetric ? `${Math.round(latestTelemetry.co2 * 750).toLocaleString()} PPM` : `${latestTelemetry.co2.toFixed(2)} mmHg`}
-              </span>
-              <span className="text-[10px] text-slate-500 ml-1">
-                ({isMetric ? "Baseline 2,250" : "Baseline 3.00"})
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`font-mono font-bold ${
+                    hasCo2 || latestTelemetry.co2Ppm > 3500
+                      ? "text-amber-700 font-extrabold"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {isMetric
+                    ? `${Math.round(latestTelemetry.co2Ppm).toLocaleString()} PPM`
+                    : `${latestTelemetry.co2.toFixed(2)} mmHg`}
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  ({isMetric ? "Baseline 2,250" : "Baseline 3.00"})
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Heart Rate */}
           <div className="flex items-center gap-2">
-            <Heart className={`w-4 h-4 ${latestTelemetry.hr > 85 ? "text-red-500 animate-pulse" : "text-rose-500"}`} />
+            <Heart
+              className={`w-4 h-4 ${
+                vitals.hrAlert || latestTelemetry.hr > 85
+                  ? "text-red-500 animate-pulse"
+                  : "text-rose-500"
+              }`}
+            />
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Heart Rate</span>
-              <span className="font-mono font-bold text-slate-900">
-                {latestTelemetry.hr.toFixed(0)} bpm
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                Heart Rate
               </span>
-              <span className="text-[10px] text-slate-500 ml-1">
-                (Base {activeAstronaut?.resting_hr ?? 65})
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`font-mono font-bold ${
+                    vitals.hrAlert || latestTelemetry.hr > 85
+                      ? "text-red-700 font-extrabold"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {latestTelemetry.hr.toFixed(0)} bpm
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  (Base {vitals.baselineHr.toFixed(0)})
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* HRV RMSSD */}
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-600" />
+            <Activity
+              className={`w-4 h-4 ${
+                vitals.rmssdAlert
+                  ? "text-amber-600 animate-pulse"
+                  : "text-emerald-600"
+              }`}
+            />
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">HRV (RMSSD)</span>
-              <span className="font-mono font-bold text-slate-900">
-                {latestTelemetry.rmssd.toFixed(1)} ms
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                HRV (RMSSD)
               </span>
-              <span className="text-[10px] text-slate-500 ml-1">
-                (Base {activeAstronaut?.resting_rmssd ?? 55})
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`font-mono font-bold ${
+                    vitals.rmssdAlert
+                      ? "text-amber-700 font-extrabold"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {latestTelemetry.rmssd.toFixed(1)} ms
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  (Base {vitals.baselineRmssd.toFixed(0)})
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Cabin Temp */}
           <div className="flex items-center gap-2">
-            <Thermometer className="w-4 h-4 text-amber-500" />
+            <Thermometer
+              className={`w-4 h-4 ${
+                hasThermal || latestTelemetry.temp > 25.0
+                  ? "text-orange-600 animate-pulse"
+                  : "text-amber-600"
+              }`}
+            />
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 block">
                 Cabin Temp ({isMetric ? "°C" : "°F"})
               </span>
-              <span className="font-mono font-bold text-slate-900">
-                {isMetric ? `${latestTelemetry.temp.toFixed(1)} °C` : `${(latestTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}
-              </span>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`font-mono font-bold ${
+                    hasThermal || latestTelemetry.temp > 25.0
+                      ? "text-orange-700 font-extrabold"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {isMetric
+                    ? `${latestTelemetry.temp.toFixed(1)} °C`
+                    : `${(latestTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  ({isMetric ? "Nom 22.8" : "Nom 73.0"})
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Active Simulation Status Notice */}
-        {isAnomalyActive && (
-          <div className="flex items-center gap-2 ml-auto text-xs">
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[10px] animate-pulse">
-              ⚡ Live Anomaly Active: {activeScenario.replace(/_/g, " ").toUpperCase()}
-            </span>
-          </div>
-        )}
+        {/* Active Simulation Anomaly Status or Nominal Badge with Controls */}
+        <div className="flex items-center gap-2 ml-auto">
+          {isAnomalyActive ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[10px] animate-pulse flex items-center gap-1 shadow-2xs">
+                <span>⚡ Live Anomaly Active: {activeScenarios.map((s) => s.replace(/_/g, " ").toUpperCase()).join(" + ")}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => simulationControls.resetNominal()}
+                className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-300 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                title="Reset active simulation anomaly overrides to nominal"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Reset Nominal</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium text-[10px] flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>✓ All Telemetry Nominal</span>
+              </span>
+              {/* Quick Anomaly Testing Injectors */}
+              <div className="hidden sm:flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => simulationControls.toggleScenario("co2_spike")}
+                  className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-200 hover:border-amber-300 hover:bg-amber-50 text-slate-600 hover:text-amber-800 transition-colors cursor-pointer"
+                  title="Simulate CO₂ Hypercapnia Excursion"
+                >
+                  +CO₂ Spike
+                </button>
+                <button
+                  type="button"
+                  onClick={() => simulationControls.toggleScenario("thermal_overheat")}
+                  className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-200 hover:border-orange-300 hover:bg-orange-50 text-slate-600 hover:text-orange-800 transition-colors cursor-pointer"
+                  title="Simulate Thermal Loop Excursion"
+                >
+                  +Overheat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => simulationControls.toggleScenario("saa_transit")}
+                  className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-slate-600 hover:text-purple-800 transition-colors cursor-pointer"
+                  title="Simulate SAA Radiation Belt Cross"
+                >
+                  +SAA Cross
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Explanatory Note */}
-      <div className="mt-3 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
+      <div className="mt-4 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
         <span>
           Real-time alerts cross-reference live environmental telemetry (NASA EDA) against personalized circadian envelopes.
         </span>
@@ -672,13 +880,25 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
                   </div>
 
                   {!isResolved ? (
-                    <button
-                      onClick={() => handleAcknowledge(alert.id)}
-                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 border border-slate-300 text-[11px] font-semibold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs hover:border-sky-300 hover:text-sky-700 shrink-0"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Acknowledge</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleAcknowledge(alert.id)}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 border border-slate-300 text-[11px] font-semibold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs hover:border-sky-300 hover:text-sky-700"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Acknowledge</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAcknowledge(alert.id)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                        title="Close alert"
+                        aria-label="Close alert"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700 font-mono font-semibold flex items-center gap-1 shrink-0">
                       <CheckCircle2 className="w-3.5 h-3.5" />

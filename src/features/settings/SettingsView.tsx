@@ -51,14 +51,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive, thresholds } = simulationState;
+  const activeScenarios =
+    simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
+
+  const isCo2Active = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
+  const isThermalActive =
+    activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
+  const isSaaActive =
+    activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
+  const isNominalActive = !isCo2Active && !isThermalActive && !isSaaActive;
 
   const isMetric = settings.unitSystem === "metric";
   const displayCo2 = isMetric
-    ? (activeScenario === "co2_spike" ? "4,350 PPM" : "2,250 PPM")
-    : (activeScenario === "co2_spike" ? "5.80 mmHg" : "3.00 mmHg");
+    ? (isCo2Active ? "4,350 PPM" : "2,250 PPM")
+    : (isCo2Active ? "5.80 mmHg" : "3.00 mmHg");
   const displayTemp = isMetric
-    ? (activeScenario === "thermal_overheat" ? "27.4 °C" : "22.8 °C")
-    : (activeScenario === "thermal_overheat" ? "81.3 °F" : "73.0 °F");
+    ? (isThermalActive ? "27.4 °C" : "22.8 °C")
+    : (isThermalActive ? "81.3 °F" : "73.0 °F");
+  const displayRad = isSaaActive ? "0.48 mGy/d" : "0.19 mGy/d";
+
+  let displayHr = `${profile.baselineHeartRate} bpm`;
+  if (isCo2Active) {
+    displayHr = "92 bpm (+27)";
+  } else if (isThermalActive) {
+    displayHr = "80 bpm (+15)";
+  }
 
   const [formName, setFormName] = useState(profile.name);
   const [formRole, setFormRole] = useState(profile.role);
@@ -78,22 +95,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setScenarioNotice(null), 3500);
   };
 
-  const handleInjectScenario = (
-    scenario: "co2_spike" | "thermal_overheat" | "saa_transit" | "nominal"
+  const handleToggleScenario = (
+    scenario: "co2_spike" | "thermal_overheat" | "saa_transit"
   ) => {
-    if (scenario === "nominal") {
-      simulationControls.resetNominal();
-      notifyScenario("All systems restored to nominal baselines.");
+    simulationControls.toggleScenario(scenario);
+    const currentlyActive =
+      scenario === "co2_spike"
+        ? isCo2Active
+        : scenario === "thermal_overheat"
+        ? isThermalActive
+        : isSaaActive;
+    const title =
+      scenario === "co2_spike"
+        ? (isMetric ? "CO₂ Pocket Spike (4,350 PPM)" : "CO₂ Pocket Spike (5.80 mmHg)")
+        : scenario === "thermal_overheat"
+        ? (isMetric ? "Thermal Loop Excursion (27.4 °C)" : "Thermal Loop Excursion (81.3 °F)")
+        : "SAA Orbital Radiation Transit (0.48 mGy/d)";
+
+    if (currentlyActive) {
+      notifyScenario(`Deactivated ${title}.`);
     } else {
-      simulationControls.injectScenario(scenario);
-      const title =
-        scenario === "co2_spike"
-          ? (isMetric ? "CO₂ Pocket Spike (>4,200 PPM)" : "CO₂ Pocket Spike (>5.6 mmHg)")
-          : scenario === "thermal_overheat"
-          ? (isMetric ? "Thermal Loop Excursion (27.4 °C)" : "Thermal Loop Excursion (81.3 °F)")
-          : "SAA Orbital Radiation Transit";
-      notifyScenario(`Injected ${title}. Overview & Alerts reacting in real time!`);
+      notifyScenario(`Injected ${title}. Propagated across Overview, Alerts & Timeline!`);
     }
+  };
+
+  const handleResetNominal = () => {
+    simulationControls.resetNominal();
+    notifyScenario("All systems restored to nominal baselines.");
   };
 
   return (
@@ -446,10 +474,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </h3>
               </div>
 
-              {isAnomalyActive ? (
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3 text-amber-600" />
-                  <span>{activeScenario.replace(/_/g, " ").toUpperCase()} ACTIVE</span>
+              {!isNominalActive ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                  <span>
+                    {[
+                      isCo2Active && "CO₂ SPIKE",
+                      isThermalActive && "OVERHEAT",
+                      isSaaActive && "SAA RADIATION",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}{" "}
+                    ACTIVE
+                  </span>
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium">
@@ -464,28 +501,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">
                   Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
                 </span>
-                <span className={`font-mono font-bold text-xs ${activeScenario === "co2_spike" ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
+                <span className={`font-mono font-bold text-xs ${isCo2Active ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
                   {displayCo2}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">Heart Rate</span>
-                <span className={`font-mono font-bold text-xs ${activeScenario === "co2_spike" ? "text-rose-600 font-extrabold" : "text-slate-900"}`}>
-                  {activeScenario === "co2_spike" ? "92 bpm (+27)" : `${profile.baselineHeartRate} bpm`}
+                <span className={`font-mono font-bold text-xs ${isCo2Active || isThermalActive ? "text-rose-600 font-extrabold" : "text-slate-900"}`}>
+                  {displayHr}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">
                   Cabin Temp ({isMetric ? "°C" : "°F"})
                 </span>
-                <span className={`font-mono font-bold text-xs ${activeScenario === "thermal_overheat" ? "text-orange-600 font-extrabold" : "text-slate-900"}`}>
+                <span className={`font-mono font-bold text-xs ${isThermalActive ? "text-orange-600 font-extrabold" : "text-slate-900"}`}>
                   {displayTemp}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">Radiation</span>
-                <span className={`font-mono font-bold text-xs ${activeScenario === "saa_transit" ? "text-purple-600 font-extrabold" : "text-slate-900"}`}>
-                  {activeScenario === "saa_transit" ? "0.48 mGy/d" : "0.19 mGy/d"}
+                <span className={`font-mono font-bold text-xs ${isSaaActive ? "text-purple-600 font-extrabold" : "text-slate-900"}`}>
+                  {displayRad}
                 </span>
               </div>
             </div>
@@ -495,47 +532,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleInjectScenario("co2_spike")}
+                  onClick={() => handleToggleScenario("co2_spike")}
                   className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
-                    activeScenario === "co2_spike"
-                      ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-1 ring-amber-300"
+                    isCo2Active
+                      ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-2 ring-amber-400 font-bold"
                       : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
                   }`}
+                  title="Toggle CO₂ Spike simulation anomaly"
                 >
                   <Wind className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                   <span>⚡ CO₂ Spike</span>
+                  {isCo2Active && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping ml-0.5" />
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleInjectScenario("thermal_overheat")}
+                  onClick={() => handleToggleScenario("thermal_overheat")}
                   className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
-                    activeScenario === "thermal_overheat"
-                      ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-1 ring-orange-300"
+                    isThermalActive
+                      ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-2 ring-orange-400 font-bold"
                       : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
                   }`}
+                  title="Toggle Thermal Loop Overheat anomaly"
                 >
                   <Thermometer className="w-3.5 h-3.5 text-orange-600 shrink-0" />
                   <span>🌡️ Overheat</span>
+                  {isThermalActive && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-ping ml-0.5" />
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleInjectScenario("saa_transit")}
+                  onClick={() => handleToggleScenario("saa_transit")}
                   className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
-                    activeScenario === "saa_transit"
-                      ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-1 ring-purple-300"
+                    isSaaActive
+                      ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-2 ring-purple-400 font-bold"
                       : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
                   }`}
+                  title="Toggle SAA Radiation belt transit anomaly"
                 >
                   <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                   <span>☢️ SAA Radiation</span>
+                  {isSaaActive && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-ping ml-0.5" />
+                  )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleInjectScenario("nominal")}
-                  className="py-1.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  onClick={handleResetNominal}
+                  className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                    isNominalActive
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      : "border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800"
+                  }`}
+                  title="Reset all active simulation anomalies to nominal baselines"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <span>🔄 Reset Nominal</span>
@@ -549,7 +603,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => notifyScenario("Cleared Symptoms")}
+                    onClick={() => {
+                      localStorage.removeItem("habitrack_symptom_diary_v3");
+                      window.dispatchEvent(new Event("habitrack_symptom_logged"));
+                      notifyScenario("Cleared all logged symptoms from local station diary.");
+                    }}
                     className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
                     title="Clear logged symptoms"
                   >
@@ -559,7 +617,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => notifyScenario("Loaded NASA Case Study")}
+                    onClick={() => {
+                      simulationControls.injectScenario("co2_spike");
+                      notifyScenario("Loaded NASA Hypercapnia Case Study (CO₂ Spike active).");
+                    }}
                     className="px-2.5 py-1.5 rounded-lg glass-panel-subtle hover:border-sky-300 hover:bg-sky-50 text-secondary hover:text-sky-700 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
                     title="Load NASA case study"
                   >

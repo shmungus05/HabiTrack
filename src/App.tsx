@@ -10,6 +10,7 @@ import {
   FileText,
   LayoutDashboard,
   Lock,
+  MapPin,
   Radar,
   RefreshCw,
   Library as LibraryIcon,
@@ -29,15 +30,19 @@ import { OverviewView } from "./components/OverviewView";
 import { ResearchView } from "./components/ResearchView";
 import { StandbyAgentTrigger } from "./components/StandbyAgentTrigger";
 import { SymptomsView } from "./components/SymptomsView";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AlertsDeck } from "./features/alerts";
 import { SettingsView } from "./features/settings";
 import { HealthReportModal } from "./features/health-report";
 import { LibraryView } from "./features/library";
 import { useSimulationSandbox } from "./features/simulation";
+import { getAstronautDetectedLocation } from "./features/topology";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
+import { NavbarMissionControl } from "./components/NavbarMissionControl";
 import { fetchHealth } from "./services/api";
 import { useCohortStore } from "./stores/cohortStore";
+import { useMissionStore, useActiveMissionTime } from "./stores/missionStore";
 import {
   ASTRONAUT_LOCKED_COHORT_ID,
   useRoleStore,
@@ -110,21 +115,21 @@ function crewShortName(callsign?: string): string {
   return parts[parts.length - 1] ?? callsign;
 }
 
-function formatCockpitClock(date: Date): { mmt: string; utc: string } {
-  const mmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Yangon",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(date);
+function formatCockpitClock(date: Date): { utc: string; utcSeconds: string } {
   const utc = new Intl.DateTimeFormat("en-GB", {
     timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   }).format(date);
-  return { mmt, utc };
+  const utcSeconds = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+  return { utc, utcSeconds };
 }
 
 export default function App() {
@@ -152,6 +157,18 @@ export default function App() {
 
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
+  const [isSimulationBannerDismissed, setIsSimulationBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!isAnomalyActive) {
+      setIsSimulationBannerDismissed(false);
+    }
+  }, [isAnomalyActive]);
+
+  const activeScenarios = simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
+  const activeScenariosLabel = activeScenarios.length > 0
+    ? activeScenarios.map((s) => s.replace(/_/g, " ").toUpperCase()).join(" + ")
+    : activeScenario.replace(/_/g, " ").toUpperCase();
 
   const availableViews = useMemo(() => {
     if (isAstronaut) {
@@ -196,10 +213,37 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  const missionMode = useMissionStore((state) => state.mode);
+  const isSimulationPlaying = useMissionStore((state) => state.isPlaying);
+  const tickSimulation = useMissionStore((state) => state.tickSimulation);
+  const tickRealTime = useMissionStore((state) => state.tickRealTime);
+  const simTimeMs = useMissionStore((state) => state.simTimeMs);
+
+  // Global Real-Time Ticker for Normal Mode
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 10000);
+    const timer = window.setInterval(() => {
+      tickRealTime();
+      setNow(new Date());
+    }, 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [tickRealTime]);
+
+  // Global Mission Simulation Ticker (runs when in simulation mode & playing)
+  useEffect(() => {
+    if (missionMode !== "simulation" || !isSimulationPlaying) return;
+
+    let lastTime = Date.now();
+    const intervalMs = 100;
+
+    const timer = window.setInterval(() => {
+      const current = Date.now();
+      const deltaMs = current - lastTime;
+      lastTime = current;
+      tickSimulation(deltaMs);
+    }, intervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [missionMode, isSimulationPlaying, tickSimulation]);
 
   const navigate = (view: (typeof ALL_VIEWS)[number]) => {
     setActiveView(view.key);
@@ -293,15 +337,21 @@ export default function App() {
             </Badge>
             <div
               className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] 2xl:flex"
-              title="Synchronized Myanmar Time (MMT, UTC+06:30) and Coordinated Universal Time (UTC)"
+              title={
+                missionMode === "simulation"
+                  ? "Simulated Mission Operations Time"
+                  : "Station Flight Operations Time (Coordinated Universal Time / UTC)"
+              }
             >
-              <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-              <span className="font-semibold text-slate-900 tabular-nums">
-                {clock.mmt}
+              <Clock3 className={`h-3.5 w-3.5 ${missionMode === "simulation" ? "text-sky-600" : "text-emerald-600"}`} />
+              <span className="font-bold text-slate-900 tabular-nums">
+                {missionMode === "simulation"
+                  ? formatCockpitClock(new Date(simTimeMs)).utcSeconds
+                  : clock.utcSeconds}
               </span>
-              <span className="text-slate-500">MMT</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-500 tabular-nums">{clock.utc} UTC</span>
+              <span className={`font-semibold ${missionMode === "simulation" ? "text-sky-700" : "text-emerald-700"}`}>
+                {missionMode === "simulation" ? "SIM UTC" : "UTC"}
+              </span>
             </div>
 
             <Button
@@ -392,6 +442,9 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Global ISS Simulation Mode & Real-Time Flight Ops Control Bar */}
+        <NavbarMissionControl />
 
         {/* Mobile / Tablet Navigation Strip */}
         <nav
@@ -513,19 +566,30 @@ export default function App() {
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 flex items-center gap-3">
-              <AstronautAvatar
-                astronautId={activeAstronautId}
-                size="sm"
-                label={activeAstronaut?.callsign ?? activeAstronautId}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs font-semibold text-slate-900">
-                  {activeAstronaut?.callsign ?? activeAstronautId}
-                </p>
-                <p className="truncate text-[11px] text-slate-500">
-                  {activeAstronaut?.crew_role ?? "Crew"}
-                </p>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-2">
+              <div className="flex items-center gap-3">
+                <AstronautAvatar
+                  astronautId={activeAstronautId}
+                  size="sm"
+                  label={activeAstronaut?.callsign ?? activeAstronautId}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-xs font-semibold text-slate-900">
+                    {activeAstronaut?.callsign ?? activeAstronautId}
+                  </p>
+                  <p className="truncate text-[11px] text-slate-500">
+                    {activeAstronaut?.crew_role ?? "Crew"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto-Detected Astronaut Physical Compartment */}
+              <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-800 bg-emerald-50/90 border border-emerald-200/80 px-2 py-1 rounded-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span className="truncate">
+                  Station: <strong>{getAstronautDetectedLocation(activeAstronautId).moduleShortName}</strong> · {getAstronautDetectedLocation(activeAstronautId).location}
+                </span>
               </div>
             </div>
 
@@ -533,35 +597,44 @@ export default function App() {
               <div className="flex items-center justify-between font-mono font-medium text-slate-700">
                 <span>ISS / RR-1</span>
               </div>
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                MMT {clock.mmt} · UTC {clock.utc}
+              <p className="mt-0.5 text-[11px] text-slate-600 font-mono font-medium">
+                {clock.utcSeconds} UTC · Station Flight Time
               </p>
             </div>
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {isAnomalyActive ? (
+          {isAnomalyActive && !isSimulationBannerDismissed ? (
             <div className="mt-4 w-full px-4 sm:px-6">
               <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-2 text-xs text-amber-900 shadow-xs animate-fadeIn">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 animate-pulse" />
                   <span className="font-bold uppercase tracking-wider text-[11px] text-amber-950">
-                    Simulation Override Active: {activeScenario.replace(/_/g, " ").toUpperCase()}
+                    Simulation Override Active: {activeScenariosLabel}
                   </span>
                   <span className="text-amber-800 text-[11px] truncate hidden sm:inline">
-                    · Live injected telemetry reacting across deck
+                    · Live injected telemetry reacting across deck ({activeScenarios.length} {activeScenarios.length > 1 ? "anomalies" : "anomaly"} active)
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={simulationControls.resetNominal}
-                  className="p-1 rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/60 transition-colors cursor-pointer shrink-0"
-                  title="Close and reset to nominal"
-                  aria-label="Close and reset to nominal"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={simulationControls.resetNominal}
+                    className="px-2 py-0.5 rounded text-[11px] font-semibold text-amber-900 bg-amber-200/80 hover:bg-amber-300 transition-colors cursor-pointer"
+                  >
+                    Reset Nominal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSimulationBannerDismissed(true)}
+                    className="p-1 rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/60 transition-colors cursor-pointer"
+                    title="Close alert notification (simulation remains active)"
+                    aria-label="Close alert notification"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -584,45 +657,47 @@ export default function App() {
           ) : null}
 
           <main className="w-full flex-1 px-4 py-6 pb-20 sm:px-6 sm:py-7 sm:pb-20">
-            {activeView === "overview" ? (
-              <OverviewView
-                astronautId={activeAstronautId}
-                onOpenHealthImport={() => setIsHealthImportOpen(true)}
-                healthImportRevision={healthImportRevision}
-              />
-            ) : null}
-            {activeView === "timeline" ? (
-              <Suspense
-                fallback={
-                  <div className="card h-[calc(100vh-260px)] min-h-[640px] animate-pulse" />
-                }
-              >
-                <TimelineView
+            <ErrorBoundary>
+              {activeView === "overview" ? (
+                <OverviewView
                   astronautId={activeAstronautId}
                   onOpenHealthImport={() => setIsHealthImportOpen(true)}
                   healthImportRevision={healthImportRevision}
                 />
-              </Suspense>
-            ) : null}
-            {activeView === "symptoms" ? (
-              <SymptomsView astronautId={activeAstronautId} />
-            ) : null}
-            {activeView === "library" ? (
-              <LibraryView
-                astronautId={activeAstronautId}
-                onNavigateToSymptoms={(symptomCode) => {
-                  const targetView = ALL_VIEWS.find((v) => v.key === "symptoms");
-                  if (targetView) navigate(targetView);
-                }}
-              />
-            ) : null}
-            {activeView === "research" ? (
-              <ResearchView astronautId={activeAstronautId} />
-            ) : null}
-            {activeView === "alerts" ? (
-              <AlertsDeck astronautId={activeAstronautId} />
-            ) : null}
-            {activeView === "settings" ? <SettingsView /> : null}
+              ) : null}
+              {activeView === "timeline" ? (
+                <Suspense
+                  fallback={
+                    <div className="card h-[calc(100vh-260px)] min-h-[640px] animate-pulse" />
+                  }
+                >
+                  <TimelineView
+                    astronautId={activeAstronautId}
+                    onOpenHealthImport={() => setIsHealthImportOpen(true)}
+                    healthImportRevision={healthImportRevision}
+                  />
+                </Suspense>
+              ) : null}
+              {activeView === "symptoms" ? (
+                <SymptomsView astronautId={activeAstronautId} />
+              ) : null}
+              {activeView === "library" ? (
+                <LibraryView
+                  astronautId={activeAstronautId}
+                  onNavigateToSymptoms={(_symptomCode) => {
+                    const targetView = ALL_VIEWS.find((v) => v.key === "symptoms");
+                    if (targetView) navigate(targetView);
+                  }}
+                />
+              ) : null}
+              {activeView === "research" ? (
+                <ResearchView astronautId={activeAstronautId} />
+              ) : null}
+              {activeView === "alerts" ? (
+                <AlertsDeck astronautId={activeAstronautId} />
+              ) : null}
+              {activeView === "settings" ? <SettingsView /> : null}
+            </ErrorBoundary>
           </main>
         </div>
       </div>

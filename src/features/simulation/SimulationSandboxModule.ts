@@ -22,6 +22,7 @@ export interface SimulationThresholds {
 
 export interface SimulationState {
   activeScenario: AnomalyScenarioType;
+  activeScenarios: AnomalyScenarioType[];
   thresholds: SimulationThresholds;
   profileOverrides: {
     callsign: string;
@@ -34,6 +35,7 @@ export interface SimulationState {
 
 export interface SimulationControls {
   injectScenario: (scenario: AnomalyScenarioType) => void;
+  toggleScenario: (scenario: AnomalyScenarioType) => void;
   resetNominal: () => void;
   updateThresholds: (thresholds: Partial<SimulationThresholds>) => void;
   updateProfileOverrides: (profile: Partial<SimulationState["profileOverrides"]>) => void;
@@ -41,6 +43,7 @@ export interface SimulationControls {
 
 const INITIAL_STATE: SimulationState = {
   activeScenario: "nominal",
+  activeScenarios: [],
   thresholds: {
     co2WarningPpm: 3100,
     co2CriticalPpm: 4500,
@@ -80,14 +83,42 @@ function getSnapshot(): SimulationState {
 
 const controls: SimulationControls = {
   injectScenario: (scenario: AnomalyScenarioType) => {
+    if (scenario === "nominal") {
+      controls.resetNominal();
+      return;
+    }
+    const current = (currentState.activeScenarios || []).filter((s) => s !== "nominal");
+    const nextScenarios = current.includes(scenario) ? current : [...current, scenario];
     publish({
       ...currentState,
       activeScenario: scenario,
-      isAnomalyActive: scenario !== "nominal",
+      activeScenarios: nextScenarios,
+      isAnomalyActive: true,
+    });
+  },
+  toggleScenario: (scenario: AnomalyScenarioType) => {
+    if (scenario === "nominal") {
+      controls.resetNominal();
+      return;
+    }
+    const current = (currentState.activeScenarios || []).filter((s) => s !== "nominal");
+    const nextScenarios = current.includes(scenario)
+      ? current.filter((s) => s !== scenario)
+      : [...current, scenario];
+    publish({
+      ...currentState,
+      activeScenario: nextScenarios.length ? nextScenarios[nextScenarios.length - 1] : "nominal",
+      activeScenarios: nextScenarios,
+      isAnomalyActive: nextScenarios.length > 0,
     });
   },
   resetNominal: () => {
-    publish({ ...currentState, activeScenario: "nominal", isAnomalyActive: false });
+    publish({
+      ...currentState,
+      activeScenario: "nominal",
+      activeScenarios: [],
+      isAnomalyActive: false,
+    });
   },
   updateThresholds: (updates: Partial<SimulationThresholds>) => {
     publish({
@@ -102,6 +133,16 @@ const controls: SimulationControls = {
     });
   },
 };
+
+export function isScenarioActive(state: SimulationState, scenario: AnomalyScenarioType): boolean {
+  if (scenario === "nominal") {
+    return !state.isAnomalyActive || (state.activeScenarios || []).length === 0;
+  }
+  return (
+    (state.activeScenarios || []).includes(scenario) ||
+    state.activeScenario === scenario
+  );
+}
 
 export function useSimulationSandbox(): [SimulationState, SimulationControls] {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);

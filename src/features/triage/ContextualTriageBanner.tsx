@@ -117,7 +117,7 @@ export const ContextualTriageBanner: React.FC<ContextualTriageBannerProps> = ({
               {evaluation.detectedModule?.name ?? "General Spacecraft Complex"}
             </p>
             <p className="text-[11px] text-muted">
-              Sensors: {evaluation.detectedModule?.primarySensors.join(", ") ?? "ECLSS Primary Loop"}
+              Sensors: {(evaluation.detectedModule?.sensorLocations || evaluation.detectedModule?.primarySensors || []).join(", ") || "ECLSS Primary Loop"}
             </p>
           </div>
 
