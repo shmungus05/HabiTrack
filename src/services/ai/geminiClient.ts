@@ -9,7 +9,7 @@ const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const SYSTEM_INSTRUCTION = `
-You are Habitat Trace, an onboard clinical decision-support co-pilot for ISS Expedition 71.
+You are HabiTrack, an onboard clinical decision-support co-pilot for ISS Expedition 71.
 You assist astronauts, flight surgeons, and mission specialists in monitoring environmental factors, vital signs, and NASA Flight Rules.
 
 Guidelines:
@@ -32,7 +32,7 @@ export async function generateGeminiRagResponse(
 ): Promise<GeminiResponse> {
   const apiKey =
     (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ||
-    (typeof window !== "undefined" ? localStorage.getItem("habitat_trace_gemini_api_key") : null);
+    (typeof window !== "undefined" ? localStorage.getItem("habitrack_gemini_api_key") : null);
 
   if (!apiKey) {
     throw new Error("No Gemini API key available");
@@ -144,7 +144,7 @@ export async function generateClinicalTriageAI(params: {
 }): Promise<DynamicTriageAIResponse> {
   const apiKey =
     (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ||
-    (typeof window !== "undefined" ? localStorage.getItem("habitat_trace_gemini_api_key") : null);
+    (typeof window !== "undefined" ? localStorage.getItem("habitrack_gemini_api_key") : null);
 
   if (!apiKey) {
     throw new Error("No Gemini API key available for dynamic clinical triage");

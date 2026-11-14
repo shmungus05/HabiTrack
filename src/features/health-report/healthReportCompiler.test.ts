@@ -333,7 +333,7 @@ check(
   "every pdf row matches its column count",
 );
 check(
-  healthReportPdfFilename(report).startsWith("Habitat_Trace_Health_Report_"),
+  healthReportPdfFilename(report).startsWith("HabiTrack_Health_Report_"),
   "pdf filename carries the health report label",
 );
 check(healthReportPdfFilename(report).endsWith(".pdf"), "pdf filename uses .pdf");

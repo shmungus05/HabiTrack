@@ -119,7 +119,7 @@ const DEFAULT_SNAPSHOT: TelemetrySnapshot = {
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: "welcome-msg",
   sender: "assistant",
-  text: "Hello, I am Habitat Trace Standby Assistant. Ask me directly about any symptoms, telemetry excursions, or mission procedures. I will provide direct answers grounded in certified NASA Flight Rules, live 5-factor compartment telemetry, and research documents.",
+  text: "Hello, I am HabiTrack Standby Assistant. Ask me directly about any symptoms, telemetry excursions, or mission procedures. I will provide direct answers grounded in certified NASA Flight Rules, live 5-factor compartment telemetry, and research documents.",
   timestamp: "Ready",
   snapshot: DEFAULT_SNAPSHOT,
 };
@@ -181,7 +181,7 @@ function recordSymptomToLocalDiary(
   snapshot: TelemetrySnapshot
 ) {
   try {
-    const raw = localStorage.getItem("habitat_trace_symptom_diary_v3");
+    const raw = localStorage.getItem("habitrack_symptom_diary_v3");
     const current = raw ? JSON.parse(raw) : [];
     const newEntry = {
       id: `sym-${Date.now()}`,
@@ -193,9 +193,9 @@ function recordSymptomToLocalDiary(
       description: symptomText,
       environmentalFactor: `CO₂: ${snapshot.co2Ppm} PPM · Rad: ${snapshot.radiationRateMGy} mGy/d · Temp: ${snapshot.tempC} °C`,
     };
-    localStorage.setItem("habitat_trace_symptom_diary_v3", JSON.stringify([newEntry, ...current]));
+    localStorage.setItem("habitrack_symptom_diary_v3", JSON.stringify([newEntry, ...current]));
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("habitat_trace_symptom_logged", { detail: newEntry }));
+      window.dispatchEvent(new CustomEvent("habitrack_symptom_logged", { detail: newEntry }));
     }
   } catch {
     // Best-effort local storage sync

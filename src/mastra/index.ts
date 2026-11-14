@@ -1,5 +1,5 @@
 /**
- * Central Mastra orchestrator for HABITAT TRACE.
+ * Central Mastra orchestrator for HabiTrack.
  * 100% Pure TypeScript, zero-backend, browser-native agent & workflow engine.
  */
 

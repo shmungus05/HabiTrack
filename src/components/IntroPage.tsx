@@ -1,7 +1,7 @@
 /**
  * IntroPage: Mission Path Selection screen.
  * Fits entirely within a single viewport (100vh) without scrolling,
- * matching the StarBound / Habitat Trace operational design mockup.
+ * matching the StarBound / HabiTrack operational design mockup.
  */
 
 import { Radio, Rocket } from "lucide-react";
@@ -50,7 +50,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
             <Rocket className="h-2.5 w-2.5" />
           </span>
           <span className="font-bold tracking-tight text-xs">
-            StarBound · Habitat Trace
+            StarBound · HabiTrack
           </span>
         </div>
 

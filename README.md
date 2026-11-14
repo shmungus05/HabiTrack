@@ -1,8 +1,8 @@
-# Habitat Trace: Evidence-Grounded Spaceflight Health Intelligence
+# HabiTrack: Evidence-Grounded Spaceflight Health Intelligence
 
 ## System Overview
 
-Habitat Trace is an offline-first operational health intelligence and personalized environmental exposure analysis workstation designed for long-duration human spaceflight (e.g., International Space Station expeditions and lunar/Mars transit missions).
+HabiTrack is an offline-first operational health intelligence and personalized environmental exposure analysis workstation designed for long-duration human spaceflight (e.g., International Space Station expeditions and lunar/Mars transit missions).
 
 The system is built as a **100% Pure TypeScript + React 18 + Vite** application:
 - **Zero Python Dependencies:** Runs entirely in modern browsers or static hosting environments (Vercel, Netlify, Cloudflare Pages, GitHub Pages) without needing a separate backend server.
@@ -59,7 +59,7 @@ No environment variables or serverless Python runtimes are required.
 
 ```mermaid
 flowchart TD
-    subgraph Client["Habitat Trace Single Page Application (React 18 + TypeScript + Vite)"]
+    subgraph Client["HabiTrack Single Page Application (React 18 + TypeScript + Vite)"]
         SHELL["App Shell & Navigation<br/>(Intro Page · Role Selection)"]
         ROLES["Role State<br/>(Astronaut ASTRO-01 vs Flight Surgeon)"]
         VIEWS["Overview · Timeline · Symptoms · Research · Alerts · Settings"]

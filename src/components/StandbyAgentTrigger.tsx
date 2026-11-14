@@ -137,7 +137,7 @@ export const StandbyAgentTrigger: React.FC = () => {
             : "border-slate-200 hover:border-slate-300"
         }`}
         onClick={() => openDrawer(latchedRule ? "checklists" : "evidence")}
-        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open Habitat Trace AI (Ctrl+K)"}
+        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open HabiTrack AI (Ctrl+K)"}
       >
         <span
           className={`w-2 h-2 rounded-full shrink-0 ${
@@ -146,7 +146,7 @@ export const StandbyAgentTrigger: React.FC = () => {
         />
 
         <span className="text-xs font-semibold tracking-tight text-slate-900 whitespace-nowrap">
-          Habitat Trace AI
+          HabiTrack AI
         </span>
 
         {latchedRule && (

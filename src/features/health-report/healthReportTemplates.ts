@@ -110,7 +110,7 @@ export function generateHealthReportHtml(report: HealthReport): string {
 
   return `<article id="health-report-document" style="font-family:'JetBrains Mono',Consolas,monospace;color:#111;background:#fff;padding:4px;">
   <header style="border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;">
-    <p style="margin:0;font-size:9pt;letter-spacing:0.14em;text-transform:uppercase;color:#555;">HABITAT TRACE · Offline Clinical Decision Support</p>
+    <p style="margin:0;font-size:9pt;letter-spacing:0.14em;text-transform:uppercase;color:#555;">HABITRACK · Offline Clinical Decision Support</p>
     <h1 style="margin:4px 0 2px;font-size:18pt;line-height:1.2;">Clinical Health Report</h1>
     <p style="margin:0;font-size:9.5pt;color:#444;">${escapeHtml(metadata.reportId)} · generated ${escapeHtml(metadata.generatedAt)}</p>
   </header>

@@ -1,4 +1,4 @@
-# Habitat Trace Domain Model
+# HabiTrack Domain Model
 
 Offline-first astronaut health intelligence and environmental exposure analysis workstation supporting crew medical decision-making during spaceflight missions.
 
