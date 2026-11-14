@@ -11,6 +11,7 @@ import { create } from "zustand";
 export type UserRole = "astronaut" | "flight_surgeon";
 
 const STORAGE_KEY = "wayfinder_active_role";
+const SELECTION_STORAGE_KEY = "wayfinder_role_selected";
 const DEFAULT_ROLE: UserRole = "flight_surgeon";
 
 /** Astronaut perspective is locked to the logged crewmember (Commander Vance). */
@@ -32,6 +33,17 @@ function readPersistedRole(): UserRole {
   }
 }
 
+function readPersistedSelection(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(SELECTION_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 function persistRole(role: UserRole): void {
   if (typeof window === "undefined") {
     return;
@@ -43,14 +55,33 @@ function persistRole(role: UserRole): void {
   }
 }
 
+function persistSelection(selected: boolean): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    if (selected) {
+      window.localStorage.setItem(SELECTION_STORAGE_KEY, "true");
+    } else {
+      window.localStorage.removeItem(SELECTION_STORAGE_KEY);
+    }
+  } catch {
+    /* Ignore quota failures */
+  }
+}
+
 interface RoleState {
   role: UserRole;
+  hasSelectedRole: boolean;
   setRole: (role: UserRole) => void;
+  selectRoleAndEnter: (role: UserRole) => void;
+  openRoleSelector: () => void;
   toggleRole: () => void;
 }
 
 export const useRoleStore = create<RoleState>((set, get) => ({
   role: readPersistedRole(),
+  hasSelectedRole: readPersistedSelection(),
 
   setRole: (role: UserRole) => {
     if (!isUserRole(role) || get().role === role) {
@@ -58,6 +89,19 @@ export const useRoleStore = create<RoleState>((set, get) => ({
     }
     persistRole(role);
     set({ role });
+  },
+
+  selectRoleAndEnter: (role: UserRole) => {
+    if (!isUserRole(role)) {
+      return;
+    }
+    persistRole(role);
+    persistSelection(true);
+    set({ role, hasSelectedRole: true });
+  },
+
+  openRoleSelector: () => {
+    set({ hasSelectedRole: false });
   },
 
   toggleRole: () => {

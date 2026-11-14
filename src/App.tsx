@@ -31,6 +31,7 @@ import { CommsStatusChip } from "./features/comms";
 import { DossierModal } from "./features/dossier";
 import { useSimulationSandbox } from "./features/simulation";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
+import { IntroPage } from "./components/IntroPage";
 import { fetchHealth } from "./services/api";
 import { useCohortStore } from "./stores/cohortStore";
 import {
@@ -39,16 +40,30 @@ import {
 } from "./stores/roleStore";
 import type { HealthStatus } from "./types/api";
 
-const VIEWS = [
-  { key: "overview", label: "Overview", icon: LayoutDashboard, path: "/" },
-  { key: "timeline", label: "Timeline", icon: Activity, path: "/timeline" },
-  { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms" },
-  { key: "research", label: "Research", icon: BookOpen, path: "/research" },
-  { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts" },
-  { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings" },
-] as const;
+export type ViewKey =
+  | "overview"
+  | "timeline"
+  | "symptoms"
+  | "research"
+  | "alerts"
+  | "settings";
 
-type ViewKey = (typeof VIEWS)[number]["key"];
+interface ViewDefinition {
+  key: ViewKey;
+  label: string;
+  icon: typeof LayoutDashboard;
+  path: string;
+  surgeonOnly?: boolean;
+}
+
+const ALL_VIEWS: readonly ViewDefinition[] = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard, path: "/", surgeonOnly: false },
+  { key: "timeline", label: "Timeline", icon: Activity, path: "/timeline", surgeonOnly: false },
+  { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms", surgeonOnly: false },
+  { key: "research", label: "Research", icon: BookOpen, path: "/research", surgeonOnly: true },
+  { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts", surgeonOnly: false },
+  { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: true },
+];
 
 const TimelineView = lazy(() =>
   import("./components/TimelineView").then((module) => ({
@@ -58,7 +73,7 @@ const TimelineView = lazy(() =>
 
 function viewFromPath(pathname: string): ViewKey {
   const segment = pathname.split("/").filter(Boolean)[0];
-  const match = VIEWS.find((view) => view.key === segment);
+  const match = ALL_VIEWS.find((view) => view.key === segment);
   return match?.key ?? "overview";
 }
 
@@ -126,10 +141,19 @@ export default function App() {
 
   const role = useRoleStore((state) => state.role);
   const setRole = useRoleStore((state) => state.setRole);
+  const hasSelectedRole = useRoleStore((state) => state.hasSelectedRole);
+  const openRoleSelector = useRoleStore((state) => state.openRoleSelector);
   const isAstronaut = role === "astronaut";
 
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
+
+  const availableViews = useMemo(() => {
+    if (isAstronaut) {
+      return ALL_VIEWS.filter((v) => !v.surgeonOnly);
+    }
+    return ALL_VIEWS;
+  }, [isAstronaut]);
 
   const activeAstronaut = useMemo(
     () => astronauts.find((astronaut) => astronaut.astronaut_id === activeAstronautId),
@@ -151,6 +175,16 @@ export default function App() {
     }
   }, [isAstronaut, activeAstronautId, selectAstronaut]);
 
+  // When in astronaut perspective, redirect if on surgeon-restricted views
+  useEffect(() => {
+    if (isAstronaut && (activeView === "research" || activeView === "settings")) {
+      setActiveView("overview");
+      if (window.location.pathname !== "/") {
+        window.history.replaceState({}, "", "/");
+      }
+    }
+  }, [isAstronaut, activeView]);
+
   useEffect(() => {
     const onPopState = () => setActiveView(viewFromPath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
@@ -162,7 +196,7 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const navigate = (view: (typeof VIEWS)[number]) => {
+  const navigate = (view: (typeof ALL_VIEWS)[number]) => {
     setActiveView(view.key);
     if (window.location.pathname !== view.path) {
       window.history.pushState({}, "", view.path);
@@ -180,9 +214,13 @@ export default function App() {
   const chunkCount = health?.vector_store_chunks ?? 0;
   const clock = useMemo(() => formatCockpitClock(now), [now]);
   const activeViewMeta = useMemo(
-    () => VIEWS.find((v) => v.key === activeView) ?? VIEWS[0],
+    () => ALL_VIEWS.find((v) => v.key === activeView) ?? ALL_VIEWS[0],
     [activeView],
   );
+
+  if (!hasSelectedRole) {
+    return <IntroPage onSelectRole={() => setActiveView("overview")} />;
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-canvas text-slate-700 font-sans selection:bg-sky-200/60">
@@ -212,36 +250,29 @@ export default function App() {
             </div>
           </div>
 
-          <div
-            role="group"
-            aria-label="Active perspective"
-            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5"
-          >
+          {/* Mission Path Active Perspective Indicator & Selector */}
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              aria-pressed={isAstronaut}
-              onClick={() => setRole("astronaut")}
-              title="Astronaut perspective: glanceable status and quick symptom entry"
-              className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
+              onClick={() => openRoleSelector()}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold cursor-pointer transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] ${
                 isAstronaut
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
               }`}
+              title="Click to open Mission Path selection"
             >
-              Astronaut
-            </button>
-            <button
-              type="button"
-              aria-pressed={!isAstronaut}
-              onClick={() => setRole("flight_surgeon")}
-              title="Flight Surgeon perspective: full diagnostic depth"
-              className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
-                !isAstronaut
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Flight Surgeon
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isAstronaut ? "bg-sky-500" : "bg-emerald-500"
+                } animate-pulse`}
+              />
+              <span className="tracking-tight font-bold">
+                {isAstronaut ? "Field Mission · Astronaut" : "Medical Ops · Flight Surgeon"}
+              </span>
+              <span className="rounded-md bg-white border border-slate-200/80 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 shadow-2xs">
+                Switch
+              </span>
             </button>
           </div>
 
@@ -364,7 +395,7 @@ export default function App() {
           aria-label="Flight deck navigation"
           className="flex items-center gap-1.5 overflow-x-auto border-t border-slate-100 px-4 py-2 lg:hidden"
         >
-          {VIEWS.map((view) => {
+          {availableViews.map((view) => {
             const Icon = view.icon;
             const selected = activeView === view.key;
             return (
@@ -399,7 +430,7 @@ export default function App() {
                 Flight Deck Views
               </p>
               <nav className="mt-2 space-y-1">
-                {VIEWS.map((view) => {
+                {availableViews.map((view) => {
                   const Icon = view.icon;
                   const selected = activeView === view.key;
                   return (
