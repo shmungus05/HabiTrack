@@ -10,7 +10,6 @@ import {
   FileText,
   LayoutDashboard,
   Lock,
-  Radar,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldAlert,
@@ -161,8 +160,12 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-border bg-canvas/90 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3.5">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-elevated text-foreground">
-              <Radar className="h-4 w-4" />
+            <span className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-elevated overflow-hidden p-0.5">
+              <img
+                src="/Logo.png"
+                alt="WAYFINDER Logo"
+                className="h-full w-full object-contain rounded-md"
+              />
             </span>
             <div>
               <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
