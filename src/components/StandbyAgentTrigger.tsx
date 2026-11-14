@@ -133,12 +133,10 @@ export const StandbyAgentTrigger: React.FC = () => {
       <button
         type="button"
         onClick={() => openDrawer("chat")}
-        className={`group relative flex items-center gap-2.5 p-2 pr-3.5 rounded-full bg-white/95 backdrop-blur-md border transition-all duration-200 cursor-pointer shadow-elevated hover:shadow-lg active:scale-95 ${
-          latchedRule
-            ? "border-amber-300 hover:border-amber-400"
-            : "border-slate-200 hover:border-slate-300"
-        } ${isRecording ? "ring-2 ring-red-500/50 border-red-500" : ""}`}
-        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open HabiTrack AI (Ctrl+K · Alt+V Voice)"}
+        className={`group relative flex items-center gap-2.5 p-2 pr-3.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 hover:border-slate-300 transition-all duration-200 cursor-pointer shadow-elevated hover:shadow-lg active:scale-95 ${
+          isRecording ? "ring-2 ring-red-500/50 border-red-500" : ""
+        }`}
+        title="Open HabiTrack AI (Ctrl+K · Alt+V Voice)"
       >
         {/* Dynamic Waveform Energy Aura during Voice Dictation */}
         {isRecording && (
@@ -166,24 +164,11 @@ export const StandbyAgentTrigger: React.FC = () => {
             {isRecording ? "Listening..." : "HabiTrack AI"}
           </span>
 
-          {latchedRule && !isRecording && (
-            <span className="px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-mono font-bold">
-              {latchedRule.rule_id}
-            </span>
-          )}
-
           <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">
             Ctrl K
           </kbd>
         </div>
 
-        {/* Latched Flight Rule Notification Indicator */}
-        {latchedRule && (
-          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 border-2 border-white" />
-          </span>
-        )}
       </button>
     </aside>
   );

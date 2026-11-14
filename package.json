@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "tsc": "tsc --noEmit",
-    "test": "node --experimental-strip-types src/features/health-report/healthReportCompiler.test.ts",
+    "test": "node --experimental-strip-types src/features/health-report/healthReportCompiler.test.ts && node --experimental-strip-types src/features/library/library.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

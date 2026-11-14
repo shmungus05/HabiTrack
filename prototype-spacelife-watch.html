@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpaceLife Library · Watch Prototype | HabiTrack</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+              950: '#082f49',
+            },
+            space: {
+              900: '#0b0f19',
+              850: '#111726',
+              800: '#172033',
+              700: '#1e293b',
+              600: '#334155',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #07090e;
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.45);
+    }
+    .video-glow {
+      box-shadow: 0 0 60px -15px rgba(14, 165, 233, 0.25);
+    }
+    @keyframes pulseSlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.02); }
+    }
+    .animate-pulse-slow {
+      animation: pulseSlow 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#07090e] text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
+
+  <!-- TOP HUD HEADER -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-[#07090e]/90 backdrop-blur-xl px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-sm">
+          HT
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black tracking-wider uppercase text-sky-400">HabiTrack · SpaceLife</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-300 border border-sky-500/20">PROTOTYPE</span>
+          </div>
+          <h1 class="text-sm font-bold text-white tracking-tight">Astronaut Watch & Instructional Video Hub</h1>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Crew & System Indicators -->
+    <div class="flex items-center gap-4 text-xs font-mono">
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>ISS EXP-71</span>
+        <span class="text-slate-600">|</span>
+        <span class="text-sky-400">CDR M. Vance</span>
+      </div>
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-950/40 border border-sky-800/50 text-sky-300">
+        <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <span class="font-bold text-[11px] uppercase tracking-wider">Offline Cache: 100% Ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ROOT PROTOTYPE VIEW MOUNT -->
+  <main id="app-root" class="flex-1 w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 pb-32">
+    <!-- Dynamic Variant Container will be rendered here -->
+  </main>
+
+  <!-- FLOATING PROTOTYPE SWITCHER (Mandatory per /prototype skill) -->
+  <aside class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 rounded-full bg-slate-900/95 border border-sky-500/40 shadow-2xl shadow-sky-950/80 backdrop-blur-2xl text-xs font-medium">
+    <button id="btn-prev-variant" class="p-2 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer" title="Previous variant (Left Arrow)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+
+    <div class="flex items-center gap-1 px-2">
+      <button data-variant="A" class="variant-pill-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer">
+        A: Field HUD
+      </button>
+      <button data-variant="B" class="variant-pill-btn px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer">
+        B: Perplexity Watch
+      </button>
+      <button data-variant="C" class="variant-pill-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer">
+        C: Tactical Playbook
+      </button>
+    </div>
+
+    <button id="btn-next-variant" class="p-2 rounded-full hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer" title="Next variant (Right Arrow)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  </aside>
+
+  <!-- VIDEO MODAL CONTAINER -->
+  <div id="video-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 sm:p-8 animate-fadeIn">
+    <div id="video-modal-content" class="w-full max-w-5xl rounded-[32px] bg-slate-900 border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span id="modal-category" class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/30">Category</span>
+          <h3 id="modal-title" class="text-base font-bold text-white tracking-tight">Video Title</h3>
+        </div>
+        <button id="btn-close-modal" class="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <!-- Modal Body -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <div id="modal-video-container" class="relative aspect-video rounded-2xl bg-black overflow-hidden border border-slate-800 flex items-center justify-center group">
+          <!-- Mock Interactive Video Screen -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30 pointer-events-none"></div>
+          <div class="text-center p-6 space-y-3 z-10">
+            <div class="w-16 h-16 rounded-full bg-sky-500/90 text-white flex items-center justify-center mx-auto shadow-xl shadow-sky-500/40 group-hover:scale-110 transition-transform cursor-pointer">
+              <svg class="w-8 h-8 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-200">Interactive High-Definition Video Simulation</p>
+            <p class="text-xs text-slate-400 font-mono">Offline cached stream from NASA HRP life sciences repository</p>
+          </div>
+          <!-- Scrub Controls -->
+          <div class="absolute bottom-3 left-4 right-4 flex items-center gap-3 z-20 text-xs font-mono text-slate-300">
+            <span class="text-sky-400 font-bold">01:42</span>
+            <div class="flex-1 h-1.5 bg-slate-700/80 rounded-full overflow-hidden cursor-pointer">
+              <div class="w-1/3 h-full bg-sky-400 rounded-full"></div>
+            </div>
+            <span>04:15</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-4">
+            <h4 class="text-xs font-mono uppercase tracking-wider text-slate-400">Step-by-Step Execution Protocol</h4>
+            <div id="modal-instructions" class="space-y-2"></div>
+          </div>
+          <div class="space-y-4">
+            <h4 class="text-xs font-mono uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Flight Surgeon Safety Notes
+            </h4>
+            <div id="modal-safety" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT: DATA MODEL & PROTOTYPE RUNTIME -->
+  <script>
+    // 1. DATA REPOSITORY (per feature/library.md specification)
+    const SPACE_LIFE_RESOURCES = [
+      {
+        id: "res-01",
+        title: "ARED Microgravity Squat & Heel-Raise Technique",
+        category: "exercise",
+        contentType: "video",
+        durationMinutes: 4.5,
+        sourceName: "NASA JSC Exercise Countermeasures",
+        approvalStatus: "approved",
+        badge: "Mandatory Daily Countermeasure",
+        tags: ["musculoskeletal", "bone-density", "ared"],
+        summary: "Proper harness alignment and bar lock engagement to prevent lumbar shear stress during microgravity axial loading.",
+        posterGradient: "from-sky-900 to-indigo-950",
+        instructions: [
+          "Verify Main Arm Bar is latched at Station 4 prior to stepping into footplate.",
+          "Tighten waist belt harness snugly below iliac crest; confirm zero vertical play.",
+          "Engage vacuum cylinder inertial compensator knob to nominal mission load (140 kg equivalent).",
+          "Maintain upright spine posture with eyes fixed on Node 3 bulkhead marker during descent.",
+          "Perform 3 sets of 10 repetitions with a 2-second eccentric tempo."
+        ],
+        safetyNotes: [
+          "Do not release bar lock until feet are fully flat on the load plates.",
+          "Abort exercise if spinal compression pain exceeds mild discomfort; report to Surgeon."
+        ],
+        chapters: [
+          { time: "00:00", title: "Harness Fit & Sensor Calibration" },
+          { time: "01:15", title: "Footplate Positioning & Stance" },
+          { time: "02:30", title: "Eccentric Deceleration Mechanics" },
+          { time: "03:45", title: "Emergency Release & Lock-Off" }
+        ]
+      },
+      {
+        id: "res-02",
+        title: "Space Motion Sickness (SMS) Vestibular Adaptation",
+        category: "adaptation",
+        contentType: "video",
+        durationMinutes: 3.2,
+        sourceName: "NASA Human Research Program (HRP)",
+        approvalStatus: "approved",
+        badge: "Critical Adaptation Protocol",
+        tags: ["vestibular", "neuro-ocular", "sms", "dizziness"],
+        summary: "Targeted head-eye coordination drills to accelerate otolith-canal re-weighting during Flight Days 1-4.",
+        posterGradient: "from-teal-950 to-slate-900",
+        instructions: [
+          "Anchor feet in handrail restraint to minimize tactile drift.",
+          "Fixate gaze on a stationary cabin bolt 1.5 meters directly ahead.",
+          "Perform gentle ±30° yaw (horizontal) head rotations while holding visual target lock.",
+          "Pause for 15 seconds if nausea or pallor escalates.",
+          "Transition to gentle pitch (vertical) tilts at 0.5 Hz frequency for 2 minutes."
+        ],
+        safetyNotes: [
+          "Avoid rapid head pitch movements during translation between modules.",
+          "Keep emesis containment bag clipped to flight suit chest ring during first 72 hours."
+        ],
+        chapters: [
+          { time: "00:00", title: "Physiological Mechanism of Otolith Misalignment" },
+          { time: "01:00", title: "Visual Fixation Drills (Horizontal)" },
+          { time: "02:10", title: "Pitch Damping & Recovery Position" }
+        ]
+      },
+      {
+        id: "res-03",
+        title: "Node 2 Harmony Sleep Station Rigging & Noise Attenuation",
+        category: "sleep",
+        contentType: "video",
+        durationMinutes: 5.0,
+        sourceName: "Expedition Medical Ops",
+        approvalStatus: "approved",
+        badge: "Circadian Alignment",
+        tags: ["sleep", "circadian", "acoustic", "cq"],
+        summary: "Optimal tether tensioning, airflow acoustic duct positioning, and eye-shield rigging for restful REM sleep.",
+        posterGradient: "from-purple-950 to-slate-950",
+        instructions: [
+          "Verify crew quarter intake fan filter is free of lint build-up; confirm 55 dB acoustic baffle alignment.",
+          "Attach four bungee anchor points of sleeping bag to cabin bulkhead clips with 10% slack.",
+          "Position forehead band gently across brow to prevent floating involuntary arm drift.",
+          "Set cabin ambient lighting spectrum to 450nm-attenuated warm amber 45 minutes prior to sleep."
+        ],
+        safetyNotes: [
+          "Ensure fresh ventilation duct outlet is aimed directly at face to prevent local CO2 pocket buildup.",
+          "If waking with throbbing headache, check duct airflow immediately before reporting."
+        ],
+        chapters: [
+          { time: "00:00", title: "Acoustic Dampening Inspection" },
+          { time: "01:45", title: "Sleeping Bag 4-Point Rigging" },
+          { time: "03:30", title: "CO2 Pocket Ventilation Verification" }
+        ]
+      },
+      {
+        id: "res-04",
+        title: "Microgravity Foreign Body Eye Irrigation & Corneal Check",
+        category: "medical",
+        contentType: "guide",
+        durationMinutes: 3.8,
+        sourceName: "ISS Chief Medical Officer Guide",
+        approvalStatus: "approved",
+        badge: "First Aid Procedure",
+        tags: ["first-aid", "ocular", "emergency", "symptom"],
+        summary: "Using suction-assisted saline flush kit to safely evacuate floating debris from the eye without cabin liquid spill.",
+        posterGradient: "from-rose-950 to-slate-950",
+        instructions: [
+          "Retrieve Ophthalmic Emergency Kit from Crew Care Bag in Columbus Module.",
+          "Seat eye cup firmly against orbital rim; verify seal prevents fluid capillary escape.",
+          "Connect gentle suction syringe to lower evacuation port.",
+          "Instill 15 mL sterile saline through top injection port while blinking continuously.",
+          "Inspect eyelid with handheld cobalt blue light and fluorescein strip if scratch sensation persists."
+        ],
+        safetyNotes: [
+          "Do not rub eye with gloved or bare fingers; micro-abrasions worsen rapidly in microgravity.",
+          "Report any persistent foreign body sensation to Flight Surgeon immediately."
+        ],
+        chapters: [
+          { time: "00:00", title: "Kit Inventory & Suction Setup" },
+          { time: "01:20", title: "Orbital Rim Seal Application" },
+          { time: "02:40", title: "Flush & Flourescein Evaluation" }
+        ]
+      },
+      {
+        id: "res-05",
+        title: "ISS Closed-Loop Food Rehydration & Nutrition Prep",
+        category: "nutrition",
+        contentType: "video",
+        durationMinutes: 2.5,
+        sourceName: "NASA Food Technology Lab",
+        approvalStatus: "approved",
+        badge: "Daily Living Tip",
+        tags: ["nutrition", "galley", "rehydration"],
+        summary: "Precise needle volume dosing for retort pouches to ensure complete mineral and electrolyte reconstitution.",
+        posterGradient: "from-amber-950 to-slate-950",
+        instructions: [
+          "Inspect foil pouch seal for pinhole breaches or vacuum loss.",
+          "Insert galley water dispenser needle into septum valve until positive detent click.",
+          "Select exact water volume (e.g. 150 mL hot at 75°C); press dispense button once.",
+          "Knead pouch thoroughly for 45 seconds to dissolve electrolyte clusters.",
+          "Insert into food warmer slot for 15 minutes before consuming."
+        ],
+        safetyNotes: [
+          "Check septum seal for hot water droplets before undocking needle to avoid skin scalding.",
+          "Ensure sodium intake remains balanced per daily mission flight rule allotment."
+        ],
+        chapters: [
+          { time: "00:00", title: "Septum Valve Coupling" },
+          { time: "01:10", title: "Automated Volume Dosing" },
+          { time: "02:00", title: "Kneading & Thermal Warmer Stacking" }
+        ]
+      },
+      {
+        id: "res-06",
+        title: "T2 Colbert Treadmill Bungee Harness Calibration",
+        category: "exercise",
+        contentType: "video",
+        durationMinutes: 4.0,
+        sourceName: "ESA EAC Astronaut Training",
+        approvalStatus: "approved",
+        badge: "Cardiovascular Health",
+        tags: ["treadmill", "cardio", "t2", "aerobic"],
+        summary: "Calibrating subjective harness comfort vs 70% body weight loading for daily aerobic endurance runs.",
+        posterGradient: "from-blue-950 to-slate-950",
+        instructions: [
+          "Inspect bungee cords for elastomeric wear or fiber fraying.",
+          "Attach harness clips to T2 carriage bungees with click confirmation.",
+          "Step onto belt; verify load indicator reads between 65% and 75% Earth body weight.",
+          "Begin with a 3-minute warm-up walk at 4.5 km/h before initiating 25-minute running interval."
+        ],
+        safetyNotes: [
+          "Always tether emergency stop magnetic clip to waist strap before belt start.",
+          "Stop immediately if vibration isolation dampers bottom out against the deck."
+        ],
+        chapters: [
+          { time: "00:00", title: "Bungee Tension Inspection" },
+          { time: "01:30", title: "Digital Load Cell Tare" },
+          { time: "02:45", title: "Stride & Cadence Monitoring" }
+        ]
+      }
+    ];
+
+    // 2. STATE REPOSITORY
+    let state = {
+      variant: "B", // Default to user's favorite Perplexity aesthetic
+      selectedCategory: "all",
+      searchQuery: "",
+      activeResourceId: "res-01",
+      bookmarkedIds: new Set(["res-01", "res-02"]),
+      completedSteps: new Set(),
+      activeChapterIndex: 0
+    };
+
+    // Read initial variant from URL param if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialVariant = urlParams.get("variant");
+    if (initialVariant && ["A", "B", "C"].includes(initialVariant.toUpperCase())) {
+      state.variant = initialVariant.toUpperCase();
+    }
+
+    // 3. RENDERERS FOR THE THREE VARIANTS
+
+    /**
+     * VARIANT A: Field HUD & Split Workspace
+     * Operational, high-density, mission-mode console layout with instant chapter scrub.
+     */
+    function renderVariantA() {
+      const activeRes = SPACE_LIFE_RESOURCES.find(r => r.id === state.activeResourceId) || SPACE_LIFE_RESOURCES[0];
+      const filtered = getFilteredResources();
+
+      return `
+        <div class="space-y-4">
+          <!-- Sub-header banner -->
+          <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                <h2 class="text-lg font-black tracking-tight text-white uppercase font-mono">Variant A · Field HUD & Split Workspace</h2>
+              </div>
+              <p class="text-xs text-slate-400">High-density mission console. Select video on left, play with active checklist on right.</p>
+            </div>
+            <!-- Quick Category Badges -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${renderCategoryPills(true)}
+            </div>
+          </div>
+
+          <!-- Main Split Layout -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[680px]">
+            <!-- LEFT COLUMN: Search & Queue (4 cols) -->
+            <div class="lg:col-span-5 space-y-3 flex flex-col">
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="search-input" 
+                  value="${state.searchQuery}" 
+                  placeholder="Filter instructional guides, exercises, medical..."
+                  class="w-full px-4 py-2.5 pl-10 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                />
+                <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              <!-- Queue List -->
+              <div class="flex-1 space-y-2 overflow-y-auto max-h-[620px] custom-scrollbar pr-1">
+                ${filtered.map(res => `
+                  <div 
+                    onclick="selectResource('${res.id}')"
+                    class="p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      res.id === state.activeResourceId 
+                        ? 'bg-sky-950/60 border-sky-500/80 shadow-lg shadow-sky-950/50' 
+                        : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-800/50 hover:border-slate-700'
+                    }"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
+                        res.category === 'exercise' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' :
+                        res.category === 'medical' ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' :
+                        res.category === 'sleep' ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20' :
+                        'bg-sky-500/10 text-sky-300 border border-sky-500/20'
+                      }">
+                        ${res.category}
+                      </span>
+                      <span class="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                        <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        ${res.durationMinutes}m
+                      </span>
+                    </div>
+                    <h3 class="text-xs font-bold text-white mt-1.5 tracking-tight">${res.title}</h3>
+                    <p class="text-[11px] text-slate-400 mt-1 line-clamp-1">${res.summary}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Active Player + Checklist HUD (7 cols) -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+              <!-- Persistent Player Container -->
+              <div class="relative aspect-video rounded-2xl bg-black border border-slate-800 overflow-hidden shadow-2xl video-glow flex flex-col justify-between p-4">
+                <div class="flex items-center justify-between z-10">
+                  <span class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-black/60 text-sky-300 border border-sky-500/30 backdrop-blur-sm">
+                    LIVE PLAYBACK · ${activeRes.title}
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <button onclick="toggleBookmark('${activeRes.id}')" class="p-1.5 rounded-lg bg-black/60 hover:bg-slate-800 border border-slate-700 text-slate-300 cursor-pointer">
+                      <svg class="w-4 h-4 ${state.bookmarkedIds.has(activeRes.id) ? 'text-amber-400 fill-amber-400' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                    <button onclick="openModal('${activeRes.id}')" class="p-1.5 rounded-lg bg-black/60 hover:bg-slate-800 border border-slate-700 text-slate-300 cursor-pointer" title="Full Screen Cinema Mode">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Center Play Visual -->
+                <div class="text-center space-y-2 z-10 my-auto">
+                  <div class="w-14 h-14 rounded-full bg-sky-500 text-white flex items-center justify-center mx-auto shadow-xl shadow-sky-500/50 hover:scale-110 transition-transform cursor-pointer">
+                    <svg class="w-6 h-6 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <p class="text-xs font-mono text-slate-300">NASA Life Sciences Video Stream</p>
+                </div>
+
+                <!-- Bottom Scrub & Timeline Chapters -->
+                <div class="space-y-2 z-10 bg-black/70 p-2.5 rounded-xl backdrop-blur-md border border-slate-800">
+                  <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                    <span class="text-sky-400 font-bold">01:45</span>
+                    <span class="text-slate-300 truncate max-w-[280px]">Chapter: ${activeRes.chapters[state.activeChapterIndex]?.title || 'Demonstration'}</span>
+                    <span>0${activeRes.durationMinutes}:00</span>
+                  </div>
+                  <div class="relative h-2 bg-slate-800 rounded-full cursor-pointer overflow-hidden">
+                    <div class="w-2/5 h-full bg-gradient-to-r from-sky-500 to-blue-500 rounded-full"></div>
+                  </div>
+                  <!-- Quick Chapter Jump Pills -->
+                  <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar pt-1">
+                    ${activeRes.chapters.map((ch, idx) => `
+                      <button 
+                        onclick="setChapter(${idx})" 
+                        class="px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap cursor-pointer transition-colors ${
+                          state.activeChapterIndex === idx ? 'bg-sky-500 text-white font-bold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        }"
+                      >
+                        ${ch.time} · ${ch.title}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pinned Procedure Checklist & Safety Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5">
+                  <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Action Checklist
+                  </h4>
+                  <div class="space-y-2 text-xs">
+                    ${activeRes.instructions.map((ins, idx) => `
+                      <label class="flex items-start gap-2.5 cursor-pointer text-slate-300 hover:text-white">
+                        <input type="checkbox" class="mt-0.5 rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-0 cursor-pointer">
+                        <span class="leading-relaxed text-[11px]">${ins}</span>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-900/40 space-y-2.5">
+                  <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    Safety Precautions
+                  </h4>
+                  <div class="space-y-2 text-xs">
+                    ${activeRes.safetyNotes.map(note => `
+                      <div class="p-2 rounded-lg bg-amber-900/20 border border-amber-800/30 text-[11px] text-amber-200/90 leading-relaxed">
+                        ${note}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * VARIANT B: Perplexity-Style Curated Watch Hub
+     * High-end, minimalist aesthetic: font-black headings, increased whitespace, rounded-[32px] containers, subtle micro-animations.
+     */
+    function renderVariantB() {
+      const filtered = getFilteredResources();
+      const hero = SPACE_LIFE_RESOURCES[0];
+
+      return `
+        <div class="space-y-8 animate-fadeIn">
+          <!-- Hero Section: High-End Perplexity Clean Header -->
+          <div class="space-y-3 max-w-4xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-bold tracking-wide">
+              <span>✦</span>
+              <span>EXPEDITION 71 OPERATIONAL VIDEO LIBRARY</span>
+            </div>
+            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              Watch & Master Microgravity Health Routines
+            </h2>
+            <p class="text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl">
+              Curated astronaut life hacks, exercise techniques, and medical first-aid video guides, verified by NASA Human Research Program.
+            </p>
+          </div>
+
+          <!-- Search & Filter Bar: Rounded-[32px] Container -->
+          <div class="p-2 sm:p-3 rounded-[32px] bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row items-center gap-3">
+            <div class="relative w-full md:flex-1">
+              <input 
+                type="text" 
+                id="search-input" 
+                value="${state.searchQuery}" 
+                placeholder="Ask or search for exercises, sleep techniques, or first aid videos..."
+                class="w-full px-5 py-3 pl-12 rounded-[24px] bg-slate-950/80 border border-slate-800/90 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-all font-medium"
+              />
+              <svg class="w-5 h-5 text-slate-500 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap w-full md:w-auto px-2">
+              ${renderCategoryPills(false)}
+            </div>
+          </div>
+
+          <!-- Featured Spotlight Hero Card (rounded-[32px]) -->
+          <div class="relative rounded-[32px] overflow-hidden border border-slate-800 bg-gradient-to-br from-slate-900 via-sky-950/40 to-slate-950 p-6 sm:p-10 shadow-2xl group transition-all duration-300">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              <div class="lg:col-span-7 space-y-4">
+                <div class="flex items-center gap-3">
+                  <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                    Recommended For Today
+                  </span>
+                  <span class="text-xs font-mono text-slate-400 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    ${hero.durationMinutes} min watch
+                  </span>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight leading-snug">
+                  ${hero.title}
+                </h3>
+                <p class="text-sm text-slate-300 leading-relaxed">
+                  ${hero.summary}
+                </p>
+                <div class="flex flex-wrap items-center gap-3 pt-2">
+                  <button 
+                    onclick="openModal('${hero.id}')"
+                    class="px-6 py-3 rounded-full bg-white hover:bg-slate-100 text-slate-950 text-xs font-black flex items-center gap-2 shadow-xl shadow-white/10 hover:scale-105 transition-all cursor-pointer"
+                  >
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span>Play Demonstration</span>
+                  </button>
+                  <button 
+                    onclick="toggleBookmark('${hero.id}')"
+                    class="px-5 py-3 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <svg class="w-4 h-4 ${state.bookmarkedIds.has(hero.id) ? 'text-amber-400 fill-amber-400' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                    <span>${state.bookmarkedIds.has(hero.id) ? 'Saved' : 'Save for EVA'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Visual Poster Thumbnail -->
+              <div class="lg:col-span-5">
+                <div onclick="openModal('${hero.id}')" class="relative aspect-video rounded-[24px] bg-gradient-to-br ${hero.posterGradient} border border-slate-700/80 shadow-2xl flex items-center justify-center cursor-pointer group-hover:scale-[1.02] transition-transform duration-300 overflow-hidden">
+                  <div class="w-16 h-16 rounded-full bg-white/95 text-slate-950 flex items-center justify-center shadow-2xl shadow-sky-500/30 group-hover:scale-110 transition-transform">
+                    <svg class="w-7 h-7 translate-x-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono text-white font-bold">
+                    HD · 1080p
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Grid: 3-column rounded-[32px] cards with subtle micro-animations -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-black text-white tracking-tight">All Instructional Guides (${filtered.length})</h3>
+              <span class="text-xs font-mono text-slate-400">Offline Local Cache: Synchronized</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              ${filtered.map(res => `
+                <div class="group rounded-[32px] bg-slate-900/60 border border-slate-800/80 p-5 hover:border-sky-500/50 hover:bg-slate-900/90 hover:-translate-y-1 hover:shadow-2xl hover:shadow-sky-950/50 transition-all duration-300 flex flex-col justify-between">
+                  <!-- Poster Frame -->
+                  <div onclick="openModal('${res.id}')" class="relative aspect-video rounded-[22px] bg-gradient-to-br ${res.posterGradient} border border-slate-800 overflow-hidden cursor-pointer flex items-center justify-center mb-4 group-hover:border-slate-700">
+                    <div class="w-12 h-12 rounded-full bg-white/90 text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <svg class="w-5 h-5 translate-x-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    <span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/60 backdrop-blur-md text-sky-300 border border-white/10 font-mono">
+                      ${res.category}
+                    </span>
+                    <span class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-black/70 text-slate-300">
+                      ${res.durationMinutes}m
+                    </span>
+                  </div>
+
+                  <!-- Card Info -->
+                  <div class="space-y-2 flex-1">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] font-mono text-slate-400">${res.sourceName}</span>
+                      <button onclick="toggleBookmark('${res.id}')" class="text-slate-500 hover:text-amber-400 cursor-pointer">
+                        <svg class="w-4 h-4 ${state.bookmarkedIds.has(res.id) ? 'text-amber-400 fill-amber-400' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                      </button>
+                    </div>
+                    <h4 onclick="openModal('${res.id}')" class="text-sm font-black text-white group-hover:text-sky-300 transition-colors tracking-tight cursor-pointer line-clamp-2">
+                      ${res.title}
+                    </h4>
+                    <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                      ${res.summary}
+                    </p>
+                  </div>
+
+                  <!-- Card Footer Actions -->
+                  <div class="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                    <span class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      Verified
+                    </span>
+                    <button onclick="openModal('${res.id}')" class="font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer">
+                      <span>Watch</span>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * VARIANT C: Step-by-Step Tactical Playbook
+     * Action-first checklist with micro-video loops and hands-free text-to-speech cues.
+     */
+    function renderVariantC() {
+      const activeRes = SPACE_LIFE_RESOURCES.find(r => r.id === state.activeResourceId) || SPACE_LIFE_RESOURCES[0];
+      const filtered = getFilteredResources();
+
+      return `
+        <div class="space-y-6">
+          <!-- Playbook Header -->
+          <div class="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <h2 class="text-lg font-black tracking-tight text-white uppercase font-mono">Variant C · Tactical Execution Playbook</h2>
+              </div>
+              <p class="text-xs text-slate-400">Tactile step-by-step checklist. Each action item syncs to an instructional loop for hands-free operations.</p>
+            </div>
+            <!-- Resource Selector Dropdown -->
+            <div class="flex items-center gap-3">
+              <label class="text-xs font-mono text-slate-400">Select Protocol:</label>
+              <select 
+                onchange="selectResource(this.value)" 
+                class="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:border-sky-500 font-mono cursor-pointer"
+              >
+                ${SPACE_LIFE_RESOURCES.map(r => `
+                  <option value="${r.id}" ${r.id === activeRes.id ? 'selected' : ''}>${r.title} (${r.durationMinutes}m)</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Protocol Dashboard -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Execution Steps (7 cols) -->
+            <div class="lg:col-span-7 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-mono font-bold uppercase tracking-wider text-sky-400">Sequential Action Sequence</h3>
+                <button onclick="readAloudCurrent()" class="px-3 py-1.5 rounded-lg bg-sky-950 border border-sky-800 text-sky-300 text-xs font-bold flex items-center gap-1.5 hover:bg-sky-900 transition-colors cursor-pointer">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                  <span>Audio Guidance Readout</span>
+                </button>
+              </div>
+
+              <!-- Step Cards -->
+              <div class="space-y-3">
+                ${activeRes.instructions.map((ins, index) => {
+                  const stepKey = `${activeRes.id}-step-${index}`;
+                  const isDone = state.completedSteps.has(stepKey);
+                  return `
+                    <div class="p-4 rounded-2xl border transition-all ${
+                      isDone 
+                        ? 'bg-emerald-950/20 border-emerald-800/40 opacity-75' 
+                        : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                    }">
+                      <div class="flex items-start gap-4">
+                        <button 
+                          onclick="toggleStep('${stepKey}')"
+                          class="mt-1 w-6 h-6 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
+                            isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-700 hover:border-sky-400 bg-slate-800'
+                          }"
+                        >
+                          ${isDone ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
+                        </button>
+                        <div class="flex-1 space-y-1">
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono font-bold text-sky-400 uppercase">Step ${index + 1}</span>
+                            ${isDone ? '<span class="text-[10px] font-mono text-emerald-400 font-bold uppercase">Completed</span>' : ''}
+                          </div>
+                          <p class="text-sm font-semibold text-slate-200 leading-relaxed ${isDone ? 'line-through text-slate-400' : ''}">${ins}</p>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Right Micro-Loop Video & Surgeon Warnings (5 cols) -->
+            <div class="lg:col-span-5 space-y-4">
+              <!-- Looping Demo Player -->
+              <div class="rounded-2xl bg-black border border-slate-800 overflow-hidden shadow-2xl space-y-3 p-4">
+                <span class="text-[11px] font-mono font-bold text-slate-400 uppercase">Synchronized Visual Demonstration</span>
+                <div class="relative aspect-video rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden flex items-center justify-center">
+                  <div class="text-center p-4 space-y-2">
+                    <div class="w-12 h-12 rounded-full bg-sky-500/80 text-white flex items-center justify-center mx-auto shadow-lg animate-pulse-slow">
+                      <svg class="w-6 h-6 translate-x-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    <p class="text-xs font-mono text-slate-300">Continuous Demonstration Loop</p>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30">Auto-Looping 1080p</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Safety Alert Box -->
+              <div class="p-4 rounded-2xl bg-amber-950/20 border border-amber-900/40 space-y-2.5">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">Flight Rule Safety Warning</h4>
+                </div>
+                ${activeRes.safetyNotes.map(n => `
+                  <p class="text-xs text-amber-200/90 leading-relaxed bg-amber-900/20 p-2.5 rounded-xl border border-amber-800/30">
+                    ${n}
+                  </p>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 4. HELPER FUNCTIONS
+    function getFilteredResources() {
+      return SPACE_LIFE_RESOURCES.filter(res => {
+        const matchesCategory = state.selectedCategory === "all" || res.category === state.selectedCategory;
+        const q = state.searchQuery.toLowerCase().trim();
+        const matchesQuery = !q || 
+          res.title.toLowerCase().includes(q) || 
+          res.summary.toLowerCase().includes(q) ||
+          res.tags.some(t => t.toLowerCase().includes(q));
+        return matchesCategory && matchesQuery;
+      });
+    }
+
+    function renderCategoryPills(isMonospace) {
+      const categories = [
+        { id: "all", label: "All" },
+        { id: "exercise", label: "Exercise" },
+        { id: "sleep", label: "Sleep" },
+        { id: "medical", label: "Medical" },
+        { id: "nutrition", label: "Nutrition" },
+        { id: "adaptation", label: "Adaptation" },
+      ];
+
+      return categories.map(cat => `
+        <button 
+          onclick="setCategory('${cat.id}')"
+          class="px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${isMonospace ? 'font-mono' : ''} ${
+            state.selectedCategory === cat.id
+              ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
+              : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700'
+          }"
+        >
+          ${cat.label}
+        </button>
+      `).join('');
+    }
+
+    // 5. EVENT HANDLERS & ACTIONS
+    function renderApp() {
+      const root = document.getElementById("app-root");
+      if (state.variant === "A") {
+        root.innerHTML = renderVariantA();
+      } else if (state.variant === "B") {
+        root.innerHTML = renderVariantB();
+      } else if (state.variant === "C") {
+        root.innerHTML = renderVariantC();
+      }
+      updateSwitcherUI();
+      attachSearchListener();
+    }
+
+    function attachSearchListener() {
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          state.searchQuery = e.target.value;
+          // Surgical re-render without losing focus
+          const scrollPos = window.scrollY;
+          renderApp();
+          window.scrollTo(0, scrollPos);
+          const newInput = document.getElementById("search-input");
+          if (newInput) {
+            newInput.focus();
+            newInput.setSelectionRange(newInput.value.length, newInput.value.length);
+          }
+        });
+      }
+    }
+
+    function setVariant(varKey) {
+      if (!["A", "B", "C"].includes(varKey)) return;
+      state.variant = varKey;
+      const url = new URL(window.location);
+      url.searchParams.set("variant", varKey);
+      window.history.replaceState({}, "", url);
+      renderApp();
+    }
+
+    function setCategory(catId) {
+      state.selectedCategory = catId;
+      renderApp();
+    }
+
+    function selectResource(resId) {
+      state.activeResourceId = resId;
+      state.activeChapterIndex = 0;
+      renderApp();
+    }
+
+    function setChapter(idx) {
+      state.activeChapterIndex = idx;
+      renderApp();
+    }
+
+    function toggleBookmark(resId) {
+      if (state.bookmarkedIds.has(resId)) {
+        state.bookmarkedIds.delete(resId);
+      } else {
+        state.bookmarkedIds.add(resId);
+      }
+      renderApp();
+    }
+
+    function toggleStep(stepKey) {
+      if (state.completedSteps.has(stepKey)) {
+        state.completedSteps.delete(stepKey);
+      } else {
+        state.completedSteps.add(stepKey);
+      }
+      renderApp();
+    }
+
+    function readAloudCurrent() {
+      const activeRes = SPACE_LIFE_RESOURCES.find(r => r.id === state.activeResourceId) || SPACE_LIFE_RESOURCES[0];
+      if ('speechSynthesis' in window) {
+        const text = `${activeRes.title}. Sequential steps: ${activeRes.instructions.join('. ')}`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert("Text-to-speech audio guidance not supported by this browser.");
+      }
+    }
+
+    function updateSwitcherUI() {
+      document.querySelectorAll(".variant-pill-btn").forEach(btn => {
+        const v = btn.getAttribute("data-variant");
+        if (v === state.variant) {
+          btn.className = "variant-pill-btn px-4 py-1.5 rounded-full text-xs font-black bg-sky-500 text-white shadow-lg shadow-sky-500/40 transition-all cursor-pointer";
+        } else {
+          btn.className = "variant-pill-btn px-3 py-1.5 rounded-full text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer";
+        }
+      });
+    }
+
+    // Modal logic
+    function openModal(resId) {
+      const res = SPACE_LIFE_RESOURCES.find(r => r.id === resId) || SPACE_LIFE_RESOURCES[0];
+      document.getElementById("modal-category").textContent = res.category.toUpperCase();
+      document.getElementById("modal-title").textContent = res.title;
+      
+      const instructionsContainer = document.getElementById("modal-instructions");
+      instructionsContainer.innerHTML = res.instructions.map((ins, i) => `
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 flex items-start gap-3">
+          <span class="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+            ${i+1}
+          </span>
+          <span class="leading-relaxed">${ins}</span>
+        </div>
+      `).join('');
+
+      const safetyContainer = document.getElementById("modal-safety");
+      safetyContainer.innerHTML = res.safetyNotes.map(n => `
+        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-800/40 text-xs text-amber-200 leading-relaxed">
+          ${n}
+        </div>
+      `).join('');
+
+      const modal = document.getElementById("video-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("video-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    document.getElementById("btn-close-modal").addEventListener("click", closeModal);
+    document.getElementById("video-modal").addEventListener("click", (e) => {
+      if (e.target.id === "video-modal") closeModal();
+    });
+
+    // Switcher arrow buttons
+    const VARIANTS = ["A", "B", "C"];
+    document.getElementById("btn-prev-variant").addEventListener("click", () => {
+      const idx = VARIANTS.indexOf(state.variant);
+      const nextIdx = (idx - 1 + VARIANTS.length) % VARIANTS.length;
+      setVariant(VARIANTS[nextIdx]);
+    });
+
+    document.getElementById("btn-next-variant").addEventListener("click", () => {
+      const idx = VARIANTS.indexOf(state.variant);
+      const nextIdx = (idx + 1) % VARIANTS.length;
+      setVariant(VARIANTS[nextIdx]);
+    });
+
+    document.querySelectorAll(".variant-pill-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setVariant(btn.getAttribute("data-variant"));
+      });
+    });
+
+    // Keyboard navigation (ArrowLeft & ArrowRight to cycle variants)
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+      if (e.key === "ArrowLeft") {
+        const idx = VARIANTS.indexOf(state.variant);
+        const nextIdx = (idx - 1 + VARIANTS.length) % VARIANTS.length;
+        setVariant(VARIANTS[nextIdx]);
+      } else if (e.key === "ArrowRight") {
+        const idx = VARIANTS.indexOf(state.variant);
+        const nextIdx = (idx + 1) % VARIANTS.length;
+        setVariant(VARIANTS[nextIdx]);
+      } else if (e.key === "Escape") {
+        closeModal();
+      }
+    });
+
+    // Initial render
+    renderApp();
+  </script>
+</body>
+</html>
