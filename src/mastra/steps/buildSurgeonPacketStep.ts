@@ -79,7 +79,6 @@ export const buildSurgeonPacketStep = createStep({
       }),
       latchedRuleId: z.string(),
       interimActionsCount: z.number(),
-      downlinkStatus: z.enum(["QUEUED_FOR_AOS", "DOWNLINKED", "REVIEWED_BY_GROUND"]),
     }),
   }),
   execute: async ({ context }) => {
@@ -101,7 +100,6 @@ export const buildSurgeonPacketStep = createStep({
       },
       latchedRuleId: context.latchedRuleId,
       interimActionsCount: context.interimActions.length,
-      downlinkStatus: "QUEUED_FOR_AOS" as const,
     };
 
     return {

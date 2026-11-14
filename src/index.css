@@ -298,12 +298,12 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Paged media: the dossier preview is injected into #printable-dossier-root
+   Paged media: the health report preview is injected into #printable-health-report-root
    and every other body child is hidden. Normal document flow only, so the
    browser's print engine never clips absolutely positioned report content.
 --------------------------------------------------------------------------- */
 /* The print staging node stays out of screen layout until print time. */
-#printable-dossier-root {
+#printable-health-report-root {
   display: none;
 }
 
@@ -314,11 +314,11 @@ body {
     font-size: 11pt !important;
   }
 
-  body > *:not(#printable-dossier-root) {
+  body > *:not(#printable-health-report-root) {
     display: none !important;
   }
 
-  #printable-dossier-root {
+  #printable-health-report-root {
     display: block !important;
     position: static !important;
     width: 100% !important;
@@ -330,7 +330,7 @@ body {
   tr,
   td,
   th,
-  .dossier-card {
+  .health-report-card {
     page-break-inside: avoid;
     break-inside: avoid;
   }

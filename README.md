@@ -1,15 +1,15 @@
-# HabiTrack / WAYFINDER V3: Evidence-Grounded Spaceflight Health Intelligence
+# Habitat Trace: Evidence-Grounded Spaceflight Health Intelligence
 
 ## System Overview
 
-HabiTrack (WAYFINDER V3) is an offline-first operational health intelligence and personalized environmental exposure analysis workstation designed for long-duration human spaceflight (e.g., International Space Station expeditions and lunar/Mars transit missions).
+Habitat Trace is an offline-first operational health intelligence and personalized environmental exposure analysis workstation designed for long-duration human spaceflight (e.g., International Space Station expeditions and lunar/Mars transit missions).
 
 The system is built as a **100% Pure TypeScript + React 18 + Vite** application:
 - **Zero Python Dependencies:** Runs entirely in modern browsers or static hosting environments (Vercel, Netlify, Cloudflare Pages, GitHub Pages) without needing a separate backend server.
 - **Client-Side Telemetry & Research Engine:** Centralized typed data service (`src/services/api.ts`) correlates authentic NASA Environmental Data Application (EDA) telemetry against personalized astronaut circadian baselines, autonomic vital dynamics, and crew symptom reports.
 - **Epistemic Guardrails & Decision Support:** Implements deterministic extractive literature synthesis, NASA flight rules checklists, and non-causal decision support disclaimers.
 - **Astronaut vs. Flight Surgeon Gating:** Tailored field mission interface for individual astronauts and full 6-view clinical expedition oversight for flight surgeons.
-- **High-Performance Telemetry Visualization:** Synchronized multi-lane Plotly WebGL timelines, 3D biometric card canvases, and responsive clinical dossier drawers.
+- **High-Performance Telemetry Visualization:** Synchronized multi-lane Plotly WebGL timelines, 3D biometric card canvases, and one-click clinical health report PDF exports.
 
 ---
 
@@ -59,7 +59,7 @@ No environment variables or serverless Python runtimes are required.
 
 ```mermaid
 flowchart TD
-    subgraph Client["HabiTrack Single Page Application (React 18 + TypeScript + Vite)"]
+    subgraph Client["Habitat Trace Single Page Application (React 18 + TypeScript + Vite)"]
         SHELL["App Shell & Navigation<br/>(Intro Page · Role Selection)"]
         ROLES["Role State<br/>(Astronaut ASTRO-01 vs Flight Surgeon)"]
         VIEWS["Overview · Timeline · Symptoms · Research · Alerts · Settings"]

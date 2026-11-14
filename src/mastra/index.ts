@@ -1,5 +1,5 @@
 /**
- * Central Mastra orchestrator for WAYFINDER V3.
+ * Central Mastra orchestrator for HABITAT TRACE.
  * 100% Pure TypeScript, zero-backend, browser-native agent & workflow engine.
  */
 

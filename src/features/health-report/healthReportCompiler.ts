@@ -1,5 +1,5 @@
 /**
- * Pure dossier compiler.
+ * Pure health report compiler.
  *
  * Deterministic projection from authoritative cohort data to a portable
  * clinical investigation report. No React, no stores, no network: the same
@@ -17,14 +17,14 @@ import type {
   QualityStatus,
 } from "../../types/api";
 import type {
-  DossierCompilerInput,
-  DossierConcordanceRow,
-  DossierEnvironmentalRow,
-  DossierFlightRuleRow,
-  DossierReport,
-  DossierSourceReference,
-  DossierSymptomRow,
-  DossierVitalsRow,
+  HealthReportInput,
+  HealthReportConcordanceRow,
+  HealthReportEnvironmentalRow,
+  HealthReportFlightRuleRow,
+  HealthReport,
+  HealthReportSourceReference,
+  HealthReportSymptomRow,
+  HealthReportVitalsRow,
   EnvironmentalStatus,
   VitalStatus,
 } from "./types";
@@ -36,7 +36,7 @@ export const PROHIBITED_CAUSAL_TERMS_SOURCE =
   "\\b(cause|causes|caused|causing|proves|proven|proving|diagnose|diagnosed|diagnosing|diagnosis|prescribe|prescribes|prescribed|prescribing|prescription|treat|treated|treating|treatment|therapeutic|therapy|cure|remedy)\\b";
 
 export const EPISTEMIC_DISCLAIMER =
-  "Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. WAYFINDER is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons.";
+  "Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. Habitat Trace is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons.";
 
 /** Fresh regex per call: a global flag would make `.test()` stateful. */
 export function containsProhibitedCausalTerms(text: string): boolean {
@@ -120,7 +120,7 @@ const ENVIRONMENTAL_STREAMS: readonly EnvironmentalDefinition[] = [
   },
 ];
 
-export const SOURCE_REFERENCES: readonly DossierSourceReference[] = [
+export const SOURCE_REFERENCES: readonly HealthReportSourceReference[] = [
   {
     sourceName: "NASA Flight Telemetry EDA",
     datasetIdentifier: "JSC-CN-33120",
@@ -137,13 +137,13 @@ export const SOURCE_REFERENCES: readonly DossierSourceReference[] = [
     provenance: "AUTHENTIC_NASA_EDA",
   },
   {
-    sourceName: "WAYFINDER Cohort Vitals Simulation",
-    datasetIdentifier: "WAYFINDER-SIM-V4",
+    sourceName: "Habitat Trace Cohort Vitals Simulation",
+    datasetIdentifier: "HABITAT-TRACE-SIM-V4",
     provenance: "SYNTHETIC_SIMULATION",
   },
   {
     sourceName: "Crew Symptom Log",
-    datasetIdentifier: "WAYFINDER-SYMPTOM-LOG",
+    datasetIdentifier: "HABITAT-TRACE-SYMPTOM-LOG",
     provenance: "CREW_REPORTED",
   },
 ];
@@ -222,7 +222,7 @@ function qualityOf(measurement: Measurement | null): QualityStatus {
   return measurement?.quality_status ?? "GAP";
 }
 
-function buildVitalsSummary(input: DossierCompilerInput): DossierVitalsRow[] {
+function buildVitalsSummary(input: HealthReportInput): HealthReportVitalsRow[] {
   return VITALS_STREAMS.map((definition) => {
     const latest = latestMeasurement(input.measurements, definition.streamId);
     const baseline = estimateBaseline(input.baselines, definition.streamId);
@@ -247,8 +247,8 @@ function buildVitalsSummary(input: DossierCompilerInput): DossierVitalsRow[] {
 }
 
 function buildEnvironmentalSnapshot(
-  input: DossierCompilerInput,
-): DossierEnvironmentalRow[] {
+  input: HealthReportInput,
+): HealthReportEnvironmentalRow[] {
   return ENVIRONMENTAL_STREAMS.map((definition) => {
     const latest = latestMeasurement(input.measurements, definition.streamId);
     const value = latest ? latest.value : definition.fallback;
@@ -272,7 +272,7 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
-function buildSymptomHistory(input: DossierCompilerInput): DossierSymptomRow[] {
+function buildSymptomHistory(input: HealthReportInput): HealthReportSymptomRow[] {
   return [...input.symptoms]
     .sort((left, right) => right.occurred_at.localeCompare(left.occurred_at))
     .map((symptom) => {
@@ -289,7 +289,7 @@ function buildSymptomHistory(input: DossierCompilerInput): DossierSymptomRow[] {
     });
 }
 
-function buildConcordanceEvents(input: DossierCompilerInput): DossierConcordanceRow[] {
+function buildConcordanceEvents(input: HealthReportInput): HealthReportConcordanceRow[] {
   return [...input.events]
     .sort((left, right) => right.start_time.localeCompare(left.start_time))
     .map((event) => ({
@@ -301,7 +301,7 @@ function buildConcordanceEvents(input: DossierCompilerInput): DossierConcordance
     }));
 }
 
-function buildFlightRules(input: DossierCompilerInput): DossierFlightRuleRow[] {
+function buildFlightRules(input: HealthReportInput): HealthReportFlightRuleRow[] {
   const rules = input.activeFlightRules ?? [];
   return [...rules]
     .sort((left, right) => left.rule_id.localeCompare(right.rule_id))
@@ -319,7 +319,7 @@ function buildFlightRules(input: DossierCompilerInput): DossierFlightRuleRow[] {
     }));
 }
 
-function deriveTimeWindow(input: DossierCompilerInput): DossierReport["metadata"]["timeWindow"] {
+function deriveTimeWindow(input: HealthReportInput): HealthReport["metadata"]["timeWindow"] {
   if (input.timeWindow) {
     return input.timeWindow;
   }
@@ -349,7 +349,7 @@ function buildReportId(astronautId: string, generatedAt: string): string {
   return `WF-${astronautId}-${stamp}`;
 }
 
-export function compileDossier(input: DossierCompilerInput): DossierReport {
+export function compileHealthReport(input: HealthReportInput): HealthReport {
   const now = input.now ?? new Date();
   const generatedAt = now.toISOString();
 

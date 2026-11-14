@@ -4,7 +4,7 @@
  * Photography sourced from NASA's public-domain image library and re-cropped
  * to a consistent head-and-shoulders square, background removed, and composited
  * on the console canvas so the cohort reads as one photo shoot. They are
- * illustrative stand-ins for the simulated WAYFINDER crew, not the crew itself.
+ * illustrative stand-ins for the simulated Habitat Trace crew, not the crew itself.
  *
  *   ASTRO-01  jsc2023e000469_alt
  *   ASTRO-02  jsc2023e000234_alt
@@ -14,12 +14,10 @@
 import React from "react";
 
 export type AstronautAvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
-export type AvatarCalibration = "CALIBRATED" | "CALIBRATING";
 
 export interface AstronautAvatarProps {
   astronautId: string;
   size?: AstronautAvatarSize;
-  status?: AvatarCalibration;
   selected?: boolean;
   className?: string;
   /** When supplied the portrait becomes a labelled image instead of decoration. */
@@ -40,22 +38,6 @@ const RADIUS: Record<AstronautAvatarSize, string> = {
   md: "rounded-lg",
   lg: "rounded-lg",
   xl: "rounded-lg",
-};
-
-const DOT_SIZE: Record<AstronautAvatarSize, string> = {
-  xs: "h-2 w-2",
-  sm: "h-2.5 w-2.5",
-  md: "h-3 w-3",
-  lg: "h-3.5 w-3.5",
-  xl: "h-4 w-4",
-};
-
-const DOT_OFFSET: Record<AstronautAvatarSize, string> = {
-  xs: "-bottom-0.5 -right-0.5",
-  sm: "-bottom-0.5 -right-0.5",
-  md: "-bottom-1 -right-1",
-  lg: "-bottom-1 -right-1",
-  xl: "-bottom-1.5 -right-1.5",
 };
 
 interface CrewIdentity {
@@ -88,7 +70,6 @@ function monogram(astronautId: string): string {
 export function AstronautAvatar({
   astronautId,
   size = "md",
-  status,
   selected = false,
   className = "",
   label,
@@ -130,15 +111,6 @@ export function AstronautAvatar({
           {monogram(astronautId)}
         </span>
       )}
-
-      {status ? (
-        <span
-          className={`absolute ${DOT_OFFSET[size]} ${DOT_SIZE[size]} rounded-full border-2 border-white ${
-            status === "CALIBRATED" ? "bg-emerald-500" : "bg-amber-500"
-          }`}
-          title={status === "CALIBRATED" ? "Baseline calibrated" : "Baseline calibrating"}
-        />
-      ) : null}
     </span>
   );
 }

@@ -1,10 +1,10 @@
-﻿# WAYFINDER Version 3: Evidence-Grounded Local AI & React Console Architecture
+﻿# HABITAT TRACE Version 3: Evidence-Grounded Local AI & React Console Architecture
 
 * **Author:** MinnThikeTunn
 * **Date:** 2026-11-14
 * **Status:** Approved Technical Design Document (Remediated & Implementation Ready)
 * **Predecessor Context:** [concepts_brief.md](file:///D:/nasaResearch/concepts_brief.md)
-* **Parent System:** [WAYFINDER Version 2 Approved Technical Design](file:///D:/nasaResearch/docs/designs/wayfinder_v2.md)
+* **Parent System:** [HABITAT TRACE Version 2 Approved Technical Design](file:///D:/nasaResearch/docs/designs/habitat_trace_v2.md)
 * **Requirements Baseline:** [PRD.md](file:///D:/nasaResearch/PRD.md) (Section 17: Version 3 Scope, Section 9.1, Section 11, and FR-10)
 * **Domain Model:** [GLOSSARY.md](file:///D:/nasaResearch/GLOSSARY.md)
 
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-WAYFINDER Version 3 transitions the platform from a prototype demonstration workstation into an **Evidence-Grounded Local AI Health Intelligence System** backed by a decoupled **React + TypeScript + Tailwind CSS** presentation console and a Python **FastAPI** service.
+HABITAT TRACE Version 3 transitions the platform from a prototype demonstration workstation into an **Evidence-Grounded Local AI Health Intelligence System** backed by a decoupled **React + TypeScript + Tailwind CSS** presentation console and a Python **FastAPI** service.
 
 The system correlates authentic NASA ISS Environmental Data Application (EDA) telemetry, deterministic multi-day physiological vitals with non-linear inverse RMSSD dynamics, and crew-logged symptom reports against a curated NASA spaceflight biomedical research corpus. It introduces an in-process embedded vector store (SQLite-backed float32 embeddings with contiguous in-memory NumPy matrix dot-product similarity) fused with SQLite FTS5 BM25 via Reciprocal Rank Fusion (RRF), a contextual Knowledge Assistant providing 1-click citation-grounded explanations within a non-blocking sliding side drawer, a resilient local LLM integration with deterministic non-causal safety guardrails and instant extractive fallback, and a full React console adhering to a high-end minimalist 'Perplexity' aesthetic.
 
@@ -23,13 +23,13 @@ The system correlates authentic NASA ISS Environmental Data Application (EDA) te
 During long-duration human spaceflight (such as International Space Station expeditions and lunar/Mars transit missions), crewmembers and flight surgeons face two major operational challenges:
 
 ### 2.1 Disconnected, Keyword-Only Evidence Retrieval
-In WAYFINDER Version 2, scientific evidence retrieval is isolated within a separate "Research" tab and relies exclusively on lexical SQLite FTS5 BM25 search:
+In HABITAT TRACE Version 2, scientific evidence retrieval is isolated within a separate "Research" tab and relies exclusively on lexical SQLite FTS5 BM25 search:
 - **Lexical Mismatch:** Lexical search fails on spaceflight physiological synonyms (e.g. querying "autonomic suppression during hypercapnia" fails to retrieve papers describing "reduced vagal tone and sympathetic overactivation during elevated CO2 partial pressures").
 - **Disconnected Decision Support:** Retrieval is disconnected from real-time operational events. When an `INVESTIGATE` Multi-Signal Concordance Event fires (such as Commander Vance's acute headache, elevated heart rate, and suppressed RMSSD during the Day 127 cabin $P_{\text{CO}_2}$ excursion), the flight surgeon or astronaut must manually pivot to another tab and formulate keyword queries rather than receiving an instantaneous, citation-grounded contextual explanation.
 - **Absence of Explainable Synthesis:** Raw search returns disparate text excerpts without synthesizing observed operational dynamics, scientific context, and explicit research limitations.
 
 ### 2.2 Monolithic Prototype UI Bottlenecks
-The Streamlit prototype console (`wayfinder/ui/`) established proof of concept, but presents core structural limitations:
+The Streamlit prototype console (`habitat_trace/ui/`) established proof of concept, but presents core structural limitations:
 - **Server Rerun Overhead:** Streamlit's reactive execution model re-executes the Python script on user interaction, causing noticeable UI re-rendering latency and fragile camera state preservation during time-series interaction.
 - **Ergonomic Constraints:** Modal dialogs or expanders in Streamlit obscure or desynchronize the 4-lane WebGL time-series timeline, preventing simultaneous visual correlation between physiological traces and research citations.
 - **Specification Alignment:** [PRD.md](file:///D:/nasaResearch/PRD.md) Section 9.1 explicitly specifies a decoupled architecture: React + TypeScript frontend with a Python FastAPI backend and responsive charting.
@@ -39,13 +39,13 @@ The Streamlit prototype console (`wayfinder/ui/`) established proof of concept, 
 ## 3. Goals and Non-Goals
 
 ### 3.1 In-Scope Goals
-1. **In-Process Embedded Vector Store (`wayfinder.core.rag`):**
+1. **In-Process Embedded Vector Store (`habitat_trace.core.rag`):**
    - SQLite table `research_vectors` storing passage metadata, verified DOI citations, title, authors, report identifier, and 384-dimensional float32 vector embeddings pinned to `all-minilm` (`sentence-transformers/all-MiniLM-L6-v2`).
    - Contiguous in-memory 2D float32 NumPy matrix dot-product similarity executing in $< 0.2\text{ ms}$ on standard CPU hardware with startup empty-store protection.
    - Pre-computed canonical archetype query vectors for all known mission event signatures (enabling 1-click event vector lookups with zero runtime model dependencies).
    - Bundled static seed embeddings (`data/research_embeddings_seed.json`) ensuring cold-start offline readiness without requiring a running Ollama daemon.
    - Reciprocal Rank Fusion (RRF) combining dense vector search and SQLite FTS5 BM25 with normalized percentage scores ($[0\%, 100\%]$).
-2. **Contextual Knowledge Assistant (`wayfinder.core.assistant` & `/api/assistant`):**
+2. **Contextual Knowledge Assistant (`habitat_trace.core.assistant` & `/api/assistant`):**
    - Dedicated Research Workspace for ad-hoc hybrid search and passage inspection.
    - Non-blocking collapsible sliding side drawer (`w-[500px]`, `rounded-l-[32px]`, `backdrop-blur-xl`) in Overview and Timeline views for 1-click evidence explanations of active Multi-Signal Concordance Events.
    - Dynamic chart resizing (`w-[calc(100%-500px)]`) on drawer toggle with `Plotly.Plots.resize` to preserve interactive WebGL crosshairs.
@@ -62,13 +62,13 @@ The Streamlit prototype console (`wayfinder/ui/`) established proof of concept, 
    - Explicit WebGL context cleanup (`Plotly.purge`) upon component unmount to prevent browser canvas context exhaustion.
    - Cohort switcher supporting `CDR Vance (ASTRO-01)`, `FE-1 Dr. Patel (ASTRO-02)`, and `MS Lindgren (ASTRO-03)`.
    - Cohort-bound structured symptom logging form with validation and history table.
-   - High-performance Python FastAPI backend (`wayfinder/api/`) exposing REST endpoints and serving compiled static assets (`web/dist/`) with Single-Page Application (SPA) catch-all fallback.
+   - High-performance Python FastAPI backend (`habitat_trace/api/`) exposing REST endpoints and serving compiled static assets (`web/dist/`) with Single-Page Application (SPA) catch-all fallback.
 
 ### 3.2 Out-of-Scope Non-Goals
 - **Cloud-Based AI APIs:** Zero cloud dependencies; strictly 100% offline edge execution.
 - **Autonomous Medical Diagnosis:** The system must never independently calculate clinical risk, diagnose pathology, or prescribe medical countermeasures.
 - **External Vector Database Daemons:** No ChromaDB, Milvus, Qdrant, or external vector service processes.
-- **Modifying Headless Core Invariants:** All existing mathematical algorithms in `wayfinder.core` (circadian hourly binning, physiological variance floors $\sigma_{\min}$, pre-severity interval coalescence, tripartite concordance) and their 64 passing pytest tests must remain untouched and backward compatible.
+- **Modifying Headless Core Invariants:** All existing mathematical algorithms in `habitat_trace.core` (circadian hourly binning, physiological variance floors $\sigma_{\min}$, pre-severity interval coalescence, tripartite concordance) and their 64 passing pytest tests must remain untouched and backward compatible.
 
 ---
 
@@ -103,7 +103,7 @@ The Streamlit prototype console (`wayfinder/ui/`) established proof of concept, 
 * **Then:** The health check times out within 1.5 seconds. The system immediately engages the Extractive Research Synthesizer, rendering top-ranked literature passages, key findings, and study caveats with an `[EXTRACTIVE RETRIEVAL]` status badge, maintaining zero UI delay or failure dialogs.
 
 ### CUJ 4: Full React Console Navigation, Cohort Switching & Timeline Inspection
-* **Given:** The flight surgeon launches the system via `python -m wayfinder.server` and opens `http://localhost:8000`.
+* **Given:** The flight surgeon launches the system via `python -m habitat_trace.server` and opens `http://localhost:8000`.
 * **When:** The flight surgeon toggles between Commander Vance (`ASTRO-01`) and Dr. Patel (`ASTRO-02`), and interacts with the 4-lane WebGL timeline.
 * **Then:** The React application updates the active cohort in $< 50\text{ ms}$ without a full page refresh. The 4-lane Plotly timeline renders at 60 FPS, maintaining synchronized crosshairs across all four lanes and displaying Dr. Patel's endurance-trained nominal baselines with zero cross-crew context leakage. Switching cohorts unconditionally closes the assistant drawer.
 
@@ -133,7 +133,7 @@ flowchart TD
         STORE --> DRAWER
     end
 
-    subgraph Backend["Python FastAPI Service (wayfinder/api/)"]
+    subgraph Backend["Python FastAPI Service (habitat_trace/api/)"]
         ROUTER["FastAPI Application Router (server.py)"]
         
         API_ASTRONAUTS["/api/astronauts"]
@@ -151,14 +151,14 @@ flowchart TD
         ROUTER --> STATIC
     end
 
-    subgraph Core["Headless Analytical Core (wayfinder/core/)"]
+    subgraph Core["Headless Analytical Core (habitat_trace/core/)"]
         STORAGE["StorageManager (SQLite WAL Mode)"]
         INGEST["EDAIngestionEngine (Authentic NASA EDA)"]
         SIM["MultiDayVitalsSimulator (Coupled RMSSD)"]
         BASELINES["CircadianBaselineEngine (Hourly Bins b in [0,23])"]
         ANALYTICS["AnalyticsEngine (Coalescence & Tripartite Concordance)"]
         
-        subgraph Knowledge_Engine["Version 3 Knowledge Core (wayfinder.core.rag & assistant)"]
+        subgraph Knowledge_Engine["Version 3 Knowledge Core (habitat_trace.core.rag & assistant)"]
             VEC_STORE["VectorStoreManager<br/>- SQLite research_vectors Table<br/>- Contiguous Float32 NumPy Matrix (384-d)<br/>- Canonical Archetype Vectors & Seeder"]
             FTS_STORE["SQLite FTS5 BM25 Engine<br/>(research_knowledge_fts)"]
             RRF["Hybrid Reciprocal Rank Fusion<br/>RRF(d) = sum(I(d in topK_m) / (60 + r_m(d)))"]
@@ -184,7 +184,7 @@ flowchart TD
     Client <-->|REST API JSON| ROUTER
 ```
 
-### 6.2 Data Layer & SQLite DDL Migrations (`wayfinder/core/storage.py`)
+### 6.2 Data Layer & SQLite DDL Migrations (`habitat_trace/core/storage.py`)
 
 To support dense vectors, audit logging, and canonical event archetype lookups without external services, `StorageManager.ensure_initialized()` applies the following DDL migrations:
 
@@ -284,7 +284,7 @@ Serialization from JSON float lists to SQLite BLOB storage is explicitly defined
 blob_bytes = np.array(item["embedding"], dtype=np.float32).tobytes()
 ```
 
-### 6.3 Domain Models & Schemas (`wayfinder/core/models.py`)
+### 6.3 Domain Models & Schemas (`habitat_trace/core/models.py`)
 
 ```python
 class HealthEvent(BaseModel):
@@ -411,7 +411,7 @@ class SymptomReportRequest(BaseModel):
     occurred_at: Optional[str] = None  # defaults to current UTC timestamp if None
 ```
 
-### 6.4 Hybrid Retrieval & In-Memory Vector Acceleration (`wayfinder/core/rag.py`)
+### 6.4 Hybrid Retrieval & In-Memory Vector Acceleration (`habitat_trace/core/rag.py`)
 
 1. **In-Memory Matrix Initialization & Empty-Store Guard:**
    On server initialization, `VectorStoreManager` queries all rows from `research_vectors`:
@@ -453,7 +453,7 @@ class SymptomReportRequest(BaseModel):
 
    UI Scientific Evidence Cards display source attribution badges (e.g., `Hybrid RRF: 92%`, `Dense Semantic: 88%`, `Lexical FTS5: 75%`) with a minimum confidence display threshold so that flight surgeons can immediately interpret absolute confidence.
 
-### 6.5 Deterministic Epistemic Guardrail & Archetype Mapping (`wayfinder/core/assistant.py`)
+### 6.5 Deterministic Epistemic Guardrail & Archetype Mapping (`habitat_trace/core/assistant.py`)
 
 ```python
 DEFAULT_EMBEDDING_MODEL = "all-minilm"
@@ -461,7 +461,7 @@ DEFAULT_GENERATIVE_MODEL = "llama3.2:1b"
 
 MANDATORY_DISCLAIMER = (
     "Non-Causal Decision Support Disclaimer: Temporal correlation indicates "
-    "co-occurrence only and does not establish clinical causation. WAYFINDER "
+    "co-occurrence only and does not establish clinical causation. HABITAT TRACE "
     "is a clinical decision-support tool, not an autonomous diagnostic system. "
     "Operational countermeasure decisions must be verified by flight surgeons."
 )
@@ -679,7 +679,7 @@ async def query_generative_assistant(
         return _fallback(tripwire=False)
 ```
 
-### 6.6 REST API Interface (`wayfinder/api/server.py`)
+### 6.6 REST API Interface (`habitat_trace/api/server.py`)
 
 | Method | Endpoint | Query / Body Schema | Response Model | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -695,7 +695,7 @@ async def query_generative_assistant(
 | `POST` | `/api/assistant/explain` | Body: `ExplainEventRequest` | `AssistantResponse` | Contextual 1-click evidence explanation for an active health event. Looks up event via `storage.get_health_event(event_id)`, retrieves evidence, applies guardrails, logs interaction to `assistant_audit_logs`, and returns response. |
 | `POST` | `/api/assistant/query` | Body: `ResearchQueryRequest` | `AssistantResponse` | Ad-hoc biomedical literature exploration. Runs hybrid RRF (or pure BM25 fallback), synthesizes explanation, logs interaction to `assistant_audit_logs`, and returns response. |
 
-#### StorageManager Contracts for API and Assistant Layer (`wayfinder/core/storage.py`)
+#### StorageManager Contracts for API and Assistant Layer (`habitat_trace/core/storage.py`)
 
 To satisfy the REST and Assistant contracts, `StorageManager` implements:
 ```python
@@ -757,8 +757,8 @@ In `POST /api/events/{id}/review`, the handler executes `storage.update_health_e
 - **Handling:** The client wraps Ollama calls with a strict 15.0-second timeout, preceded by an asynchronous 1.5-second `/api/tags` health check. If unreachable, the system instantaneously engages the `ExtractiveResearchSynthesizer`. The flight surgeon receives valid, structured decision support with zero latency stall or error modals.
 
 ### 7.2 Missing Pre-Compiled `web/dist/` Static Assets
-- **Scenario:** The backend is started via `python -m wayfinder.server` in a fresh checkout where `npm run build` has not yet been executed.
-- **Handling:** In `wayfinder/api/server.py`, the SPA static file mount is guarded with an existence check for `web/dist/index.html`. If absent, root requests return a clean JSON diagnostic response (`status: "WAYFINDER V3 API Online"`, instruction to compile or use Vite dev server) rather than a fatal startup `RuntimeError`.
+- **Scenario:** The backend is started via `python -m habitat_trace.server` in a fresh checkout where `npm run build` has not yet been executed.
+- **Handling:** In `habitat_trace/api/server.py`, the SPA static file mount is guarded with an existence check for `web/dist/index.html`. If absent, root requests return a clean JSON diagnostic response (`status: "HABITAT TRACE V3 API Online"`, instruction to compile or use Vite dev server) rather than a fatal startup `RuntimeError`.
 
 ### 7.3 Multi-Astronaut Context Leakage
 - **Scenario:** The flight surgeon is reviewing Commander Vance's CO2 excursion in the assistant drawer, then selects Flight Engineer Dr. Patel from the sidebar.
@@ -810,8 +810,8 @@ The Version 3 migration executes across 6 sequential, fully tested phases:
 | :--- | :--- | :--- |
 | **Phase 1** | **Authoritative Vector Persistence** | SQLite DDL migrations (`research_vectors`, `assistant_audit_logs`, `event_archetype_vectors`) and static seed seeder in `StorageManager`. Unit tests in `test_storage.py`. |
 | **Phase 2** | **Accelerated Hybrid RAG Engine** | `VectorStoreManager` with contiguous NumPy matrix dot-product similarity ($<0.2\text{ ms}$), canonical event archetype seeds, and hybrid RRF scoring. Unit tests in `test_vectors.py` and `test_rag.py`. |
-| **Phase 3** | **Knowledge Assistant & Epistemic Guardrail** | `AssistantEngine` in `wayfinder/core/assistant.py` with post-generation regex tripwire, Ollama client, and deterministic Extractive Research Synthesizer. Unit tests in `test_assistant.py`. |
-| **Phase 4** | **FastAPI Application Service** | Modular REST endpoints in `wayfinder/api/` covering astronauts, telemetry, events, symptoms, and assistant explanations. Guarded SPA static mount. API tests in `test_api.py`. |
+| **Phase 3** | **Knowledge Assistant & Epistemic Guardrail** | `AssistantEngine` in `habitat_trace/core/assistant.py` with post-generation regex tripwire, Ollama client, and deterministic Extractive Research Synthesizer. Unit tests in `test_assistant.py`. |
+| **Phase 4** | **FastAPI Application Service** | Modular REST endpoints in `habitat_trace/api/` covering astronauts, telemetry, events, symptoms, and assistant explanations. Guarded SPA static mount. API tests in `test_api.py`. |
 | **Phase 5** | **React Console Presentation Tier** | React 18 + TypeScript + Tailwind CSS application in `web/` with Perplexity dark aesthetic (`#090d16`), 4-lane Plotly.js WebGL timeline, cohort switcher, and sliding side drawer. Build verified via `npm run build`. |
 | **Phase 6** | **Mission E2E Verification & Documentation** | Full 14-day Expedition 71 scenario verification (`test_scenario_v3.py`). Verify 64 existing tests pass. Update `README.md` and subsystem blueprints. |
 
@@ -845,7 +845,7 @@ The Version 3 migration executes across 6 sequential, fully tested phases:
 ### Alternative D: Immediate Removal of Streamlit Console
 * **Pros:** Eliminates duplicate presentation code immediately.
 * **Cons:** Deprives developers of a working visual baseline during early phases of the React migration.
-* **Reason for Rejection:** Retaining the Streamlit console (`wayfinder/ui/app.py`) in maintenance mode (port 8501) ensures continuous visual inspection while the React application is developed.
+* **Reason for Rejection:** Retaining the Streamlit console (`habitat_trace/ui/app.py`) in maintenance mode (port 8501) ensures continuous visual inspection while the React application is developed.
 
 ---
 
@@ -866,23 +866,23 @@ flowchart LR
 
 | File Path | Status | Change Rationale & Explicit Technical Contract |
 | :--- | :--- | :--- |
-| `wayfinder/core/models.py` | **Modified** | Add Pydantic V2 models: `CitedEvidence`, `AssistantResponse`, `VectorEmbeddingRecord`, `AssistantAuditLog`, `ExplainEventRequest`, `ResearchQueryRequest`, `ReviewEventRequest`, `SymptomReportRequest`. |
-| `wayfinder/core/storage.py` | **Modified** | Add idempotent DDL migrations in `ensure_initialized()` for `research_vectors` (with `title`, `authors`, `report_identifier`), `event_archetype_vectors`, and `assistant_audit_logs` (with `tripwire_triggered`, `latency_ms`). Add static seed loading from `data/research_embeddings_seed.json`. |
-| `wayfinder/core/embeddings.py` | **Created** | Deterministic offline text encoder: `embed_text(text: str) -> np.ndarray` (384-d float32 L2-normalized vector via SHA-256 token hashing pinned to `all-minilm`). |
-| `wayfinder/core/rag.py` | **Modified** | Add `VectorStoreManager` with startup in-memory contiguous NumPy matrix caching (`corpus_matrix` shape $(N, 384)$), vector dot-product similarity, empty-matrix protection, thread-safe `reload_corpus()`, and `search_hybrid_rrf`. |
-| `wayfinder/core/assistant.py` | **Created** | Headless `AssistantEngine`: implements `resolve_archetype_id(event: HealthEvent)`, local Ollama client (`/api/generate`) with 15s timeout and 1.5s health probe, deterministic post-generation regex assertion (`PROHIBITED_CAUSAL_TERMS`), and deterministic `ExtractiveResearchSynthesizer`. |
-| `wayfinder/provision.py` | **Created** | Dataset bootstrap CLI (`python -m wayfinder.provision`) provisioning authentic EDA telemetry and 5-min cohort vitals across Days 120â€“134. |
-| `wayfinder/api/__init__.py` | **Created** | Package initialization for the FastAPI backend. |
-| `wayfinder/api/deps.py` | **Created** | Shared FastAPI dependency injection helpers (`get_storage`, `get_vector_store`). |
-| `wayfinder/api/server.py` | **Created** | Main FastAPI application instance, CORS configuration, route inclusions, and guarded static file mounting for `web/dist/` with SPA catch-all fallback (returns diagnostic JSON guide if uncompiled). |
-| `wayfinder/api/routes/health.py` | **Created** | REST endpoint: `GET /api/health` reporting service status, version, Ollama availability, and vector chunk count. |
-| `wayfinder/api/routes/astronauts.py` | **Created** | REST endpoints: `GET /api/astronauts` (list cohort) and `GET /api/astronauts/{id}` (profile & calibration). |
-| `wayfinder/api/routes/telemetry.py` | **Created** | REST endpoints: `GET /api/telemetry/measurements` (LTTB decimated streams filtered by `astronaut_id`) and `GET /api/telemetry/baselines` (hourly envelopes). |
-| `wayfinder/api/routes/events.py` | **Created** | REST endpoints: `GET /api/events?astronaut_id={id}&severity={level}` and `POST /api/events/{id}/review`. |
-| `wayfinder/api/routes/symptoms.py` | **Created** | REST endpoints: `GET /api/symptoms?astronaut_id={id}` and `POST /api/symptoms`. |
-| `wayfinder/api/routes/assistant.py` | **Created** | REST endpoints: `POST /api/assistant/explain` (1-click event explanation) and `POST /api/assistant/query` (free-text research search). |
-| `wayfinder/server.py` | **Created** | CLI entry point launching FastAPI server via `python -m wayfinder.server` with Uvicorn on port 8000. |
-| `wayfinder/ui/app.py` | **Unchanged** | Retained in maintenance mode; launchable via `streamlit run wayfinder/ui/app.py` on port 8501 as reference console. |
+| `habitat_trace/core/models.py` | **Modified** | Add Pydantic V2 models: `CitedEvidence`, `AssistantResponse`, `VectorEmbeddingRecord`, `AssistantAuditLog`, `ExplainEventRequest`, `ResearchQueryRequest`, `ReviewEventRequest`, `SymptomReportRequest`. |
+| `habitat_trace/core/storage.py` | **Modified** | Add idempotent DDL migrations in `ensure_initialized()` for `research_vectors` (with `title`, `authors`, `report_identifier`), `event_archetype_vectors`, and `assistant_audit_logs` (with `tripwire_triggered`, `latency_ms`). Add static seed loading from `data/research_embeddings_seed.json`. |
+| `habitat_trace/core/embeddings.py` | **Created** | Deterministic offline text encoder: `embed_text(text: str) -> np.ndarray` (384-d float32 L2-normalized vector via SHA-256 token hashing pinned to `all-minilm`). |
+| `habitat_trace/core/rag.py` | **Modified** | Add `VectorStoreManager` with startup in-memory contiguous NumPy matrix caching (`corpus_matrix` shape $(N, 384)$), vector dot-product similarity, empty-matrix protection, thread-safe `reload_corpus()`, and `search_hybrid_rrf`. |
+| `habitat_trace/core/assistant.py` | **Created** | Headless `AssistantEngine`: implements `resolve_archetype_id(event: HealthEvent)`, local Ollama client (`/api/generate`) with 15s timeout and 1.5s health probe, deterministic post-generation regex assertion (`PROHIBITED_CAUSAL_TERMS`), and deterministic `ExtractiveResearchSynthesizer`. |
+| `habitat_trace/provision.py` | **Created** | Dataset bootstrap CLI (`python -m habitat_trace.provision`) provisioning authentic EDA telemetry and 5-min cohort vitals across Days 120â€“134. |
+| `habitat_trace/api/__init__.py` | **Created** | Package initialization for the FastAPI backend. |
+| `habitat_trace/api/deps.py` | **Created** | Shared FastAPI dependency injection helpers (`get_storage`, `get_vector_store`). |
+| `habitat_trace/api/server.py` | **Created** | Main FastAPI application instance, CORS configuration, route inclusions, and guarded static file mounting for `web/dist/` with SPA catch-all fallback (returns diagnostic JSON guide if uncompiled). |
+| `habitat_trace/api/routes/health.py` | **Created** | REST endpoint: `GET /api/health` reporting service status, version, Ollama availability, and vector chunk count. |
+| `habitat_trace/api/routes/astronauts.py` | **Created** | REST endpoints: `GET /api/astronauts` (list cohort) and `GET /api/astronauts/{id}` (profile & calibration). |
+| `habitat_trace/api/routes/telemetry.py` | **Created** | REST endpoints: `GET /api/telemetry/measurements` (LTTB decimated streams filtered by `astronaut_id`) and `GET /api/telemetry/baselines` (hourly envelopes). |
+| `habitat_trace/api/routes/events.py` | **Created** | REST endpoints: `GET /api/events?astronaut_id={id}&severity={level}` and `POST /api/events/{id}/review`. |
+| `habitat_trace/api/routes/symptoms.py` | **Created** | REST endpoints: `GET /api/symptoms?astronaut_id={id}` and `POST /api/symptoms`. |
+| `habitat_trace/api/routes/assistant.py` | **Created** | REST endpoints: `POST /api/assistant/explain` (1-click event explanation) and `POST /api/assistant/query` (free-text research search). |
+| `habitat_trace/server.py` | **Created** | CLI entry point launching FastAPI server via `python -m habitat_trace.server` with Uvicorn on port 8000. |
+| `habitat_trace/ui/app.py` | **Unchanged** | Retained in maintenance mode; launchable via `streamlit run habitat_trace/ui/app.py` on port 8501 as reference console. |
 | `web/package.json` | **Created** | Node.js manifest with React 18, TypeScript 5, Vite, Tailwind CSS, Plotly.js (`react-plotly.js`), Lucide React, Zustand, and devDependencies including `@types/plotly.js` and `@types/react-plotly.js`. |
 | `web/vite.config.ts` | **Created** | Vite configuration with local proxy forwarding `/api` to `http://localhost:8000`. |
 | `web/tailwind.config.js` | **Created** | Tailwind configuration with dark minimalist Perplexity palette (`#090d16`, `#0f172a`, rounded-[32px]). |
@@ -902,9 +902,9 @@ flowchart LR
 | `web/src/components/ResearchView.tsx` | **Created** | Dedicated literature search workspace with Scientific Evidence Cards and confidence match badges. |
 | `web/src/components/EvidenceCard.tsx` | **Created** | Reusable scientific evidence presentation card with DOI links and RRF match badges. |
 | `web/src/components/AssistantDrawer.tsx` | **Created** | Non-blocking sliding side drawer (`w-[500px]`, `rounded-l-[32px]`, `backdrop-blur-xl`) with sticky disclaimer, observed dynamics, cited evidence, and study caveats. |
-| `wayfinder/core/README.md` | **Created** | Subsystem architectural blueprint for headless analytical core. |
-| `wayfinder/api/README.md` | **Created** | Subsystem architectural blueprint for FastAPI application service. |
-| `wayfinder/ui/README.md` | **Created** | Subsystem architectural blueprint for Streamlit maintenance console. |
+| `habitat_trace/core/README.md` | **Created** | Subsystem architectural blueprint for headless analytical core. |
+| `habitat_trace/api/README.md` | **Created** | Subsystem architectural blueprint for FastAPI application service. |
+| `habitat_trace/ui/README.md` | **Created** | Subsystem architectural blueprint for Streamlit maintenance console. |
 | `tests/test_vectors.py` | **Created** | Unit test suite for SQLite vector storage, contiguous matrix caching, empty-store protection, and $< 0.2\text{ ms}$ dot-product cosine similarity. |
 | `tests/test_assistant.py` | **Created** | Unit test suite for `AssistantEngine`, `resolve_archetype_id`, post-generation regex guardrail, Ollama timeout, and extractive fallback. |
 | `tests/test_api.py` | **Created** | Integration test suite for FastAPI REST endpoints, cohort filtering, and uncompiled static fallback using `TestClient`. |

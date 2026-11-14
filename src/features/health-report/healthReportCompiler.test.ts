@@ -1,16 +1,20 @@
 /**
- * Zero-dependency dossier compiler harness.
+ * Zero-dependency health report compiler harness.
  *
  * Run with Node 24 (native TypeScript type stripping):
- *   node src/features/dossier/dossierCompiler.test.ts
+ *   node src/features/health-report/healthReportCompiler.test.ts
  *
  * No test framework is imported, so `package.json` stays free of extra npm
  * test dependencies. Any failed assertion throws and exits non-zero.
  */
 
-import { compileDossier } from "./dossierCompiler.ts";
-import { generateHtmlDossier, generateMarkdownDossier } from "./dossierTemplates.ts";
-import type { DossierCompilerInput } from "./types.ts";
+import { compileHealthReport } from "./healthReportCompiler.ts";
+import {
+  buildHealthReportPdfModel,
+  healthReportPdfFilename,
+} from "./healthReportPdf.ts";
+import { generateHealthReportHtml } from "./healthReportTemplates.ts";
+import type { HealthReportInput } from "./types.ts";
 import type {
   Astronaut,
   Baselines,
@@ -193,7 +197,7 @@ const FLIGHT_RULES: FlightRule[] = [
   },
 ];
 
-const INPUT: DossierCompilerInput = {
+const INPUT: HealthReportInput = {
   astronaut: ASTRONAUT,
   baselines: BASELINES,
   measurements: MEASUREMENTS,
@@ -212,7 +216,7 @@ const INPUT: DossierCompilerInput = {
 // 1. Baseline deviation math
 // ---------------------------------------------------------------------------
 
-const report = compileDossier(INPUT);
+const report = compileHealthReport(INPUT);
 const hr = report.vitalsSummary.find((row) => row.parameter === "Resting Heart Rate");
 check(Boolean(hr), "heart-rate row exists");
 close(hr!.deviationSigma, 3.2, "HR deviation sigma = (92 - 60) / 10");
@@ -262,7 +266,7 @@ equal(
 
 let threw = false;
 try {
-  compileDossier(INPUT);
+  compileHealthReport(INPUT);
 } catch {
   threw = true;
 }
@@ -309,18 +313,29 @@ check(report.metadata.reportId.startsWith("WF-ASTRO-01-"), "report id is scoped 
 // 5. Export templates
 // ---------------------------------------------------------------------------
 
-const markdown = generateMarkdownDossier(report);
-check(markdown.includes("# WAYFINDER Clinical Investigation Dossier"), "markdown title");
-check(markdown.includes("| Parameter | Value | Unit |"), "markdown vitals table");
-check(markdown.includes("- [ ] 1. Confirm P_CO2 with MCA."), "markdown checklist");
-check(markdown.includes(report.epistemicDisclaimer), "markdown disclaimer blockquote");
-check(markdown.includes("PPM"), "markdown environmental units");
-check(markdown.includes("|"), "markdown uses GFM tables");
-
-const html = generateHtmlDossier(report);
-check(html.includes('id="dossier-document"'), "html dossier root");
-check(html.includes("Clinical Investigation Dossier"), "html title");
+const html = generateHealthReportHtml(report);
+check(html.includes('id="health-report-document"'), "html health report root");
+check(html.includes("Clinical Health Report"), "html title");
 check(html.includes("Non-Causal Decision Support Disclaimer"), "html disclaimer");
 check(!html.includes("<script"), "html output contains no scripts");
 
-console.log(`PASS · ${assertions} assertions · dossier compiler and templates`);
+const pdfSections = buildHealthReportPdfModel(report);
+equal(pdfSections.length, 7, "pdf model exposes seven sections");
+equal(
+  pdfSections[1].rows.length,
+  report.vitalsSummary.length,
+  "pdf vitals rows match the compiled report",
+);
+check(
+  pdfSections.every((section) =>
+    section.rows.every((row) => row.length === section.columns.length),
+  ),
+  "every pdf row matches its column count",
+);
+check(
+  healthReportPdfFilename(report).startsWith("Habitat_Trace_Health_Report_"),
+  "pdf filename carries the health report label",
+);
+check(healthReportPdfFilename(report).endsWith(".pdf"), "pdf filename uses .pdf");
+
+console.log(`PASS · ${assertions} assertions · health report compiler and templates`);

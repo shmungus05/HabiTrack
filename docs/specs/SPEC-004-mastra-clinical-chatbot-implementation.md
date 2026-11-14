@@ -1,4 +1,4 @@
-# SPEC-004: Mastra AI Integration Specification for WAYFINDER
+﻿# SPEC-004: Mastra AI Integration Specification for HABITAT TRACE
 
 ## Status: Approved Architecture Specification
 ## Target Directory: `src/mastra/`
