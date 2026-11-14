@@ -1,5 +1,5 @@
 /**
- * HABITAT TRACE application shell: calm, focused clinical intelligence console.
+ * HabiTrack application shell: calm, focused clinical intelligence console.
  * High usability, restrained color palette, and clear visual hierarchy.
  */
 
@@ -224,14 +224,14 @@ export default function App() {
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white overflow-hidden p-0.5">
               <img
                 src="/Logo.png"
-                alt="Habitat Trace Logo"
+                alt="HabiTrack Logo"
                 className="h-full w-full object-contain rounded-md"
               />
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900">
-                  Habitat Trace
+                  HabiTrack
                 </h1>
                 <span className="hidden text-xs text-slate-400 sm:inline">/</span>
                 <span className="hidden truncate text-xs font-medium text-slate-500 sm:inline">
@@ -239,7 +239,7 @@ export default function App() {
                 </span>
               </div>
               <p className="hidden font-mono text-[11px] text-slate-500 xl:block">
-                ISS Exp 72 · Habitat Trace
+                ISS Exp 72 · HabiTrack
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@
  * Photography sourced from NASA's public-domain image library and re-cropped
  * to a consistent head-and-shoulders square, background removed, and composited
  * on the console canvas so the cohort reads as one photo shoot. They are
- * illustrative stand-ins for the simulated Habitat Trace crew, not the crew itself.
+ * illustrative stand-ins for the simulated HabiTrack crew, not the crew itself.
  *
  *   ASTRO-01  jsc2023e000469_alt
  *   ASTRO-02  jsc2023e000234_alt

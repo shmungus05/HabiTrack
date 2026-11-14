@@ -190,7 +190,7 @@ export function exportDatasetToJson(datasetId: string, customPayload?: unknown):
   const payload = customPayload ?? {
     exportMetadata: {
       exportedAt: new Date().toISOString(),
-      platform: "Habitat Trace Clinical Intelligence Workstation",
+      platform: "HabiTrack Clinical Intelligence Workstation",
       datasetId: dataset.id,
       doi: dataset.doi,
       attribution: dataset.attribution,

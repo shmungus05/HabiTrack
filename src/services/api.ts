@@ -1,5 +1,5 @@
 /**
- * Pure TypeScript In-Browser API & Data Service for Habitat Trace.
+ * Pure TypeScript In-Browser API & Data Service for HabiTrack.
  *
  * Runs 100% client-side with zero external backend or Python server dependencies,
  * making the application completely hostable on Vercel, Netlify, or static CDN.
@@ -63,7 +63,7 @@ let seedDataPromise: Promise<SeedDataStructure> | null = null;
 
 const MANDATORY_DISCLAIMER =
   "Non-Causal Decision Support Disclaimer: Temporal correlation indicates " +
-  "co-occurrence only and does not establish clinical causation. Habitat Trace " +
+  "co-occurrence only and does not establish clinical causation. HabiTrack " +
   "is a clinical decision-support tool, not an autonomous diagnostic system. " +
   "Operational countermeasure decisions must be verified by flight surgeons.";
 
@@ -95,8 +95,8 @@ async function loadSeedData(): Promise<SeedDataStructure> {
 
 // Local storage keys for persisting user mutations in browser
 const STORAGE_KEYS = {
-  EVENT_REVIEWS: "habitat_trace_event_reviews_v1",
-  SYMPTOMS: "habitat_trace_symptoms_v1",
+  EVENT_REVIEWS: "habitrack_event_reviews_v1",
+  SYMPTOMS: "habitrack_symptoms_v1",
 };
 
 interface StoredReview {
@@ -473,7 +473,7 @@ export async function queryAssistant(
 
   let answerText: string | null = null;
   let providerUsed = "Gemini 2.5 Flash (Direct Browser Execution)";
-  let headline = evidence.length > 0 ? `Literature Synthesis: ${text.trim().slice(0, 45)}` : "Habitat Trace Standby Assistant";
+  let headline = evidence.length > 0 ? `Literature Synthesis: ${text.trim().slice(0, 45)}` : "HabiTrack Standby Assistant";
   let mode: "GEMINI_GENERATIVE" | "EXTRACTIVE_FALLBACK" = "GEMINI_GENERATIVE";
 
   // 1. Attempt real LLM generation via Gemini 2.5 Flash client
@@ -487,7 +487,7 @@ export async function queryAssistant(
     providerUsed = "Mastra Onboard First-Response Engine (Pure TypeScript)";
 
     if (evidence.length === 0) {
-      answerText = `Greetings. I am Habitat Trace, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor 5 spacecraft environmental factors (ppCO₂, radiation, cabin temp, humidity, atmospheric pressure) alongside crew circadian baselines and NASA Flight Rules.\n\nHow can I assist you with station telemetry, flight rules, or symptom evaluations?`;
+      answerText = `Greetings. I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor 5 spacecraft environmental factors (ppCO₂, radiation, cabin temp, humidity, atmospheric pressure) alongside crew circadian baselines and NASA Flight Rules.\n\nHow can I assist you with station telemetry, flight rules, or symptom evaluations?`;
     } else {
       answerText = `Relevant biomedical evidence from the NASA Human Research Program literature corpus:\n\n` +
         evidence.map((e) => `• **[${e.doc_id}: ${e.section_heading}]** ${e.excerpt}`).join("\n\n");

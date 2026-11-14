@@ -10,8 +10,8 @@ import { create } from "zustand";
 
 export type UserRole = "astronaut" | "flight_surgeon";
 
-const STORAGE_KEY = "habitat_trace_active_role";
-const SELECTION_STORAGE_KEY = "habitat_trace_role_selected";
+const STORAGE_KEY = "habitrack_active_role";
+const SELECTION_STORAGE_KEY = "habitrack_role_selected";
 const DEFAULT_ROLE: UserRole = "flight_surgeon";
 
 /** Astronaut perspective is locked to the logged crewmember (Commander Vance). */

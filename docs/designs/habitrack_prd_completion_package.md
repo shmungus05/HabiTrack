@@ -1,10 +1,10 @@
-﻿# HABITAT TRACE PRD Final Completion Package: Clinical Dossier, Multi-Role Perspective, & Deep Space Communications
+﻿# HABITRACK PRD Final Completion Package: Clinical Dossier, Multi-Role Perspective, & Deep Space Communications
 
 * **Author:** MinnThikeTunn
 * **Date:** 2026-11-14
 * **Status:** Final Approved Technical Design Document (Stage 9 Certified & Implementation Ready)
 * **Predecessor Context:** [concepts_brief.md](file:///D:/nasaResearch/concepts_brief.md)
-* **Parent Architecture:** [README.md](file:///D:/nasaResearch/README.md) Â· [habitat_trace_v3.md](file:///D:/nasaResearch/docs/designs/habitat_trace_v3.md) Â· [habitat_trace_v4.md](file:///D:/nasaResearch/docs/designs/habitat_trace_v4.md)
+* **Parent Architecture:** [README.md](file:///D:/nasaResearch/README.md) Â· [habitrack_v3.md](file:///D:/nasaResearch/docs/designs/habitrack_v3.md) Â· [habitrack_v4.md](file:///D:/nasaResearch/docs/designs/habitrack_v4.md)
 * **Requirements Baseline:** [PRD.md](file:///D:/nasaResearch/PRD.md) (FR-11, FR-12, Section 4, Section 11, Section 17, Section 18)
 * **Domain Model:** [GLOSSARY.md](file:///D:/nasaResearch/GLOSSARY.md)
 
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-HABITAT TRACE Version 5 established an offline-first health intelligence workstation featuring deterministic operational flight rule latching, push-to-talk voice interaction, authentic NASA EDA flight telemetry playback, and non-linear clinical risk modeling. To bring the authoritative Product Requirements Document ([PRD.md](file:///D:/nasaResearch/PRD.md)) to 100% completion, this technical design integrates the three final remaining capabilities into a unified, zero-backend frontend package:
+HABITRACK Version 5 established an offline-first health intelligence workstation featuring deterministic operational flight rule latching, push-to-talk voice interaction, authentic NASA EDA flight telemetry playback, and non-linear clinical risk modeling. To bring the authoritative Product Requirements Document ([PRD.md](file:///D:/nasaResearch/PRD.md)) to 100% completion, this technical design integrates the three final remaining capabilities into a unified, zero-backend frontend package:
 
 1. **Client-Side Structured Clinical Investigation Dossier (`FR-12` / `MVP Item 11`):** A zero-dependency report generator that aggregates active astronaut demographics, baseline vital deltas, multi-factor cabin telemetry snapshots (EDA $P_{\text{CO}_2}$, radiation, temperature), logged symptom histories, active concordance events, and verified operational flight rule checklists into a publication-grade clinical investigation dossier. Supports instant Markdown download (`.md`), clipboard copy, interactive HTML modal preview, and `@media print` optimized vector PDF generation via the browser's native print pipeline.
 2. **Multi-Role Shell Perspective Toggle (`Section 4`):** A persistent, zero-friction client-side role toggle between **Astronaut** (streamlined, low cognitive load, status chips, quick symptom entry, certified action plans) and **Flight Surgeon** (full diagnostic depth, authentic telemetry scrubbers, simulation anomaly sandbox, threshold overrides, multi-signal risk matrices) without requiring backend authentication or complex RBAC.
@@ -38,10 +38,10 @@ Long-duration spaceflight (e.g., lunar Gateway, Mars transit) operates under spe
 1. **Client-Side Dossier Compiler (`FR-12`):**
    - Provide a pure compiler function that aggregates cohort metadata, 7-day baseline deviations, multi-factor environmental measurements, symptom entries, active concordance events, and verified flight rule checklists into a typed `DossierReport`.
    - Strictly enforce non-causal epistemic assertions (`PROHIBITED_CAUSAL_TERMS` regex: `\b(cause|causes|caused|causing|proves|proven|proving|diagnose|diagnosed|diagnosing|diagnosis|prescribe|prescribes|prescribed|prescribing|prescription|treat|treated|treating|treatment|therapeutic|therapy|cure|remedy)\b`) and append the mandatory clinical disclaimer:
-     > *"Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. HABITAT TRACE is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons."*
+     > *"Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. HABITRACK is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons."*
    - Deliver four instant export modalities: Markdown download (`.md`), Markdown clipboard copy, interactive HTML modal preview, and `@media print` native browser print-to-PDF with zero added runtime dependencies.
 2. **Multi-Role Perspective Switcher (`Section 4`):**
-   - Implement a persistent header segmented toggle (`[ ðŸ§‘â€ðŸš€ Astronaut | ðŸ©º Flight Surgeon ]`) stored in `localStorage` (`habitat_trace_active_role`).
+   - Implement a persistent header segmented toggle (`[ ðŸ§‘â€ðŸš€ Astronaut | ðŸ©º Flight Surgeon ]`) stored in `localStorage` (`habitrack_active_role`).
    - Dynamically adapt UI views:
      - **Astronaut Mode:** High-contrast glanceable KPI chips (<3s cognitive assessment), 1-tap quick symptom logger, verbatim flight rule actions, and standby voice assistant. Hides secondary diagnostic panels (`SimulationSandboxPanel`, `EdaStreamController`, and threshold overrides) and locks cohort view to the active astronaut (`ASTRO-01`) for medical privacy.
      - **Flight Surgeon Mode:** Full diagnostic depth exposing anomaly injection sliders, raw telemetry scrubbers, risk matrices, and multi-cohort event sign-off controls.
@@ -229,7 +229,7 @@ flowchart TD
   - **Epistemic Invariant:** Enforces the `PROHIBITED_CAUSAL_TERMS` regex:
     `\b(cause|causes|caused|causing|proves|proven|proving|diagnose|diagnosed|diagnosing|diagnosis|prescribe|prescribes|prescribed|prescribing|prescription|treat|treated|treating|treatment|therapeutic|therapy|cure|remedy)\b`
   - **Deterministic Error Handling:** If prohibited causal terms are detected in user symptom notes, the compiler **never aborts or crashes**. Instead, it flags the entry with `nonCausalFlag: true`, appends an inline notice (`[Note: Non-causal observation - unverified correlation]`), and guarantees the mandatory non-causal disclaimer is rendered at the bottom:
-    > *"Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. HABITAT TRACE is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons."*
+    > *"Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. HABITRACK is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons."*
 
 * **`dossierTemplates.ts`**:
   - Produces clean GitHub-Flavored Markdown with markdown tables, header blocks, and verified flight rule citations.
@@ -247,7 +247,7 @@ flowchart TD
 ---
 
 #### 2. Multi-Role Shell Perspective Toggle (`web/src/stores/roleStore.ts` & `RoleGate.tsx`)
-* **`roleStore.ts`**: Lightweight Zustand store managing `role: "astronaut" | "flight_surgeon"`, synced with `localStorage` (`habitat_trace_active_role`, defaulting to `"flight_surgeon"`).
+* **`roleStore.ts`**: Lightweight Zustand store managing `role: "astronaut" | "flight_surgeon"`, synced with `localStorage` (`habitrack_active_role`, defaulting to `"flight_surgeon"`).
 * **`RoleGate.tsx`**: Structural wrapper components `<SurgeonOnly>` and `<AstronautOnly>`.
 * **Perspective Constraints & Medical Privacy**:
   - In **Astronaut** mode:
@@ -259,7 +259,7 @@ flowchart TD
 ---
 
 #### 3. Deep Space Comms & Outbox Simulator (`web/src/stores/commsStore.ts` & `web/src/features/comms/`)
-* **`commsStore.ts`**: Zustand store backed by `localStorage` persistence (`habitat_trace_comms_state`):
+* **`commsStore.ts`**: Zustand store backed by `localStorage` persistence (`habitrack_comms_state`):
   ```typescript
   export type CommsLinkState = "AOS" | "LOS";
   export type PacketStatus = "PENDING_LOS" | "TRANSMITTING" | "DELIVERED";
@@ -342,7 +342,7 @@ This section provides the complete, unified execution plan. Every file touched, 
 
 | File Path | Action | Rationale |
 | :--- | :--- | :--- |
-| [`web/src/stores/roleStore.ts`](file:///D:/nasaResearch/web/src/stores/roleStore.ts) | **Create** | Implements the lightweight Zustand role store managing active perspective (`astronaut` vs. `flight_surgeon`) with `localStorage` persistence under key `habitat_trace_active_role`. |
+| [`web/src/stores/roleStore.ts`](file:///D:/nasaResearch/web/src/stores/roleStore.ts) | **Create** | Implements the lightweight Zustand role store managing active perspective (`astronaut` vs. `flight_surgeon`) with `localStorage` persistence under key `habitrack_active_role`. |
 | [`web/src/features/shared/RoleGate.tsx`](file:///D:/nasaResearch/web/src/features/shared/RoleGate.tsx) | **Create** | Provides declarative, ergonomic `<SurgeonOnly>` and `<AstronautOnly>` React wrapper components and `useUserRole()` hook for perspective-conditional rendering. |
 | [`web/src/features/shared/index.ts`](file:///D:/nasaResearch/web/src/features/shared/index.ts) | **Create** | Barrel export exposing `RoleGate`, `SurgeonOnly`, `AstronautOnly`, and `useUserRole`. |
 | [`web/src/stores/commsStore.ts`](file:///D:/nasaResearch/web/src/stores/commsStore.ts) | **Create** | Implements the communications simulator store with `localStorage` persistence, managing link state (`AOS` / `LOS`), Mars latency in seconds, operational presets, outbox FIFO packet queue, self-contained countdown ticker, and speed multipliers. |

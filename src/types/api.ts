@@ -1,5 +1,5 @@
 /**
- * Strongly-typed domain models for Habitat Trace.
+ * Strongly-typed domain models for HabiTrack.
  */
 
 export type CalibrationStatus = "CALIBRATING" | "CALIBRATED";

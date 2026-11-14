@@ -3,7 +3,7 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      // HABITAT TRACE design tokens — clear, minimalistic light telemetry theme.
+      // HabiTrack design tokens — clear, minimalistic light telemetry theme.
       colors: {
         canvas: "#f8fafc",
         foreground: "#0f172a",

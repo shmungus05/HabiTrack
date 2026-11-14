@@ -191,7 +191,7 @@ export function buildHealthReportPdfModel(report: HealthReport): PdfSection[] {
 /** Safe, human-readable download name. */
 export function healthReportPdfFilename(report: HealthReport): string {
   const safeId = report.metadata.reportId.replace(/[^a-zA-Z0-9_-]+/g, "_");
-  return `Habitat_Trace_Health_Report_${safeId}.pdf`;
+  return `HabiTrack_Health_Report_${safeId}.pdf`;
 }
 
 /** Render and download a vector PDF. Lazily loads jsPDF on first use. */
@@ -210,7 +210,7 @@ export async function downloadHealthReportPdf(report: HealthReport): Promise<voi
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text("HABITAT TRACE · OFFLINE CLINICAL DECISION SUPPORT", margin, 15);
+  doc.text("HABITRACK · OFFLINE CLINICAL DECISION SUPPORT", margin, 15);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);

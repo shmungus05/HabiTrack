@@ -56,7 +56,7 @@ pnpm-debug.log*
 .streamlit/secrets.toml
 
 # ---------------------------------------------------------------------------
-# Local databases and backups (data/habitat_trace.db itself is tracked)
+# Local databases and backups (data/habitrack.db itself is tracked)
 # ---------------------------------------------------------------------------
 *.db-journal
 *.db-wal

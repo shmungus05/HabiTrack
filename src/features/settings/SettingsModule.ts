@@ -28,8 +28,8 @@ export interface PlatformSettings {
   };
 }
 
-const STORAGE_KEY_PROFILE = "habitat_trace_biomedical_profile_v3";
-const STORAGE_KEY_SETTINGS = "habitat_trace_platform_settings_v3";
+const STORAGE_KEY_PROFILE = "habitrack_biomedical_profile_v3";
+const STORAGE_KEY_SETTINGS = "habitrack_platform_settings_v3";
 
 const DEFAULT_PROFILE: AstronautBiomedicalProfile = {
   name: "CDR M. Vance",

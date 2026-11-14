@@ -1,6 +1,6 @@
-﻿# Technical Design Document: HABITAT TRACE Version 1
+﻿# Technical Design Document: HABITRACK Version 1
 
-* **Feature Name:** HABITAT TRACE Version 1 â€” Offline Astronaut Health Intelligence & Environmental Exposure Analysis System
+* **Feature Name:** HABITRACK Version 1 â€” Offline Astronaut Health Intelligence & Environmental Exposure Analysis System
 * **Author:** MinnThikeTunn
 * **Date:** 2026-11-14
 * **Status:** Approved (Review Complete)
@@ -25,11 +25,11 @@ Without an offline-capable, integrated health intelligence system, crew members 
 
 ### 1.2 Overview
 
-HABITAT TRACE Version 1 is an offline-capable decision-support system that unifies spacecraft environmental telemetry, deterministically generated physiological vital-sign streams, and structured crew symptom reporting into a synchronized exposure timeline. 
+HABITRACK Version 1 is an offline-capable decision-support system that unifies spacecraft environmental telemetry, deterministically generated physiological vital-sign streams, and structured crew symptom reporting into a synchronized exposure timeline. 
 
 The system runs entirely on local mission hardware without internet connectivity. It ingests authentic historical NASA Environmental Data Application (EDA) datasets (such as ISS cabin COâ‚‚ and temperature records), pairs them with transparently labeled, deterministic synthetic vitals, and aligns them with crew-submitted symptom logs. A local knowledge retrieval engine indexes curated NASA Human Research Roadmap (HRR) and space biology literature directly in an embedded SQLite database using Full-Text Search (FTS5) to provide immediate scientific citations during anomaly investigation.
 
-HABITAT TRACE provides decision support and contextual evidence. It does not provide autonomous clinical diagnoses, does not prescribe medical treatments, and explicitly disclaims causality from temporal correlations.
+HABITRACK provides decision support and contextual evidence. It does not provide autonomous clinical diagnoses, does not prescribe medical treatments, and explicitly disclaims causality from temporal correlations.
 
 ### 1.3 Goals
 
@@ -39,12 +39,12 @@ HABITAT TRACE provides decision support and contextual evidence. It does not pro
 * **Temporal Exposure Alignment [PRD: FR-05, FR-06]:** Align symptom reports (differentiating occurrence time from report submission time) with nearby environmental telemetry and physiological measurements to highlight exposure windows.
 * **Rule-Based Event Detection [PRD: FR-08, FR-09]:** Detect noteworthy co-occurrences (e.g., cabin COâ‚‚ exceeding 4.5 mmHg with coincident symptom reports) through deterministic, explainable rules.
 * **Offline Scientific Knowledge Retrieval [PRD: FR-10]:** Provide sub-millisecond local retrieval of curated NASA Human Research Roadmap and OSDR evidence summaries using SQLite FTS5 BM25 search, with optional synthesis via a local Ollama instance (`localhost:11434`) and fallback to verbatim cited excerpts.
-* **Decoupled Architecture & Headless Testability [PRD: Section 9, Section 12]:** Enforce strict separation between pure Python domain models/analytics (`habitat_trace/core`) and the steady-state Streamlit dashboard (`habitat_trace/ui`), ensuring the analytical engine is fully testable via automated test suites without launching a web server.
+* **Decoupled Architecture & Headless Testability [PRD: Section 9, Section 12]:** Enforce strict separation between pure Python domain models/analytics (`habitrack/core`) and the steady-state Streamlit dashboard (`habitrack/ui`), ensuring the analytical engine is fully testable via automated test suites without launching a web server.
 * **Architecture Staging for Future Platform Tiers [PRD: Section 17]:** Establish clean architectural boundaries and database schema provisions for personal baseline estimation (Version 2), predictive trend models (Version 4), and disruption-tolerant ground uplink synchronization (Version 5).
 
 ### 1.4 Non-Goals
 
-* **Autonomous Medical Diagnosis:** HABITAT TRACE will not diagnose clinical conditions, predict medical emergencies, or calculate clinical risk scores.
+* **Autonomous Medical Diagnosis:** HABITRACK will not diagnose clinical conditions, predict medical emergencies, or calculate clinical risk scores.
 * **Autonomous Prescription or Medical Direction:** The system will not recommend or prescribe pharmaceuticals, surgical procedures, or operational countermeasures.
 * **Causal Attribution:** The system will not assert that an environmental spike caused a symptom; it strictly reports temporal co-occurrence and exposure windows.
 * **High-Frequency Real-Time Telemetry Streaming:** Streamlit will not operate as a continuous 60 Hz sensor monitor. The dashboard operates on historical time slices and discrete mission replay steps.
@@ -58,7 +58,7 @@ HABITAT TRACE provides decision support and contextual evidence. It does not pro
 
 ### 2.1 System Architecture & Data Flow
 
-HABITAT TRACE Version 1 enforces a strict layered architecture with a completely headless analytical core. Under this architecture, the business logic, data models, persistence, and correlation algorithms have no dependencies on Streamlit or web presentation frameworks. All persistence operations are strictly encapsulated through the `StorageManager` in `habitat_trace/core/storage.py`.
+HABITRACK Version 1 enforces a strict layered architecture with a completely headless analytical core. Under this architecture, the business logic, data models, persistence, and correlation algorithms have no dependencies on Streamlit or web presentation frameworks. All persistence operations are strictly encapsulated through the `StorageManager` in `habitrack/core/storage.py`.
 
 ```mermaid
 flowchart TD
@@ -68,12 +68,12 @@ flowchart TD
         CrewInput["Crew Symptom Entry<br/>Occurred At, Reported At, Severity"]
     end
 
-    subgraph CoreEngine["Pure Python Headless Engine (habitat_trace.core)"]
-        Ingestion["Ingestion & Validation<br/>(habitat_trace.core.ingestion)"]
-        Simulation["Deterministic Physiological Simulator<br/>(habitat_trace.core.simulation)"]
-        Storage["Storage Manager (Thread-Safe SQLite)<br/>(habitat_trace.core.storage)"]
-        Analytics["Rule-Based Exposure Engine<br/>(habitat_trace.core.analytics)"]
-        RAG["Offline Knowledge Search<br/>(habitat_trace.core.rag)"]
+    subgraph CoreEngine["Pure Python Headless Engine (habitrack.core)"]
+        Ingestion["Ingestion & Validation<br/>(habitrack.core.ingestion)"]
+        Simulation["Deterministic Physiological Simulator<br/>(habitrack.core.simulation)"]
+        Storage["Storage Manager (Thread-Safe SQLite)<br/>(habitrack.core.storage)"]
+        Analytics["Rule-Based Exposure Engine<br/>(habitrack.core.analytics)"]
+        RAG["Offline Knowledge Search<br/>(habitrack.core.rag)"]
     end
 
     subgraph Database["Local Persistence (SQLite 3 WAL)"]
@@ -84,7 +84,7 @@ flowchart TD
         DB_FTS["FTS5 Research Virtual Table"]
     end
 
-    subgraph Presentation["Steady-State Dashboard (habitat_trace.ui - Streamlit)"]
+    subgraph Presentation["Steady-State Dashboard (habitrack.ui - Streamlit)"]
         View_Overview["Mission Overview (Status & Acknowledgment)"]
         View_Timeline["Dual-Timeline Viewport (Plotly WebGL LTTB)"]
         View_Symptoms["Symptom Logger & Review"]
@@ -115,7 +115,7 @@ flowchart TD
 
 ### 2.2 Core Component Specifications
 
-#### 2.2.1 Data Models (`habitat_trace/core/models.py`) [PRD: FR-01, FR-02]
+#### 2.2.1 Data Models (`habitrack/core/models.py`) [PRD: FR-01, FR-02]
 All domain entities are strictly typed using Pydantic V2 models with immutable validation rules:
 
 * **`ProvenanceCategory` (Enum):**
@@ -135,8 +135,8 @@ All domain entities are strictly typed using Pydantic V2 models with immutable v
 * **`HealthEvent`:** Event ID, astronaut reference, event type, severity level, start timestamp, end timestamp, list of contributing stream identifiers, associated symptom report ID (nullable), explainable rationale string, uncertainty level, review status, review notes.
 * **`ResearchDocument`:** Document ID, title, section heading, content snippet, DOI or authoritative URL citation, source repository designation (`NASA_OSDR`, `HUMAN_RESEARCH_ROADMAP`).
 
-#### 2.2.2 Storage & Persistence (`habitat_trace/core/storage.py`) [PRD: FR-01, FR-02, FR-11]
-Encapsulates an embedded SQLite 3 database (`habitat_trace.db`).
+#### 2.2.2 Storage & Persistence (`habitrack/core/storage.py`) [PRD: FR-01, FR-02, FR-11]
+Encapsulates an embedded SQLite 3 database (`habitrack.db`).
 * **Thread Safety & Concurrency:** The `StorageManager` implements thread-safe connection pooling via a context-manager factory. Connections are created with `check_same_thread=False`, `timeout=10.0`, and Write-Ahead Logging (`PRAGMA journal_mode = WAL;`). Foreign keys are strictly enforced (`PRAGMA foreign_keys = ON;`).
 * **Authoritative Relational DDL Schema:**
 
@@ -225,7 +225,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS research_knowledge_fts USING fts5(
 );
 ```
 
-#### 2.2.3 NASA EDA Dataset Ingestion (`habitat_trace/core/ingestion.py`) [PRD: FR-02, FR-03]
+#### 2.2.3 NASA EDA Dataset Ingestion (`habitrack/core/ingestion.py`) [PRD: FR-02, FR-03]
 Responsible for parsing and validating authentic NASA ISS Environmental Data Application exports:
 * **Format Flexibility & Normalization:** Ingests CSV or TSV files. Converts timestamps into UTC ISO 8601 strings.
 * **Standard Temperature & Pressure (STP) Conversion:** Converts carbon dioxide from `ppm` to partial pressure $P_{\text{CO}_2}$ in `mmHg` using the standard barometric relationship:
@@ -237,7 +237,7 @@ Responsible for parsing and validating authentic NASA ISS Environmental Data App
   - `STALE`: Constant value repeated unchanged across $> 10 \times$ sampling period.
   - `IMPUTED`: Linearly interpolated point across small gaps ($\le 2$ missing steps) when explicit smoothing is enabled; marked distinctly from raw values.
 
-#### 2.2.4 Deterministic Physiological Simulation (`habitat_trace/core/simulation.py`) [PRD: FR-01, FR-07]
+#### 2.2.4 Deterministic Physiological Simulation (`habitrack/core/simulation.py`) [PRD: FR-01, FR-07]
 Generates physiologically plausible astronaut vitals tied to the exact timeline of ingested EDA data. Crucially, to prevent epistemic circularity, vitals are driven by autonomous physiological baselines and diurnal cycles rather than an algebraic derivation of the environmental stream:
 * **Physiological Models:**
   - **Heart Rate:** Driven by resting baseline, circadian rhythm, and autonomous physical exertion:
@@ -249,7 +249,7 @@ Generates physiologically plausible astronaut vitals tied to the exact timeline 
 * **Temporal Discretization Policy:** Vitals streams inherit the exact discrete timestamps of the ingested EDA environmental dataset. When an EDA record carries `QualityStatus.GAP`, the simulation engine marks the corresponding vitals record as `QualityStatus.GAP` to avoid generating synthetic telemetry during sensor dropouts.
 * **Determinism & Provenance:** The simulation accepts an explicit integer seed. Given identical seeds and timestamps, output is bit-for-bit identical. All records carry `provenance_category = 'SYNTHETIC_SIMULATION'` and `is_synthetic = 1`.
 
-#### 2.2.5 Exposure Correlation & Event Detection (`habitat_trace/core/analytics.py`) [PRD: FR-06, FR-08, FR-09]
+#### 2.2.5 Exposure Correlation & Event Detection (`habitrack/core/analytics.py`) [PRD: FR-06, FR-08, FR-09]
 Implements rule-based, transparent exposure window alignment without black-box clinical claims:
 * **Baseline Operational Fallback:** Before Version 2 personal baseline fitting, Version 1 applies fixed population-level nominal bounds per NASA-STD-3001 Volume 2:
   - Cabin COâ‚‚ nominal: $\le 3.0\,\text{mmHg}$; Elevated threshold: $> 4.0\,\text{mmHg}$; Mission limit: $5.0\,\text{mmHg}$.
@@ -262,9 +262,9 @@ Implements rule-based, transparent exposure window alignment without black-box c
   - `OBSERVE`: Environmental excursion with mild physiological elevation ($P_{\text{CO}_2} > 4.0\,\text{mmHg}$ and $\text{HR} > 85\,\text{bpm}$) without reported symptoms.
   - `INVESTIGATE`: Environmental threshold exceeded ($P_{\text{CO}_2} > 4.5\,\text{mmHg}$) co-occurring with a crew-reported symptom within the exposure window.
 * **Uncertainty Quantification:** Evaluated from missing data percentage in the window: $< 5\%$ gap = `LOW`, $5\text{--}20\%$ gap = `MODERATE`, $> 20\%$ gap or spatial mismatch = `HIGH`.
-* **Non-Causal Disclaimer:** Every event includes an immutable statement: *"Temporal overlap indicates co-occurrence only, not clinical causation. HABITAT TRACE does not diagnose pathologies or prescribe countermeasures."*
+* **Non-Causal Disclaimer:** Every event includes an immutable statement: *"Temporal overlap indicates co-occurrence only, not clinical causation. HABITRACK does not diagnose pathologies or prescribe countermeasures."*
 
-#### 2.2.6 Offline Scientific Knowledge Retrieval (`habitat_trace/core/rag.py`) [PRD: FR-10]
+#### 2.2.6 Offline Scientific Knowledge Retrieval (`habitrack/core/rag.py`) [PRD: FR-10]
 Provides offline evidence retrieval using SQLite's native FTS5 engine:
 * **Corpus Indexing:** Indexes structured markdown files from `data/research_corpus/` into `research_knowledge_fts` with BM25 ranking.
 * **BM25 Search:** Executes sub-5ms full-text search against symptom codes or event rationales.
@@ -272,7 +272,7 @@ Provides offline evidence retrieval using SQLite's native FTS5 engine:
   - *Mode 1 (Local Ollama Daemon):* If reachable on `http://localhost:11434/api/generate`, dispatches a POST request with payload `{"model": "llama3.2:1b", "prompt": "...", "stream": false}` with a 3.0-second timeout.
   - *Mode 2 (Default / Fallback):* Renders the verbatim top-3 cited passages directly in the UI with source repository, section heading, and DOI links.
 
-#### 2.2.7 Presentation Layer (`habitat_trace/ui/`) [PRD: FR-04, FR-05, FR-06, FR-09]
+#### 2.2.7 Presentation Layer (`habitrack/ui/`) [PRD: FR-04, FR-05, FR-06, FR-09]
 Built with Streamlit and Plotly, operating in steady-state investigation mode:
 * **Persistent Global Disclaimer:** Header banner on all screens:  
   `Operational Decision Support Only â€” Not Approved for Autonomous Clinical Diagnosis or Medical Countermeasure Direction`
@@ -338,8 +338,8 @@ No data packets, telemetry, or user inputs ever leave the local host. Network so
   * *Trade-offs:* Clean client-server boundary, granular DOM re-rendering, and superior long-term extensibility for multi-user mission operations. However, it requires dual build pipelines, node/npm tooling, CORS management, and extensive frontend scaffolding.
   * *Rejected by author for Version 1:* Postponed to Version 5. Introduces dual-runtime operational and build complexity disproportionate to single-workstation prototype requirements.
 * **Alternative 2B: Streamlit Steady-State Console with Headless Python Core (Selected)**
-  * *Mechanism:* Python-based Streamlit UI consuming an isolated `habitat_trace.core` library. The UI operates strictly in a steady-state investigation paradigm (loading historical slices, batching inputs via `st.form`, and rendering WebGL Plotly charts) without dynamic high-frequency WebSocket streaming.
-  * *Trade-offs:* Less granular layout control and full script re-runs on unbatched interactions, but delivers an interactive, operational prototype in a single unified Python codebase. Because `habitat_trace.core` has zero Streamlit imports, the core engine can be ported to FastAPI in Version 5 without rewriting analytics logic.
+  * *Mechanism:* Python-based Streamlit UI consuming an isolated `habitrack.core` library. The UI operates strictly in a steady-state investigation paradigm (loading historical slices, batching inputs via `st.form`, and rendering WebGL Plotly charts) without dynamic high-frequency WebSocket streaming.
+  * *Trade-offs:* Less granular layout control and full script re-runs on unbatched interactions, but delivers an interactive, operational prototype in a single unified Python codebase. Because `habitrack.core` has zero Streamlit imports, the core engine can be ported to FastAPI in Version 5 without rewriting analytics logic.
 
 ### 3.3 Physiological Telemetry Sourcing
 
@@ -371,7 +371,7 @@ No data packets, telemetry, or user inputs ever leave the local host. Network so
 
 ### 4.1 File Inventory & Touch Tree
 
-The following list enumerates every file to be created, modified, or managed for the HABITAT TRACE Version 1 implementation within the workspace root (`.` / `D:\nasaResearch\`):
+The following list enumerates every file to be created, modified, or managed for the HABITRACK Version 1 implementation within the workspace root (`.` / `D:\nasaResearch\`):
 
 ```text
 .
@@ -384,7 +384,7 @@ The following list enumerates every file to be created, modified, or managed for
 â”‚       â”œâ”€â”€ hrr_sleep_loss.md
 â”‚       â”œâ”€â”€ hrr_radiation_biomarkers.md
 â”‚       â””â”€â”€ osdr_cardiovascular_microgravity.md
-â”œâ”€â”€ habitat_trace/
+â”œâ”€â”€ habitrack/
 â”‚   â”œâ”€â”€ __init__.py
 â”‚   â”œâ”€â”€ core/
 â”‚   â”‚   â”œâ”€â”€ __init__.py
@@ -435,41 +435,41 @@ The following list enumerates every file to be created, modified, or managed for
    * *Purpose:* Curated summary of space radiation dosimeter measurements and biological risk factors from RadLab and OSDR literature.
 7. **`data/research_corpus/osdr_cardiovascular_microgravity.md`**
    * *Purpose:* Curated summary of spaceflight cardiovascular deconditioning, fluid redistribution, and resting heart-rate shifts from OSDR spaceflight studies.
-8. **`habitat_trace/__init__.py`**
+8. **`habitrack/__init__.py`**
    * *Purpose:* Package root exposing top-level version metadata (`__version__ = "1.0.0"`).
-9. **`habitat_trace/core/__init__.py`**
+9. **`habitrack/core/__init__.py`**
    * *Purpose:* Core package initializer with zero Streamlit imports.
-10. **`habitat_trace/core/models.py`**
+10. **`habitrack/core/models.py`**
     * *Purpose:* Pydantic V2 schemas enforcing strict typing, enum validation, and JSON serialization for `Astronaut`, `DataSource`, `TelemetryStream`, `Measurement`, `SymptomReport`, `HealthEvent`, and `ResearchDocument`.
-11. **`habitat_trace/core/storage.py`**
-    * *Purpose:* SQLite 3 database manager. Executes DDL statements, manages WAL journal mode, creates indices on stream/time pairs, and provides thread-safe context managers for connections (`check_same_thread=False`, `timeout=10.0`). Implements `StorageManager.ensure_initialized()` for default database path `data/habitat_trace.db`, automatic schema migrations, and idempotent metadata seeding.
-12. **`habitat_trace/core/ingestion.py`**
+11. **`habitrack/core/storage.py`**
+    * *Purpose:* SQLite 3 database manager. Executes DDL statements, manages WAL journal mode, creates indices on stream/time pairs, and provides thread-safe context managers for connections (`check_same_thread=False`, `timeout=10.0`). Implements `StorageManager.ensure_initialized()` for default database path `data/habitrack.db`, automatic schema migrations, and idempotent metadata seeding.
+12. **`habitrack/core/ingestion.py`**
     * *Purpose:* Ingests NASA EDA CSV/TSV files, normalizes timestamps into UTC ISO 8601, performs STP conversion for $P_{\text{CO}_2}$, detects telemetry gaps, and marks data quality states (`VALID`, `SUSPECT`, `STALE`, `GAP`, `IMPUTED`).
-13. **`habitat_trace/core/simulation.py`**
+13. **`habitrack/core/simulation.py`**
     * *Purpose:* Generates deterministic, physiologically plausible vital-sign time-series (Heart Rate, SpOâ‚‚, Body Temperature) time-synchronized to authentic NASA EDA timestamps and driven by autonomous circadian rhythms and exertion baselines (independent of ambient COâ‚‚ to eliminate epistemic circularity), stamped with `SYNTHETIC_SIMULATION` provenance tags.
-14. **`habitat_trace/core/analytics.py`**
+14. **`habitrack/core/analytics.py`**
     * *Purpose:* Rule-based exposure alignment engine and time-series decimation utility. Exposes `decimate_time_series(df, max_points=1000)` using LTTB. Evaluates sliding exposure windows ($[-4\text{h}, +4\text{h}]$) surrounding crew symptom reports against environmental thresholds ($P_{\text{CO}_2} > 4.0 / 4.5\,\text{mmHg}$), generating immutable `HealthEvent` records with uncertainty levels and non-causal rationales.
-15. **`habitat_trace/core/rag.py`**
+15. **`habitrack/core/rag.py`**
     * *Purpose:* SQLite FTS5 indexing engine for the research corpus. Executes BM25 keyword searches against symptom codes and event rationales, rendering verbatim cited passage cards by default, with an optional zero-config experimental hook for local Ollama HTTP synthesis (`llama3.2:1b`, 3.0s timeout).
-16. **`habitat_trace/ui/__init__.py`**
+16. **`habitrack/ui/__init__.py`**
     * *Purpose:* UI package initializer.
-17. **`habitat_trace/ui/app.py`**
+17. **`habitrack/ui/app.py`**
     * *Purpose:* Main Streamlit dashboard entry point. Displays persistent operational disclaimer header banner. Sets up wide page config, astronaut profile selector in the sidebar, tab navigation, and caches the thread-safe `StorageManager` factory instance.
-18. **`habitat_trace/ui/components/__init__.py`**
+18. **`habitrack/ui/components/__init__.py`**
     * *Purpose:* UI components subpackage initializer.
-19. **`habitat_trace/ui/components/badges.py`**
+19. **`habitrack/ui/components/badges.py`**
     * *Purpose:* Reusable visual provenance badges (`[AUTHENTIC NASA EDA]`, `[SIMULATED VITALS]`, `[CREW REPORTED]`) and quality-status pills.
-20. **`habitat_trace/ui/components/charts.py`**
+20. **`habitrack/ui/components/charts.py`**
     * *Purpose:* Reusable Plotly WebGL (`scattergl`) synchronized dual-timeline charts, threshold bands, symptom markers, and hatched gray data gap indicators.
-21. **`habitat_trace/ui/views/__init__.py`**
+21. **`habitrack/ui/views/__init__.py`**
     * *Purpose:* Views subpackage initializer.
-22. **`habitat_trace/ui/views/overview.py`**
+22. **`habitrack/ui/views/overview.py`**
     * *Purpose:* High-level dashboard tab showing mission elapsed time, cabin environmental indicators, pending review events, and interactive event acknowledgment button with clinical review notes input to update `review_status` in SQLite.
-23. **`habitat_trace/ui/views/timeline.py`**
+23. **`habitrack/ui/views/timeline.py`**
     * *Purpose:* Interactive dual-timeline viewport allowing the user to scrub mission elapsed time, calling `decimate_time_series` before chart rendering to inspect environmental excursions alongside vitals and exposure analysis cards.
-24. **`habitat_trace/ui/views/symptoms.py`**
+24. **`habitrack/ui/views/symptoms.py`**
     * *Purpose:* Batched `st.form` for logging new astronaut symptoms with separate occurrence and submission timestamps, location selectors, and severity ratings. Triggers synchronous exposure window evaluation on submission.
-25. **`habitat_trace/ui/views/research.py`**
+25. **`habitrack/ui/views/research.py`**
     * *Purpose:* Offline scientific literature browser and search console displaying indexed NASA HRR and OSDR summaries with exact citations.
 26. **`tests/__init__.py`**
     * *Purpose:* Test suite package initializer.
@@ -504,27 +504,27 @@ flowchart LR
 
 #### Phase 1: Core Foundation & Data Schemas [PRD: FR-01, FR-02]
 * Set up directory structure and `requirements.txt`.
-* Implement `habitat_trace/core/models.py` with Pydantic V2 schemas and enums.
-* Implement `habitat_trace/core/storage.py` with SQLite 3 DDL, WAL configuration, indices, `StorageManager.ensure_initialized()`, and default metadata seeding (astronaut profiles, sources, streams).
+* Implement `habitrack/core/models.py` with Pydantic V2 schemas and enums.
+* Implement `habitrack/core/storage.py` with SQLite 3 DDL, WAL configuration, indices, `StorageManager.ensure_initialized()`, and default metadata seeding (astronaut profiles, sources, streams).
 * Implement `tests/conftest.py` with shared test database fixtures.
 * Write and execute `tests/test_storage.py` to verify persistence integrity and thread safety.
 
 #### Phase 2: Ingestion & Simulation Engine [PRD: FR-02, FR-03, FR-07]
 * Create `data/sample_eda_iss_co2_temp.csv` with authentic ISS EDA time-series data.
-* Implement `habitat_trace/core/ingestion.py` with STP unit normalization, timestamp parsing, and data-quality flagging (`VALID`, `SUSPECT`, `STALE`, `GAP`, `IMPUTED`).
-* Implement `habitat_trace/core/simulation.py` with deterministic, autonomous circadian-driven vitals generation and provenance tagging (`SYNTHETIC_SIMULATION`).
+* Implement `habitrack/core/ingestion.py` with STP unit normalization, timestamp parsing, and data-quality flagging (`VALID`, `SUSPECT`, `STALE`, `GAP`, `IMPUTED`).
+* Implement `habitrack/core/simulation.py` with deterministic, autonomous circadian-driven vitals generation and provenance tagging (`SYNTHETIC_SIMULATION`).
 * Write and execute `tests/test_ingestion.py` and `tests/test_simulation.py`.
 
 #### Phase 3: Analytics & Offline RAG Engine [PRD: FR-06, FR-08, FR-10]
-* Implement `habitat_trace/core/analytics.py` with LTTB decimation (`decimate_time_series`), sliding-window exposure correlation, spatial uncertainty checks, and explainable `HealthEvent` generation.
+* Implement `habitrack/core/analytics.py` with LTTB decimation (`decimate_time_series`), sliding-window exposure correlation, spatial uncertainty checks, and explainable `HealthEvent` generation.
 * Create curated markdown research summaries in `data/research_corpus/`.
-* Implement `habitat_trace/core/rag.py` with SQLite FTS5 virtual table indexing, BM25 search, and verbatim citation card rendering with optional Ollama hook.
+* Implement `habitrack/core/rag.py` with SQLite FTS5 virtual table indexing, BM25 search, and verbatim citation card rendering with optional Ollama hook.
 * Write and execute `tests/test_analytics.py` and `tests/test_rag.py`.
 
 #### Phase 4: Streamlit Steady-State Console [PRD: FR-04, FR-05, FR-09]
-* Implement `habitat_trace/ui/components/badges.py` and `habitat_trace/ui/components/charts.py` using Plotly WebGL (`scattergl`).
+* Implement `habitrack/ui/components/badges.py` and `habitrack/ui/components/charts.py` using Plotly WebGL (`scattergl`).
 * Implement tab views: `overview.py` (with event acknowledgment and notes input), `timeline.py` (with LTTB decimation integration), `symptoms.py` (with synchronous event triggering), and `research.py`.
-* Implement main entry point `habitat_trace/ui/app.py` with persistent disclaimer banner, session state caching of the `StorageManager` factory, and astronaut profile selection.
+* Implement main entry point `habitrack/ui/app.py` with persistent disclaimer banner, session state caching of the `StorageManager` factory, and astronaut profile selection.
 
 #### Phase 5: Verification & End-to-End Demonstration Scenario [PRD: FR-11]
 * Implement `tests/test_scenario_day127.py` executing the end-to-end mission verification scenario (Day 127: cabin COâ‚‚ excursion to 5.8 mmHg, delayed headache report at MET 127d 02:15, exposure alignment, and scientific literature retrieval).

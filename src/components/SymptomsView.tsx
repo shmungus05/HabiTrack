@@ -3,7 +3,7 @@
  * Complete Symptom Reporting & Diary Suite:
  * - 📋 Symptom History Diary (search, severity filter, 1-click JSON export, NASA sample loader)
  * - ⚡ Manual Fast-Log Entry (preserving API submission to /api/symptoms)
- * - 🩺 Direct Launch to Unified HABITAT TRACE 5-Factor Clinical Triage Assistant
+ * - 🩺 Direct Launch to Unified HabiTrack 5-Factor Clinical Triage Assistant
  * Styled in the minimalist Perplexity design aesthetic: rounded-2xl, font-semibold headings.
  */
 
@@ -101,7 +101,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [reports, setReports] = useState<SymptomReport[]>([]);
   const [localDiary, setLocalDiary] = useState<LocalSymptomEntry[]>(() => {
     try {
-      const saved = localStorage.getItem("habitat_trace_symptom_diary_v3");
+      const saved = localStorage.getItem("habitrack_symptom_diary_v3");
       return saved ? JSON.parse(saved) : SAMPLE_NASA_DIARY;
     } catch {
       return SAMPLE_NASA_DIARY;
@@ -114,14 +114,14 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("habitat_trace_symptom_diary_v3", JSON.stringify(localDiary));
+    localStorage.setItem("habitrack_symptom_diary_v3", JSON.stringify(localDiary));
   }, [localDiary]);
 
   // Reactive listener when the unified Assistant records a symptom triage
   useEffect(() => {
     const handleSymptomLogged = (event: Event) => {
       try {
-        const saved = localStorage.getItem("habitat_trace_symptom_diary_v3");
+        const saved = localStorage.getItem("habitrack_symptom_diary_v3");
         if (saved) {
           setLocalDiary(JSON.parse(saved));
         }
@@ -130,8 +130,8 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       }
     };
 
-    window.addEventListener("habitat_trace_symptom_logged", handleSymptomLogged);
-    return () => window.removeEventListener("habitat_trace_symptom_logged", handleSymptomLogged);
+    window.addEventListener("habitrack_symptom_logged", handleSymptomLogged);
+    return () => window.removeEventListener("habitrack_symptom_logged", handleSymptomLogged);
   }, []);
 
   const load = useCallback(async () => {

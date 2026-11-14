@@ -1,9 +1,9 @@
-﻿# HABITAT TRACE Version 4: Predictive Clinical Risk & Authentic Flight Playback Architecture
+﻿# HABITRACK Version 4: Predictive Clinical Risk & Authentic Flight Playback Architecture
 
 * **Author:** MinnThikeTunn & Antigravity Team
 * **Date:** 2026-11-14
 * **Status:** Approved Technical Design Document
-* **Predecessor Context:** [habitat_trace_v3.md](file:///D:/nasaResearch/docs/designs/habitat_trace_v3.md)
+* **Predecessor Context:** [habitrack_v3.md](file:///D:/nasaResearch/docs/designs/habitrack_v3.md)
 * **Parent Architecture:** [README.md](file:///D:/nasaResearch/README.md)
 * **Requirements Baseline:** [PRD.md](file:///D:/nasaResearch/PRD.md) (Section 17: Version 4 Scope), [SPEC-001](file:///D:/nasaResearch/docs/specs/SPEC-001-iss-environmental-telemetry-and-clinical-risk.md)
 * **Domain Model:** [GLOSSARY.md](file:///D:/nasaResearch/GLOSSARY.md)
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-HABITAT TRACE Version 4 upgrades the platform from static historical data exploration to dynamic flight-grade telemetry playback, continuous short-term trend estimation, and empirical non-linear epidemiological risk forecasting. 
+HABITRACK Version 4 upgrades the platform from static historical data exploration to dynamic flight-grade telemetry playback, continuous short-term trend estimation, and empirical non-linear epidemiological risk forecasting. 
 
 Version 4 incorporates:
 1. **Authentic ISS EDA Telemetry Playback Engine**: Continuous streaming controller for authentic ISS Expedition 71/72 flight telemetry across Node 2 Harmony and US Lab Destiny with scrub, play/pause, 1x/2x/5x speed modifiers, and sliding 10-point moving sparklines.

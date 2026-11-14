@@ -1,4 +1,4 @@
-﻿# SPEC-004: Mastra AI Integration Specification for HABITAT TRACE
+﻿# SPEC-004: Mastra AI Integration Specification for HABITRACK
 
 ## Status: Approved Architecture Specification
 ## Target Directory: `src/mastra/`

@@ -36,7 +36,7 @@ export const PROHIBITED_CAUSAL_TERMS_SOURCE =
   "\\b(cause|causes|caused|causing|proves|proven|proving|diagnose|diagnosed|diagnosing|diagnosis|prescribe|prescribes|prescribed|prescribing|prescription|treat|treated|treating|treatment|therapeutic|therapy|cure|remedy)\\b";
 
 export const EPISTEMIC_DISCLAIMER =
-  "Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. Habitat Trace is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons.";
+  "Non-Causal Decision Support Disclaimer: Temporal alignment of environmental excursions and physiological observations indicates co-occurrence only and does not establish clinical causation. HabiTrack is an operational decision-support tool, not an autonomous diagnostic system. Clinical actions must be verified by flight surgeons.";
 
 /** Fresh regex per call: a global flag would make `.test()` stateful. */
 export function containsProhibitedCausalTerms(text: string): boolean {
@@ -137,13 +137,13 @@ export const SOURCE_REFERENCES: readonly HealthReportSourceReference[] = [
     provenance: "AUTHENTIC_NASA_EDA",
   },
   {
-    sourceName: "Habitat Trace Cohort Vitals Simulation",
-    datasetIdentifier: "HABITAT-TRACE-SIM-V4",
+    sourceName: "HabiTrack Cohort Vitals Simulation",
+    datasetIdentifier: "HABITRACK-SIM-V4",
     provenance: "SYNTHETIC_SIMULATION",
   },
   {
     sourceName: "Crew Symptom Log",
-    datasetIdentifier: "HABITAT-TRACE-SYMPTOM-LOG",
+    datasetIdentifier: "HABITRACK-SYMPTOM-LOG",
     provenance: "CREW_REPORTED",
   },
 ];
