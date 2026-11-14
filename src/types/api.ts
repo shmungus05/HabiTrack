@@ -76,6 +76,10 @@ export interface SymptomReport {
   cabin_module: string | null;
   notes: string | null;
   is_synthetic: boolean;
+  review_status?: ReviewStatus;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  review_notes?: string | null;
 }
 
 export interface HealthEvent {

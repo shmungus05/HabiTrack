@@ -22,6 +22,7 @@ import {
   FileCheck2,
   FileText,
   Flame,
+  Lock,
   MessageSquare,
   Mic,
   MicOff,
@@ -53,7 +54,7 @@ import {
 } from "../stores/assistantStore";
 import { EvidenceCard } from "./EvidenceCard";
 import { parseEventRationale } from "./EventRationaleDisplay";
-import { Badge } from "./ui";
+import { Badge, MessageFormatter } from "./ui";
 
 const CABIN_MODULES = [
   "Auto-Detect",
@@ -86,6 +87,8 @@ export function AssistantDrawer() {
   const selectedCompartment = useAssistantStore((state) => state.selectedCompartment);
   const setSelectedCompartment = useAssistantStore((state) => state.setSelectedCompartment);
   const toggleInterimAction = useAssistantStore((state) => state.toggleInterimAction);
+  const confirmSymptomConsent = useAssistantStore((state) => state.confirmSymptomConsent);
+  const dismissSymptomConsent = useAssistantStore((state) => state.dismissSymptomConsent);
   const error = useAssistantStore((state) => state.error);
   const closeDrawer = useAssistantStore((state) => state.closeDrawer);
   const submitQuery = useAssistantStore((state) => state.submitQuery);
@@ -392,24 +395,13 @@ export function AssistantDrawer() {
                                     {msg.location}
                                   </span>
                                 )}
-                                {msg.latchedRuleId && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[11px]">
-                                    <ShieldCheck className="w-3 h-3 text-amber-600" />
-                                    {msg.latchedRuleId}
-                                  </span>
-                                )}
+
                               </div>
                               <span className="text-slate-400 text-[11px]">{msg.timestamp}</span>
                             </div>
 
-                            {/* Content text */}
-                            <div
-                              className={`whitespace-pre-wrap font-sans text-sm sm:text-[14.5px] leading-relaxed ${
-                                isUser ? "text-slate-100" : "text-slate-800"
-                              }`}
-                            >
-                              {msg.text}
-                            </div>
+                            {/* Content text formatted with Perplexity-style clean typography */}
+                            <MessageFormatter text={msg.text} isUser={isUser} />
 
                             {/* ChatGPT / Perplexity Style Starter Prompt Cards on Welcome */}
                             {!isUser && msg.id === "welcome-msg" && messages.length <= 1 && (
@@ -549,6 +541,90 @@ export function AssistantDrawer() {
                               </div>
                             )}
 
+                            {/* Astronaut Symptom Logging Consent / Permission Box */}
+                            {!isUser && msg.symptomConsent && (
+                              <div className="pt-3 border-t border-slate-100">
+                                {msg.symptomConsent.status === "PENDING" && (
+                                  <div className="rounded-2xl p-4 bg-gradient-to-br from-sky-50/90 via-white to-sky-50/40 border border-sky-200 shadow-sm space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="grid h-6 w-6 place-items-center rounded-lg bg-sky-600 text-white shadow-xs">
+                                          <ShieldCheck className="h-3.5 w-3.5" />
+                                        </span>
+                                        <span className="font-semibold text-xs text-sky-950 tracking-tight">
+                                          Log to Station Symptoms &amp; Ground Health Record?
+                                        </span>
+                                      </div>
+                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold uppercase">
+                                        Awaiting Permission
+                                      </span>
+                                    </div>
+
+                                    <p className="text-xs text-slate-600 leading-relaxed">
+                                      Would you like to save this evaluation to the <strong>Expedition Symptoms Diary</strong> and transmit a clinical handoff packet to the Flight Surgeon?
+                                    </p>
+
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono bg-white/80 p-2 rounded-xl border border-sky-100 text-slate-700">
+                                      <span>Crew: <strong>{msg.symptomConsent.astronautId}</strong> ({msg.symptomConsent.callsign})</span>
+                                      <span>•</span>
+                                      <span>Location: <strong>{msg.symptomConsent.location}</strong></span>
+                                      <span>•</span>
+                                      <span>CO₂: <strong>{msg.symptomConsent.snapshot.co2Ppm.toLocaleString()} PPM</strong></span>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => dismissSymptomConsent(msg.id)}
+                                        className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                      >
+                                        <Lock className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>Keep Private (Guidance Only)</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => void confirmSymptomConsent(msg.id)}
+                                        className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Save to Symptoms &amp; Alert Surgeon</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {msg.symptomConsent.status === "CONFIRMED" && (
+                                  <div className="rounded-xl p-3 bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between gap-3 shadow-xs">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                      <span className="font-semibold">
+                                        Logged to Mission Symptoms Diary &amp; Station Health Record
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] font-mono text-emerald-700 shrink-0">
+                                      {msg.symptomConsent.confirmedAt ?? "Confirmed"} · {msg.symptomConsent.astronautId}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {msg.symptomConsent.status === "DISMISSED" && (
+                                  <div className="rounded-xl p-3 bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                                      <span>Kept private in session · Not recorded in official station logs.</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => void confirmSymptomConsent(msg.id)}
+                                      className="text-[11px] font-semibold text-sky-700 hover:underline cursor-pointer"
+                                    >
+                                      Change mind &amp; Save
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             {/* Surgeon handoff packet inspector */}
                             {!isUser && msg.surgeonHandoffPacket && (
                               <div className="pt-2 flex items-center justify-end border-t border-slate-100">
@@ -624,12 +700,7 @@ export function AssistantDrawer() {
                               </div>
                             )}
 
-                            {/* Epistemic disclaimer if provided */}
-                            {!isUser && msg.disclaimer && (
-                              <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-100">
-                                {msg.disclaimer}
-                              </p>
-                            )}
+
                           </div>
                         </div>
                       );

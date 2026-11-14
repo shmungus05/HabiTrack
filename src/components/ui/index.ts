@@ -7,3 +7,4 @@ export * from "./Select";
 export * from "./Tabs";
 export * from "./MetricCard";
 export * from "./StatusDot";
+export * from "./MessageFormatter";

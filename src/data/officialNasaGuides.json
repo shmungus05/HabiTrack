@@ -1,0 +1,221 @@
+[
+  {
+    "id": "guide-ared-01",
+    "nasaDocumentId": "NASA-STD-3001-V2 Section 6.4",
+    "title": "ARED Microgravity Squat & Axial Loading Calibration",
+    "category": "exercise",
+    "durationMinutes": 4.5,
+    "sourceRepository": "NASA Johnson Space Center · Exercise Countermeasures Lab",
+    "summary": "Proper harness alignment and bar lock engagement to prevent lumbar shear stress during microgravity axial loading on the Advanced Resistive Exercise Device.",
+    "instructions": [
+      "Verify Main Arm Bar is locked at Station 4 prior to stepping into the footplate.",
+      "Tighten waist belt harness snugly below iliac crest; confirm zero vertical play.",
+      "Engage vacuum cylinder inertial compensator knob to nominal mission load (140 kg equivalent).",
+      "Maintain upright spine posture with eyes fixed on Node 3 bulkhead marker during descent.",
+      "Perform 3 sets of 10 repetitions with a controlled 2-second eccentric tempo."
+    ],
+    "safetyNotices": [
+      {
+        "level": "WARNING",
+        "ruleId": "FR-EVA-003",
+        "text": "Do not release bar lock until feet are fully flat on the load plates."
+      },
+      {
+        "level": "CAUTION",
+        "text": "Abort exercise if spinal compression pain exceeds mild discomfort; report to Flight Surgeon."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Exercise Equipment Inspection" },
+      { "time": "00:45", "seconds": 45, "title": "Harness Fit & Load Calibration" },
+      { "time": "01:30", "seconds": 90, "title": "Footplate Stance & Execution" },
+      { "time": "02:15", "seconds": 135, "title": "Cool Down & Lock-Off" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4~mobile.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4~small.jpg",
+    "relatedSymptomCodes": ["FATIGUE"],
+    "verifiedBy": "NASA JSC Lead Countermeasures Officer"
+  },
+  {
+    "id": "guide-sms-02",
+    "nasaDocumentId": "NASA-HRP-47065 Evidence Book",
+    "title": "Space Motion Sickness (SMS) Vestibular Habituation Protocol",
+    "category": "adaptation",
+    "durationMinutes": 3.2,
+    "sourceRepository": "NASA Human Research Program (HRP) · Neuro-Vestibular Lab",
+    "summary": "Targeted head-eye coordination drills to accelerate otolith-canal re-weighting and reduce neuro-vestibular disorientation during Flight Days 1-4.",
+    "instructions": [
+      "Anchor feet firmly in handrail restraint to minimize tactile drift.",
+      "Fixate gaze on a stationary cabin bulkhead bolt 1.5 meters directly ahead.",
+      "Perform gentle ±30° yaw (horizontal) head rotations while holding visual target lock.",
+      "Pause for 15 seconds if pallor, diaphoresis, or stomach awareness escalates.",
+      "Transition to gentle pitch (vertical) tilts at 0.5 Hz frequency for 2 minutes."
+    ],
+    "safetyNotices": [
+      {
+        "level": "CAUTION",
+        "text": "Avoid rapid head pitch movements during translation between ISS modules."
+      },
+      {
+        "level": "WARNING",
+        "text": "Keep emesis containment bag clipped to flight suit chest ring during first 72 hours."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Station Translation & Spatial Drift" },
+      { "time": "00:50", "seconds": 50, "title": "Horizontal Gaze Fixation Drills" },
+      { "time": "01:40", "seconds": 100, "title": "Pitch Damping & Recovery Position" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/Step_Inside_the_Station-4K/Step_Inside_the_Station-4K~preview.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/Step_Inside_the_Station-4K/Step_Inside_the_Station-4K~small.jpg",
+    "relatedSymptomCodes": ["NAUSEA", "DIZZINESS"],
+    "verifiedBy": "Flight Surgeon / Neuro-Vestibular Panel"
+  },
+  {
+    "id": "guide-sleep-03",
+    "nasaDocumentId": "NASA-STD-3001-V2 Section 8.2",
+    "title": "Node 2 Sleep Station Rigging & Cabin Habitability Testing",
+    "category": "sleep",
+    "durationMinutes": 5.0,
+    "sourceRepository": "ISS Medical Operations & ECLSS Subsystem Team",
+    "summary": "Tether tensioning, acoustic baffle alignment, and localized CO2 pocket elimination via intake fan duct targeting.",
+    "instructions": [
+      "Verify crew quarter intake fan filter is free of debris; confirm 55 dB acoustic baffle alignment.",
+      "Attach four bungee anchor points of sleeping bag to cabin bulkhead clips with 10% tension slack.",
+      "Ensure fresh ventilation duct outlet is pointed toward face to prevent local CO2 bubble stagnation.",
+      "Position brow strap gently across forehead to prevent involuntary arm drift.",
+      "Set cabin ambient lighting spectrum to 450nm-attenuated warm amber 45 minutes prior to sleep."
+    ],
+    "safetyNotices": [
+      {
+        "level": "FLIGHT_RULE",
+        "ruleId": "FR-ECLSS-001",
+        "text": "If waking with throbbing headache or shortness of breath, inspect ventilation duct flow immediately."
+      },
+      {
+        "level": "CAUTION",
+        "text": "Ensure emergency acoustic alarm beacon is unobstructed by personal equipment bags."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Crew Quarters Ingress" },
+      { "time": "01:10", "seconds": 70, "title": "Sleeping Bag 4-Point Rigging" },
+      { "time": "02:20", "seconds": 140, "title": "Local CO2 Pocket Airflow Check" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social~preview.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social~medium_1.jpg",
+    "relatedSymptomCodes": ["HEADACHE", "FATIGUE"],
+    "verifiedBy": "ISS Environmental Health Officer"
+  },
+  {
+    "id": "guide-eye-04",
+    "nasaDocumentId": "ISS CHeCS MedOps Vol 3",
+    "title": "ISS Operational Science & Clinical Health Maintenance",
+    "category": "medical",
+    "durationMinutes": 3.8,
+    "sourceRepository": "NASA Crew Health Care System (CHeCS) · Clinical Care Library",
+    "summary": "Clinical protocol adherence, daily autonomic telemetry verification, and particulate debris mitigation on station.",
+    "instructions": [
+      "Retrieve Ophthalmic Emergency Kit from Crew Care Bag in Columbus Module.",
+      "Seat contoured eye cup firmly against orbital rim; verify seal prevents fluid capillary escape.",
+      "Connect syringe suction tube to lower fluid evacuation manifold port.",
+      "Instill 15 mL sterile saline through top injection port while blinking continuously.",
+      "Inspect eyelid with handheld cobalt blue light and fluorescein strip if scratch sensation persists."
+    ],
+    "safetyNotices": [
+      {
+        "level": "WARNING",
+        "text": "Do not rub eye with gloved or bare fingers; corneal abrasions worsen rapidly in microgravity."
+      },
+      {
+        "level": "CAUTION",
+        "text": "Report any persistent visual acuity degradation or photophobia to Flight Surgeon immediately."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Clinical Module Inspection" },
+      { "time": "01:00", "seconds": 60, "title": "Biometric Diagnostic Setup" },
+      { "time": "02:15", "seconds": 135, "title": "Debris Flush & Evaluation" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/GRC-2020-CM-0152/GRC-2020-CM-0152~mobile.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/GRC-2020-CM-0152/GRC-2020-CM-0152~thumb.jpg",
+    "relatedSymptomCodes": ["HEADACHE"],
+    "verifiedBy": "Chief Medical Officer · Expedition 71"
+  },
+  {
+    "id": "guide-food-05",
+    "nasaDocumentId": "NASA-STD-3001-V2 Section 7.1",
+    "title": "Closed-Loop Food Rehydration & Space Galley Nutrition",
+    "category": "nutrition",
+    "durationMinutes": 2.5,
+    "sourceRepository": "NASA Food Technology Laboratory · JSC",
+    "summary": "Septum needle volume dosing for retort food pouches to ensure complete micronutrient, potassium, and fluid reconstitution.",
+    "instructions": [
+      "Inspect foil retort pouch seal for pinhole breaches or vacuum failure.",
+      "Insert galley potable water dispenser needle into septum valve until positive detent click.",
+      "Select exact water volume (e.g. 150 mL hot at 75°C); depress dispense button once.",
+      "Knead pouch thoroughly for 45 seconds to dissolve electrolyte clusters.",
+      "Insert into food warmer slot for 15 minutes prior to consumption."
+    ],
+    "safetyNotices": [
+      {
+        "level": "CAUTION",
+        "text": "Check septum seal for hot water droplets before undocking needle to avoid skin scalding."
+      },
+      {
+        "level": "CAUTION",
+        "text": "Ensure daily sodium intake remains within Flight Surgeon prescribed limits (<3000 mg/day)."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Galley Preparation & Pouch Detent" },
+      { "time": "00:50", "seconds": 50, "title": "Automated Dispenser Dosing" },
+      { "time": "01:30", "seconds": 90, "title": "Kneading & Thermal Warmer Stacking" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4~mobile.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4~small.jpg",
+    "relatedSymptomCodes": ["FATIGUE", "NAUSEA"],
+    "verifiedBy": "NASA Lead Nutritionist"
+  },
+  {
+    "id": "guide-treadmill-06",
+    "nasaDocumentId": "NASA-STD-3001-V2 Section 6.4",
+    "title": "Extravehicular Activity (EVA) Spacewalk Protocols",
+    "category": "exercise",
+    "durationMinutes": 4.0,
+    "sourceRepository": "ESA EAC & NASA Exercise Physiology Team",
+    "summary": "Motion protocols, tether safety checks, and physical endurance stabilization during microgravity spacewalk sorties.",
+    "instructions": [
+      "Inspect bungee elastomer cords for surface abrasion or fiber fraying.",
+      "Attach harness clips to T2 carriage bungee load straps with audible click confirmation.",
+      "Step onto belt; verify digital load cells display between 65% and 75% Earth body weight.",
+      "Begin with a 3-minute warm-up walk at 4.5 km/h before initiating aerobic running interval."
+    ],
+    "safetyNotices": [
+      {
+        "level": "WARNING",
+        "text": "Always tether emergency stop magnetic clip to waist strap before belt start."
+      },
+      {
+        "level": "FLIGHT_RULE",
+        "ruleId": "FR-EVA-003",
+        "text": "Stop immediately if vibration isolation dampers bottom out against the ISS deck structure."
+      }
+    ],
+    "chapters": [
+      { "time": "00:00", "seconds": 0, "title": "Airlock Translation & Tether Check" },
+      { "time": "01:10", "seconds": 70, "title": "Bulkhead Handrail Stability" },
+      { "time": "02:00", "seconds": 120, "title": "Sortie Return & Ingress" }
+    ],
+    "mediaType": "video_stream",
+    "mediaUrl": "https://images-assets.nasa.gov/video/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023~preview.mp4",
+    "thumbnailUrl": "https://images-assets.nasa.gov/video/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023~small_1.jpg",
+    "relatedSymptomCodes": ["FATIGUE"],
+    "verifiedBy": "ESA EAC Astronaut Trainer"
+  }
+]

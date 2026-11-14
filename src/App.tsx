@@ -12,6 +12,7 @@ import {
   Lock,
   Radar,
   RefreshCw,
+  Library as LibraryIcon,
   Settings as SettingsIcon,
   ShieldAlert,
   Stethoscope,
@@ -29,6 +30,7 @@ import { SymptomsView } from "./components/SymptomsView";
 import { AlertsDeck } from "./features/alerts";
 import { SettingsView } from "./features/settings";
 import { HealthReportModal } from "./features/health-report";
+import { LibraryView } from "./features/library";
 import { useSimulationSandbox } from "./features/simulation";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
@@ -44,6 +46,7 @@ export type ViewKey =
   | "overview"
   | "timeline"
   | "symptoms"
+  | "library"
   | "research"
   | "alerts"
   | "settings";
@@ -60,6 +63,7 @@ const ALL_VIEWS: readonly ViewDefinition[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard, path: "/", surgeonOnly: false },
   { key: "timeline", label: "Timeline", icon: Activity, path: "/timeline", surgeonOnly: false },
   { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms", surgeonOnly: false },
+  { key: "library", label: "Library", icon: LibraryIcon, path: "/library", surgeonOnly: false },
   { key: "research", label: "Research", icon: BookOpen, path: "/research", surgeonOnly: true },
   { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts", surgeonOnly: false },
   { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: false },
@@ -580,6 +584,15 @@ export default function App() {
             ) : null}
             {activeView === "symptoms" ? (
               <SymptomsView astronautId={activeAstronautId} />
+            ) : null}
+            {activeView === "library" ? (
+              <LibraryView
+                astronautId={activeAstronautId}
+                onNavigateToSymptoms={(symptomCode) => {
+                  const targetView = ALL_VIEWS.find((v) => v.key === "symptoms");
+                  if (targetView) navigate(targetView);
+                }}
+              />
             ) : null}
             {activeView === "research" ? (
               <ResearchView astronautId={activeAstronautId} />
