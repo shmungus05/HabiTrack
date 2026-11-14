@@ -1,0 +1,443 @@
+# NASA Space Apps Challenge
+# Research Guide: Astronaut Healthcare Monitoring System
+
+**Purpose:** Identify useful NASA resources, understand relevant astronaut health risks, and translate available research data into a practical healthcare-monitoring prototype.
+
+---
+
+## 1. Why NASA's Open Science Data Repository (OSDR) Matters
+
+NASA's **Open Science Data Repository (OSDR)** is one of the most valuable starting points for this challenge. It provides access to spaceflight biological and health-related research datasets.
+
+Use it to:
+
+- Investigate physiological and biological changes associated with spaceflight.
+- Explore research into radiation, microgravity, immune response, and other health risks.
+- Find datasets that can inform system requirements and analytical methods.
+- Support your prototype with real research data where suitable data is publicly available.
+
+**Important:** OSDR is primarily a research-data resource. It should not be assumed to provide live astronaut medical telemetry. Research datasets may be collected before, during, or after a mission, and some raw data may have access restrictions.
+
+**Main portal:** https://osdr.nasa.gov/bio/repo/
+
+---
+
+## 2. Useful NASA Resources and Applications
+
+### 2.1 OSDR Data Repository
+
+**Priority: Very High**
+
+Use the repository to discover space biology and astronaut-related datasets.
+
+Potential uses:
+
+- Study physiological changes associated with spaceflight.
+- Investigate health risks and biological responses.
+- Find research data for exploratory analysis and prototype testing.
+
+Link: https://osdr.nasa.gov/bio/repo/
+
+### 2.2 RadLab
+
+**Priority: High for Radiation Monitoring**
+
+RadLab is an OSDR visualization resource for exploring radiation-related measurements and data.
+
+Potential uses:
+
+- Understand radiation exposure in space.
+- Explore dose and dose-rate measurements where available.
+- Inform radiation-exposure indicators and risk visualizations.
+
+**Prototype opportunity:** Build a radiation exposure panel that displays available measurements, cumulative exposure estimates, trends, and configurable warning thresholds.
+
+Make the units, assumptions, and data source visible.
+
+Find RadLab through the OSDR tools and applications area.
+
+### 2.3 Environmental Data Application (EDA)
+
+**Priority: High for Environmental Monitoring**
+
+Use the Environmental Data Application to explore International Space Station environmental and hardware telemetry.
+
+Potentially relevant measurements include:
+
+- Temperature
+- Humidity
+- Oxygen
+- Carbon dioxide
+- Radiation or other environmental measurements, depending on the dataset
+
+Potential uses:
+
+- Monitor the environment surrounding the crew.
+- Detect unusual environmental trends.
+- Connect environmental conditions with health-monitoring context.
+
+**Prototype opportunity:** Display environmental measurements over time and flag values that cross clearly documented thresholds.
+
+Do not invent thresholds; use authoritative source documentation.
+
+Find EDA through the OSDR tools and applications area.
+
+### 2.4 Inspiration4 Human Research Data
+
+**Priority: High for Human Biological Research**
+
+The Inspiration4 mission generated human research data from four commercial astronauts, with samples collected around the mission.
+
+Potential research areas include:
+
+- Immune-system changes.
+- Biological responses to spaceflight.
+- Differences in individual responses.
+- Before-, during-, and after-flight comparisons where data is available.
+
+**Prototype opportunity:** Explore how biological indicators vary across mission phases. Use this research to explain why health monitoring should consider an astronaut's baseline and individual differences.
+
+**Limitation:** Biological sample data is not the same as continuous vital-sign telemetry. Do not present it as live heart-rate, blood-pressure, or other real-time sensor data.
+
+Find Inspiration4 studies through the OSDR repository search.
+
+### 2.5 GeneLab Visualization Tools
+
+**Priority: Useful for Deeper Biological Analysis**
+
+GeneLab-related visualization tools can help explore biological datasets.
+
+Possible visualizations include:
+
+- Heatmaps
+- Principal component analysis (PCA) plots
+- Gene-expression comparisons
+- Pair plots
+- Volcano plots
+
+Potential uses:
+
+- Explore biological changes associated with spaceflight.
+- Compare samples or experimental conditions.
+- Identify patterns that may deserve further scientific investigation.
+
+**Limitation:** These are research-analysis tools. A pattern in gene-expression data is not automatically a clinically meaningful health alert.
+
+Find relevant tools and datasets through OSDR.
+
+---
+
+## 3. Astronaut Health Risks to Investigate
+
+The following table connects broad health-risk areas with potentially relevant research sources and possible software capabilities.
+
+| Health-risk area | Potentially relevant resource/data | Possible system capability |
+|---|---|---|
+| Radiation exposure | RadLab and radiation-related OSDR studies | Display exposure measurements, trends, and cumulative-dose estimates where supported |
+| Immune-system changes | Inspiration4 and GeneLab human studies | Show research-informed biological trends and individual variation |
+| Cardiovascular changes | Human physiological and spaceflight studies | Monitor available cardiovascular measurements and detect deviations from personal baselines |
+| Bone and muscle loss | OSDR spaceflight biological studies | Track relevant measurements across time and mission phases |
+| Environmental hazards | Environmental Data Application (EDA) | Monitor available environmental telemetry such as CO₂, oxygen, temperature, and humidity |
+| Sleep and behavioral changes | OSDR behavioral and human research studies | Track sleep or behavioral indicators when suitable data is available |
+
+### Important Distinctions
+
+- **Environmental telemetry** describes conditions in the spacecraft or habitat.
+- **Physiological telemetry** describes measurements from the human body, such as heart rate.
+- **Biological research data** may include molecular or cellular measurements from collected samples.
+- **Behavioral data** may describe sleep, cognition, workload, or other human-performance factors.
+
+These data types are not interchangeable.
+
+A strong system should identify the source, measurement unit, timestamp, collection method, and limitations of every data stream.
+
+---
+
+## 4. Suggested System Architecture
+
+A practical high-level architecture can be organized into three layers.
+
+```mermaid
+flowchart TB
+    A["Layer 1: Data Collection"]
+    A1["Physiological Sensors"]
+    A2["Environmental Telemetry"]
+    A3["Crew Input"]
+
+    A --> A1
+    A --> A2
+    A --> A3
+
+    B["Layer 2: Health Intelligence"]
+    B1["Data Validation and Quality Checks"]
+    B2["Personal Baseline and Trend Analysis"]
+    B3["Anomaly Detection"]
+    B4["Risk Assessment"]
+
+    A1 --> B
+    A2 --> B
+    A3 --> B
+
+    B --> B1
+    B1 --> B2
+    B2 --> B3
+    B3 --> B4
+
+    C["Layer 3: Decision Support"]
+    C1["Health Alerts"]
+    C2["Risk Prioritization"]
+    C3["Crew-facing Recommendations"]
+    C4["Ground Communication"]
+
+    B4 --> C
+    C --> C1
+    C --> C2
+    C --> C3
+    C --> C4
+```
+
+### Layer 1 — Data Collection
+
+Collect and organize:
+
+- Physiological sensor measurements, if available.
+- Environmental telemetry.
+- Crew-reported symptoms or wellness information.
+- Research datasets for offline analysis and validation.
+
+For each data point, preserve its timestamp, unit, source, and quality status.
+
+### Layer 2 — Health Intelligence
+
+Analyze the incoming information:
+
+- Validate missing, delayed, or implausible measurements.
+- Establish individual baselines where appropriate.
+- Analyze trends over time.
+- Detect unusual values or changes.
+- Assess risks using documented rules and explainable methods.
+
+Avoid treating one unusual reading as proof of a medical problem. Account for sensor quality, context, and repeated measurements.
+
+### Layer 3 — Decision Support
+
+Present useful information to the crew and mission support team:
+
+- Clear health alerts with severity and explanation.
+- Prioritized risks.
+- Trends and relevant historical context.
+- Suggested next steps based on approved protocols.
+- Communication and escalation status.
+
+The system should support human decision-making rather than claim to replace qualified medical judgment.
+
+---
+
+## 5. How to Search the OSDR Repository
+
+When searching the repository, try these terms:
+
+| Search term | Why it is useful |
+|---|---|
+| `Human` | Find research involving human participants |
+| `Spaceflight` | Find experiments related to space missions |
+| `Radiation` | Find radiation-exposure research |
+| `Microgravity` | Find studies of reduced-gravity effects |
+| `Immune` | Find immune-system research |
+| `Cardiovascular` | Find heart and circulation research |
+| `Behavior` | Find behavioral and human-performance research |
+
+### Suggested Search Workflow
+
+1. Open the [OSDR repository](https://osdr.nasa.gov/bio/repo/).
+2. Search for a health-risk topic, such as `Immune` or `Cardiovascular`.
+3. Prioritize human studies when the project concerns astronaut health.
+4. Check whether the study relates to spaceflight.
+5. Read the study description and data-use documentation.
+6. Inspect the available variables, units, sample sizes, and collection time points.
+7. Check whether the data is publicly downloadable or access-restricted.
+8. Record the dataset identifier and cite the study in your project.
+
+### Dataset Evaluation Checklist
+
+- [ ] What research question was the dataset created to investigate?
+- [ ] Who or what was studied?
+- [ ] Was the study conducted in spaceflight, on Earth, or in a simulation?
+- [ ] What variables are included?
+- [ ] What are the measurement units?
+- [ ] When and how often were measurements collected?
+- [ ] Is the dataset raw, processed, or summarized?
+- [ ] Are there missing values or known quality limitations?
+- [ ] Is the dataset publicly accessible?
+- [ ] What conclusions can and cannot be drawn from it?
+
+---
+
+## 6. Recommended Starting Combination
+
+Rather than trying to use every dataset, begin with three complementary perspectives.
+
+### A. Inspiration4 — What Happens Inside the Astronaut?
+
+Use human biological research to understand changes associated with spaceflight and the importance of individual variation.
+
+### B. RadLab — What Exposure Does the Astronaut Experience?
+
+Use radiation-related information to understand exposure measurements and how to communicate trends and cumulative exposure.
+
+### C. EDA — What Is Happening Around the Astronaut?
+
+Use environmental telemetry to understand habitat conditions and identify potentially hazardous environmental trends.
+
+Together, these resources can help the team investigate the relationship between:
+
+1. The astronaut's environment.
+2. The astronaut's exposure to spaceflight hazards.
+3. The astronaut's biological or physiological response.
+
+This is a useful foundation for an integrated monitoring concept.
+
+---
+
+## 7. Practical Prototype Development Plan
+
+### Phase 1 — Research
+
+- Select one primary health-risk area.
+- Find two or three relevant NASA studies or datasets.
+- Document variables, units, collection methods, and limitations.
+- Identify which measurements are real research data and which would need to be simulated.
+
+### Phase 2 — Data Preparation
+
+- Download accessible datasets.
+- Inspect their structure and quality.
+- Normalize timestamps and units where appropriate.
+- Handle missing data explicitly.
+- Keep source information attached to every measurement.
+
+### Phase 3 — Monitoring Interface
+
+Build a dashboard with:
+
+- Current or sample measurements.
+- Historical trends.
+- Personal baseline comparisons where justified.
+- Data-quality indicators.
+- Alert history.
+- Clear source and timestamp information.
+
+### Phase 4 — Intelligence
+
+Start with explainable rules and statistical methods before adding complex AI:
+
+- Threshold-based alerts using documented limits.
+- Trend detection.
+- Baseline deviation.
+- Missing or stale data detection.
+- Risk prioritization with explanations.
+
+### Phase 5 — Demonstration
+
+If real-time astronaut telemetry is unavailable:
+
+- Use NASA research data for evidence and scientific context.
+- Use clearly labeled simulated sensor streams for the live demonstration.
+- Explain which parts are real, simulated, or proposed.
+- Demonstrate how the system handles missing data, abnormal readings, and alert escalation.
+
+---
+
+## 8. What Could Make the Project Stand Out?
+
+The strongest concept is not simply another dashboard displaying vital signs.
+
+A more valuable direction is an **integrated astronaut health decision-support system** that connects:
+
+- Environmental conditions.
+- Exposure history.
+- Physiological measurements.
+- Individual baselines.
+- Changes over time.
+- Explainable alerts and recommended actions.
+
+### Example Scenario
+
+If environmental CO₂ measurements rise while an astronaut reports discomfort, the system can:
+
+1. Bring those signals together.
+2. Show their timestamps and data quality.
+3. Highlight the relevant environmental trend.
+4. Notify the appropriate crew or ground-support personnel according to the mission's approved procedures.
+
+This example illustrates contextual monitoring. It is not a validated medical diagnosis or proof that CO₂ caused a symptom.
+
+### Potential Differentiators
+
+**1. Personalized Baselines**
+
+Compare measurements with an astronaut's own historical patterns rather than relying only on population averages.
+
+**2. Multisource Monitoring**
+
+Combine environmental, physiological, and crew-reported information.
+
+**3. Explainable Alerts**
+
+Show what changed, which measurements support the alert, and what information is missing.
+
+**4. Data-quality Awareness**
+
+Identify stale, missing, or unreliable measurements before generating conclusions.
+
+**5. Offline Resilience**
+
+Design for communication delays and temporary disconnection, with local data storage and clear synchronization status.
+
+**6. Human-centered Escalation**
+
+Make alerts understandable and route them through appropriate human-approved procedures.
+
+---
+
+## 9. Safety, Scientific Validity, and Limitations
+
+Keep these principles visible throughout development:
+
+- Do not claim that the prototype diagnoses diseases.
+- Do not claim that an unvalidated model predicts medical emergencies.
+- Do not invent clinical thresholds or radiation limits.
+- Distinguish actual NASA data from simulated demonstration data.
+- Preserve units, timestamps, and dataset provenance.
+- Explain uncertainty and missing data.
+- Avoid interpreting molecular research findings as direct clinical measurements.
+- Treat alerts as decision support requiring appropriate human review.
+- Use authoritative NASA and medical sources for any health-related thresholds or procedures.
+
+---
+
+## 10. Useful Links
+
+- [NASA Open Science Data Repository](https://osdr.nasa.gov/bio/repo/)
+- [NASA Biological & Physical Sciences](https://science.nasa.gov/biological-physical/)
+- [NASA Space Apps Challenge](https://www.spaceappschallenge.org/)
+
+For RadLab, EDA, Inspiration4 studies, and GeneLab visualizations, use the OSDR repository and its tools/applications pages to locate the current resource pages and dataset records.
+
+---
+
+## 11. Immediate Action Checklist
+
+- [ ] Open OSDR and explore its dataset search.
+- [ ] Search for `Human`, `Spaceflight`, `Immune`, and `Radiation`.
+- [ ] Find one relevant Inspiration4 human study.
+- [ ] Explore radiation information through RadLab.
+- [ ] Explore environmental telemetry through EDA.
+- [ ] Select one primary health-risk problem for the prototype.
+- [ ] Create a dataset inventory with variables, units, and limitations.
+- [ ] Separate real research data from simulated live data.
+- [ ] Build a small, explainable monitoring demonstration.
+- [ ] Prepare a clear explanation of scientific validity and limitations.
+
+**Recommended first move:** Start with one human-health dataset and one environmental dataset. Build a small end-to-end demonstration before expanding to more risks.
+

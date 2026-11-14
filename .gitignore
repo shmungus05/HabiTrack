@@ -1,0 +1,95 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+.eggs/
+*.egg
+*.egg-info/
+/build/
+/dist/
+/sdist/
+.tox/
+.nox/
+__pypackages__/
+*.manifest
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Node / frontend
+# ---------------------------------------------------------------------------
+node_modules/
+.vite/
+.turbo/
+.next/
+.parcel-cache/
+coverage/
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.sample
+.streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Local databases and backups (data/wayfinder.db itself is tracked)
+# ---------------------------------------------------------------------------
+*.db-journal
+*.db-wal
+*.db-shm
+*.bak
+*.bak-*
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# ---------------------------------------------------------------------------
+# Local tool / automation state
+# ---------------------------------------------------------------------------
+.cdp-*/
+.cache/
+.impeccable/config.local.json
+
+# ---------------------------------------------------------------------------
+# Logs and temporary files
+# ---------------------------------------------------------------------------
+*.log
+logs/
+tmp/
+temp/
+
+# ---------------------------------------------------------------------------
+# OS / editor junk
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

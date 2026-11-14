@@ -1,0 +1,368 @@
+/**
+ * Portable dossier formatters.
+ *
+ * Two renderings of the same report: GitHub-Flavored Markdown for clipboard and
+ * `.md` download, and semantic, normal-flow HTML for on-screen preview and the
+ * browser's native print-to-PDF pipeline. Styles are inline so the printed
+ * artifact does not depend on the app's Tailwind build.
+ */
+
+import type { DossierReport } from "./types";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Escape a value for a Markdown table cell (pipes break the grid). */
+function escapeMarkdownCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
+function markdownRow(cells: Array<string | number>): string {
+  return `| ${cells.map((cell) => escapeMarkdownCell(String(cell))).join(" | ")} |`;
+}
+
+function statusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
+export function generateMarkdownDossier(report: DossierReport): string {
+  const { metadata } = report;
+  const lines: string[] = [];
+
+  lines.push("# WAYFINDER Clinical Investigation Dossier");
+  lines.push("");
+  lines.push(`> ${report.epistemicDisclaimer}`);
+  lines.push("");
+  lines.push("## 1. Mission & Crew Metadata");
+  lines.push("");
+  lines.push(markdownRow(["Field", "Value"]));
+  lines.push(markdownRow(["---", "---"]));
+  lines.push(markdownRow(["Report ID", metadata.reportId]));
+  lines.push(markdownRow(["Generated (UTC)", metadata.generatedAt]));
+  lines.push(markdownRow(["Mission", metadata.missionId]));
+  lines.push(markdownRow(["Astronaut", `${metadata.astronautId} · ${metadata.callsign}`]));
+  lines.push(markdownRow(["Crew role", metadata.crewRole]));
+  lines.push(markdownRow(["Window start", metadata.timeWindow.start]));
+  lines.push(markdownRow(["Window end", metadata.timeWindow.end]));
+  lines.push(markdownRow(["Mission days", metadata.timeWindow.missionDayRange]));
+  lines.push("");
+
+  lines.push("## 2. Vitals Summary (baseline deviation)");
+  lines.push("");
+  if (report.vitalsSummary.length === 0) {
+    lines.push("_No calibrated vital streams were available for this window._");
+  } else {
+    lines.push(
+      markdownRow([
+        "Parameter",
+        "Value",
+        "Unit",
+        "Baseline (μ ± 2σ)",
+        "Deviation (σ)",
+        "Status",
+        "Quality",
+      ]),
+    );
+    lines.push(
+      markdownRow(["---", "---", "---", "---", "---", "---", "---"]),
+    );
+    for (const row of report.vitalsSummary) {
+      lines.push(
+        markdownRow([
+          row.parameter,
+          row.value,
+          row.unit,
+          row.baselineRange,
+          row.deviationSigma.toFixed(2),
+          statusLabel(row.status),
+          row.qualityStatus,
+        ]),
+      );
+    }
+  }
+  lines.push("");
+
+  lines.push("## 3. Environmental Snapshot");
+  lines.push("");
+  lines.push(markdownRow(["Parameter", "Value", "Unit", "Status", "Quality"]));
+  lines.push(markdownRow(["---", "---", "---", "---", "---"]));
+  for (const row of report.environmentalSnapshot) {
+    lines.push(
+      markdownRow([
+        row.parameter,
+        row.value,
+        row.unit,
+        statusLabel(row.status),
+        row.qualityStatus,
+      ]),
+    );
+  }
+  lines.push("");
+
+  lines.push("## 4. Symptom History");
+  lines.push("");
+  if (report.symptomHistory.length === 0) {
+    lines.push("_No crew symptom reports were logged in this window._");
+  } else {
+    lines.push(
+      markdownRow(["Occurred (UTC)", "Symptom", "Severity", "Module", "Notes"]),
+    );
+    lines.push(markdownRow(["---", "---", "---", "---", "---"]));
+    for (const row of report.symptomHistory) {
+      const notes = row.nonCausalFlag
+        ? `${row.notes ?? ""} _{non-causal guardrail applied}_`
+        : (row.notes ?? "—");
+      lines.push(
+        markdownRow([
+          row.occurredAt,
+          row.symptom,
+          `${row.severity}/5`,
+          row.module,
+          notes,
+        ]),
+      );
+    }
+  }
+  lines.push("");
+
+  lines.push("## 5. Concordance Events");
+  lines.push("");
+  if (report.concordanceEvents.length === 0) {
+    lines.push("_No concordance events were evaluated for this window._");
+  } else {
+    for (const event of report.concordanceEvents) {
+      lines.push(`### ${event.title} · ${event.severity}`);
+      lines.push("");
+      lines.push(`- Event ID: \`${event.eventId}\``);
+      lines.push(`- Window: ${event.timeWindow}`);
+      lines.push(`- Rationale: ${event.rationale}`);
+      lines.push("");
+    }
+  }
+
+  lines.push("## 6. Verified Operational Flight Rules");
+  lines.push("");
+  if (report.verifiedFlightRules.length === 0) {
+    lines.push("_No flight rules were attached to this investigation._");
+  } else {
+    for (const rule of report.verifiedFlightRules) {
+      lines.push(`### ${rule.ruleId} · ${rule.title}`);
+      lines.push("");
+      lines.push(`SHA-256: \`${rule.sha256Hash}\``);
+      lines.push("");
+      for (const step of rule.checklistSteps) {
+        lines.push(
+          `- [${step.verified ? "x" : " "}] ${step.stepNumber}. ${step.instruction}`,
+        );
+      }
+      lines.push("");
+    }
+  }
+
+  lines.push("## 7. Source References");
+  lines.push("");
+  lines.push(markdownRow(["Source", "Identifier", "Provenance", "DOI"]));
+  lines.push(markdownRow(["---", "---", "---", "---"]));
+  for (const source of report.sourceReferences) {
+    lines.push(
+      markdownRow([
+        source.sourceName,
+        source.datasetIdentifier,
+        source.provenance,
+        source.doi ?? "—",
+      ]),
+    );
+  }
+  lines.push("");
+
+  lines.push("## 8. Epistemic Disclaimer");
+  lines.push("");
+  lines.push(`> ${report.epistemicDisclaimer}`);
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+export function generateHtmlDossier(report: DossierReport): string {
+  const { metadata } = report;
+
+  const vitalsRows = report.vitalsSummary
+    .map((row) => {
+      const anomalous = row.status === "ANOMALOUS";
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.parameter)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:right;font-variant-numeric:tabular-nums;"><strong>${escapeHtml(row.value)}</strong> ${escapeHtml(row.unit)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.baselineRange)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:right;font-variant-numeric:tabular-nums;">${row.deviationSigma.toFixed(2)}σ</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;${anomalous ? "color:#b91c1c;font-weight:700;" : ""}">${escapeHtml(statusLabel(row.status))}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.qualityStatus)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const environmentRows = report.environmentalSnapshot
+    .map(
+      (row) => `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.parameter)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:right;font-variant-numeric:tabular-nums;"><strong>${escapeHtml(row.value)}</strong> ${escapeHtml(row.unit)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;${row.status === "ALERT" ? "color:#b91c1c;font-weight:700;" : ""}">${escapeHtml(statusLabel(row.status))}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.qualityStatus)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const symptomRows =
+    report.symptomHistory.length === 0
+      ? `<tr><td colspan="5" style="padding:8px;color:#666;">No crew symptom reports were logged in this window.</td></tr>`
+      : report.symptomHistory
+          .map(
+            (row) => `<tr>
+              <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;white-space:nowrap;">${escapeHtml(row.occurredAt)}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.symptom)}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;text-align:center;">${row.severity}/5</td>
+              <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.module)}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(row.notes ?? "—")}${row.nonCausalFlag ? ' <em style="color:#92400e;">(non-causal guardrail applied)</em>' : ""}</td>
+            </tr>`,
+          )
+          .join("");
+
+  const eventBlocks =
+    report.concordanceEvents.length === 0
+      ? `<p style="color:#666;">No concordance events were evaluated for this window.</p>`
+      : report.concordanceEvents
+          .map(
+            (event) => `<div class="dossier-card" style="border:1px solid #e5e5e5;border-left:3px solid #111;padding:10px 12px;margin:10px 0;break-inside:avoid;">
+              <p style="margin:0;font-weight:700;">${escapeHtml(event.title)} · ${escapeHtml(event.severity)}</p>
+              <p style="margin:4px 0 0;font-size:10pt;color:#444;">${escapeHtml(event.timeWindow)} · ${escapeHtml(event.eventId)}</p>
+              <p style="margin:6px 0 0;font-size:10pt;">${escapeHtml(event.rationale)}</p>
+            </div>`,
+          )
+          .join("");
+
+  const flightRuleBlocks =
+    report.verifiedFlightRules.length === 0
+      ? `<p style="color:#666;">No flight rules were attached to this investigation.</p>`
+      : report.verifiedFlightRules
+          .map(
+            (rule) => `<div class="dossier-card" style="border:1px solid #e5e5e5;padding:10px 12px;margin:10px 0;break-inside:avoid;">
+              <p style="margin:0;font-weight:700;">${escapeHtml(rule.ruleId)} · ${escapeHtml(rule.title)}</p>
+              <p style="margin:2px 0 6px;font-size:9pt;color:#555;word-break:break-all;">SHA-256: ${escapeHtml(rule.sha256Hash)}</p>
+              <ul style="margin:0;padding-left:18px;font-size:10pt;">
+                ${rule.checklistSteps
+                  .map(
+                    (step) =>
+                      `<li style="margin:2px 0;">${step.verified ? "☑" : "☐"} ${step.stepNumber}. ${escapeHtml(step.instruction)}</li>`,
+                  )
+                  .join("")}
+              </ul>
+            </div>`,
+          )
+          .join("");
+
+  const sourceRows = report.sourceReferences
+    .map(
+      (source) => `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(source.sourceName)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(source.datasetIdentifier)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(source.provenance)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e5e5;">${escapeHtml(source.doi ?? "—")}</td>
+      </tr>`,
+    )
+    .join("");
+
+  return `<article id="dossier-document" style="font-family:'JetBrains Mono',Consolas,monospace;color:#111;background:#fff;padding:4px;">
+  <header style="border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;">
+    <p style="margin:0;font-size:9pt;letter-spacing:0.14em;text-transform:uppercase;color:#555;">WAYFINDER · Offline Clinical Decision Support</p>
+    <h1 style="margin:4px 0 2px;font-size:18pt;line-height:1.2;">Clinical Investigation Dossier</h1>
+    <p style="margin:0;font-size:9.5pt;color:#444;">${escapeHtml(metadata.reportId)} · generated ${escapeHtml(metadata.generatedAt)}</p>
+  </header>
+
+  <section class="dossier-card" style="border:1px solid #e5e5e5;padding:10px 12px;margin-bottom:14px;break-inside:avoid;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">1. Mission &amp; Crew</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:10pt;">
+      <tbody>
+        <tr><td style="padding:4px 0;color:#555;width:32%;">Mission</td><td style="padding:4px 0;">${escapeHtml(metadata.missionId)}</td></tr>
+        <tr><td style="padding:4px 0;color:#555;">Astronaut</td><td style="padding:4px 0;">${escapeHtml(metadata.astronautId)} · ${escapeHtml(metadata.callsign)}</td></tr>
+        <tr><td style="padding:4px 0;color:#555;">Crew role</td><td style="padding:4px 0;">${escapeHtml(metadata.crewRole)}</td></tr>
+        <tr><td style="padding:4px 0;color:#555;">Window</td><td style="padding:4px 0;">${escapeHtml(metadata.timeWindow.start)} → ${escapeHtml(metadata.timeWindow.end)}</td></tr>
+        <tr><td style="padding:4px 0;color:#555;">Mission days</td><td style="padding:4px 0;">${escapeHtml(metadata.timeWindow.missionDayRange)}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section style="margin-bottom:14px;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">2. Vitals Summary</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Parameter</th>
+        <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #ccc;">Value</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Baseline (μ ± 2σ)</th>
+        <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #ccc;">Δ</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Status</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Quality</th>
+      </tr></thead>
+      <tbody>${vitalsRows}</tbody>
+    </table>
+  </section>
+
+  <section style="margin-bottom:14px;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">3. Environmental Snapshot</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Parameter</th>
+        <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #ccc;">Value</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Status</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Quality</th>
+      </tr></thead>
+      <tbody>${environmentRows}</tbody>
+    </table>
+  </section>
+
+  <section style="margin-bottom:14px;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">4. Symptom History</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Occurred (UTC)</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Symptom</th>
+        <th style="text-align:center;padding:6px 8px;border-bottom:1px solid #ccc;">Severity</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Module</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Notes</th>
+      </tr></thead>
+      <tbody>${symptomRows}</tbody>
+    </table>
+  </section>
+
+  <section style="margin-bottom:14px;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">5. Concordance Events</h2>
+    ${eventBlocks}
+  </section>
+
+  <section style="margin-bottom:14px;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">6. Verified Flight Rules</h2>
+    ${flightRuleBlocks}
+  </section>
+
+  <section class="dossier-card" style="margin-bottom:14px;break-inside:avoid;">
+    <h2 style="margin:0 0 6px;font-size:12pt;">7. Source References</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Source</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Identifier</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">Provenance</th>
+        <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #ccc;">DOI</th>
+      </tr></thead>
+      <tbody>${sourceRows}</tbody>
+    </table>
+  </section>
+
+  <footer style="border-top:2px solid #111;padding-top:8px;">
+    <p style="margin:0;font-size:9pt;line-height:1.5;"><strong>Epistemic disclaimer.</strong> ${escapeHtml(report.epistemicDisclaimer)}</p>
+  </footer>
+</article>`;
+}

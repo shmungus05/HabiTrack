@@ -1,0 +1,223 @@
+{
+  "name": "Expo",
+  "tagline": "Agentic mobile infrastructure",
+  "description": "Develop, validate, deploy and monitor iOS, Android, and web apps from one codebase. Expo gives your team and its agents the infrastructure to ship apps to production.",
+  "sourceUrl": "https://expo.dev/",
+  "logo": {
+    "primary": "logos/header.svg",
+    "alternates": [
+      "logos/expo-icon.svg",
+      "logos/apple-touch-icon-0.png",
+      "logos/favicon-1.png",
+      "logos/favicon-2.png",
+      "logos/favicon-3.png",
+      "logos/favicon-4.png",
+      "logos/favicon-5.png"
+    ],
+    "notes": "Vector wordmark from site header alongside the exponential symbol and favicon suites."
+  },
+  "colors": [
+    {
+      "role": "background",
+      "hex": "#000000",
+      "oklch": "oklch(0.000 0.000 0.0)",
+      "name": "Background",
+      "usage": "page canvas"
+    },
+    {
+      "role": "surface",
+      "hex": "#0a0a0a",
+      "oklch": "oklch(0.145 0.000 89.9)",
+      "name": "Surface",
+      "usage": "cards / raised surfaces"
+    },
+    {
+      "role": "foreground",
+      "hex": "#ffffff",
+      "oklch": "oklch(1.000 0.000 89.9)",
+      "name": "Foreground",
+      "usage": "body text"
+    },
+    {
+      "role": "muted",
+      "hex": "#737373",
+      "oklch": "oklch(0.556 0.000 89.9)",
+      "name": "Muted",
+      "usage": "secondary text"
+    },
+    {
+      "role": "border",
+      "hex": "#242424",
+      "oklch": "oklch(0.260 0.000 89.9)",
+      "name": "Border",
+      "usage": "hairlines / dividers"
+    },
+    {
+      "role": "accent",
+      "hex": "#000000",
+      "oklch": "oklch(0.000 0.000 0.0)",
+      "name": "Accent",
+      "usage": "primary brand color"
+    },
+    {
+      "role": "accent-secondary",
+      "hex": "#0026a3",
+      "oklch": "oklch(0.360 0.200 263.8)",
+      "name": "Accent secondary",
+      "usage": "secondary brand color / links"
+    }
+  ],
+  "typography": {
+    "display": {
+      "family": "JetBrains Mono",
+      "fallbacks": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        400,
+        700
+      ],
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+    },
+    "body": {
+      "family": "JetBrains Mono",
+      "fallbacks": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        400,
+        700
+      ],
+      "googleFontsUrl": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+    }
+  },
+  "voice": {
+    "adjectives": [
+      "agentic",
+      "infrastructure-grade",
+      "developer-first",
+      "autonomous",
+      "precise",
+      "composable"
+    ],
+    "tone": "Authoritative, technical, developer-centric, and forward-looking. Emphasizes automation, agentic workflows, reliability, and unified cross-platform execution.",
+    "messagingPillars": [
+      "Agentic mobile infrastructure",
+      "Building blocks for agentic workflows",
+      "Infrastructure for your apps",
+      "Ship native apps from one codebase",
+      "End-to-end cloud build, test, and observability"
+    ],
+    "vocabulary": {
+      "use": [
+        "Agentic",
+        "Infrastructure",
+        "Workflows",
+        "Simulators",
+        "EAS",
+        "SDK",
+        "MCP",
+        "One codebase",
+        "Observe",
+        "TestFlight",
+        "Production-grade",
+        "Dev tools"
+      ],
+      "avoid": [
+        "Magic",
+        "Easy-peasy",
+        "No-code",
+        "Toy apps",
+        "Hassle-free",
+        "Revolutionary",
+        "Disruptive",
+        "Synergy",
+        "One-click wonder"
+      ]
+    }
+  },
+  "imagery": {
+    "style": "Technical dark-mode product UI, isometric device frames, dark ambient neon glows, code terminal interfaces, and architectural pipeline diagrams.",
+    "subjects": [
+      "Mobile device simulators",
+      "Cloud build pipelines",
+      "Agentic developer workflows",
+      "Crash observability metrics",
+      "Terminal CLI interfaces",
+      "Cross-platform deployment badges"
+    ],
+    "treatment": "Deep obsidian backgrounds (#000000, #0a0a0a), sharp 1px borders (#242424), atmospheric top flares and subtle blue gradients, high-contrast typography, and crisp isometric app previews.",
+    "avoid": [
+      "Hand-drawn cartoon doodles",
+      "Generic stock smiling business people",
+      "Pastel clay 3D illustrations",
+      "Warm beige/cream palettes",
+      "Cluttered non-technical marketing fluff"
+    ],
+    "samples": [
+      {
+        "file": "imagery/og-image.png",
+        "kind": "cover",
+        "caption": "Expo 2026 Social Card & Brand Hero"
+      },
+      {
+        "file": "imagery/box-1-dark.webp",
+        "kind": "product",
+        "caption": "Expo CLI and Local Developer Tools"
+      },
+      {
+        "file": "imagery/box-2-dark.webp",
+        "kind": "hero",
+        "caption": "Cloud Simulators and Automated Agent Testing"
+      },
+      {
+        "file": "imagery/box-3-dark.webp",
+        "kind": "product",
+        "caption": "Automated Deployment to App Store & TestFlight"
+      },
+      {
+        "file": "imagery/box-4-dark.webp",
+        "kind": "product",
+        "caption": "Observe Production Telemetry & Real-time Adoption"
+      },
+      {
+        "file": "imagery/box-6-mobile-dark.webp",
+        "kind": "product",
+        "caption": "Mobile Device Simulator in Action"
+      },
+      {
+        "file": "imagery/flare-top.png",
+        "kind": "illustration",
+        "caption": "Atmospheric Ambient Top Flare"
+      },
+      {
+        "file": "imagery/new-dark.png",
+        "kind": "photo",
+        "caption": "Dark Texture Ambient Backdrop"
+      }
+    ]
+  },
+  "layout": {
+    "radius": "8px",
+    "borderWeight": "1px",
+    "spacing": "8px baseline grid",
+    "postureRules": [
+      "Strict 8px corner radius on cards, buttons, and containers",
+      "Hairline 1px border (#242424) separating obsidian surfaces (#0a0a0a)",
+      "8px baseline spatial rhythm (8px, 16px, 24px, 32px, 48px, 64px)",
+      "High-contrast JetBrains Mono monospace headings paired with dense technical tables and code snippets",
+      "Accent secondary (#0026a3) reserved for interactive elements, focus states, and key links",
+      "No large washes of accent colors; dark pitch-black canvas (#000000) dominates"
+    ]
+  }
+}
