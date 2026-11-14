@@ -19,6 +19,7 @@ import {
   Gauge,
   HeartPulse,
   Layers,
+  MapPin,
   Radio,
   RotateCcw,
   ShieldAlert,
@@ -68,6 +69,7 @@ import {
   SpacecraftModuleSelector,
   computeModuleTelemetry,
   useStationLocationStore,
+  getAstronautDetectedLocation,
 } from "../features/topology";
 import { ContextualTriageBanner } from "../features/triage";
 import { useSimulationSandbox } from "../features/simulation";
@@ -496,6 +498,8 @@ function AstronautOverview({
     activeScenario,
   );
 
+  const detectedCrewStation = getAstronautDetectedLocation(astronautId);
+
   let hr = latestValue(data, "stream_sim_hr");
   let rmssd = latestValue(data, "stream_sim_hrv");
   let latestCo2 = envTelemetry.co2;
@@ -549,6 +553,11 @@ function AstronautOverview({
                 <Gauge className="h-3 w-3" />
                 {astronaut?.baseline_window_days ?? 7}-day baseline
               </Badge>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span>Station: <strong>{detectedCrewStation.moduleName}</strong> ({detectedCrewStation.location})</span>
+              </span>
             </div>
           </div>
         </div>
@@ -569,7 +578,7 @@ function AstronautOverview({
       </section>
 
       {/* 14-Module ISS Location & Sensor Selector */}
-      <SpacecraftModuleSelector astronautId={astronautId} />
+      <SpacecraftModuleSelector />
 
       {/* Cabin Environmental Telemetry Card */}
       <section className="rounded-xl glass-panel p-4 sm:p-5">
@@ -1163,6 +1172,11 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
                 <Gauge className="h-3 w-3" />
                 {astronaut?.baseline_window_days ?? 7}-day baseline
               </Badge>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span>Station: <strong>{getAstronautDetectedLocation(astronautId).moduleName}</strong> ({getAstronautDetectedLocation(astronautId).location})</span>
+              </span>
             </div>
           </div>
         </div>
@@ -1184,7 +1198,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
       </section>
 
       {/* 14-Module ISS Location & Sensor Selector */}
-      <SpacecraftModuleSelector astronautId={astronautId} isSurgeon />
+      <SpacecraftModuleSelector />
 
       {/* Cabin Environmental Telemetry Card */}
       <section className="rounded-xl glass-panel p-4 sm:p-5">

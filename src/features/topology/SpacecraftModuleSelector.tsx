@@ -33,17 +33,13 @@ interface SpacecraftModuleSelectorProps {
 }
 
 export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> = ({
-  astronautId,
-  isSurgeon = false,
   className = "",
 }) => {
   const {
     selectedModuleId,
     selectedLocation,
-    isAutoDetected,
     setSelectedModule,
     setSelectedLocation,
-    autoDetectForAstronaut,
   } = useStationLocationStore();
 
   const [simulationState] = useSimulationSandbox();
@@ -62,13 +58,6 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
     simulationState.activeScenario,
   );
 
-  // In astronaut perspective (or initially), auto-detect position based on active astronaut
-  useEffect(() => {
-    if (astronautId && (!isSurgeon || isAutoDetected)) {
-      autoDetectForAstronaut(astronautId);
-    }
-  }, [astronautId, isSurgeon]);
-
   const activeModule =
     ISS_14_MODULES.find((m) => m.id === selectedModuleId) ?? ISS_14_MODULES[7]; // Default Harmony
 
@@ -78,12 +67,6 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
 
   const handleLocationClick = (loc: string) => {
     setSelectedLocation(loc);
-  };
-
-  const handleResetToAstronaut = () => {
-    if (astronautId) {
-      autoDetectForAstronaut(astronautId);
-    }
   };
 
   const usosModules = ISS_14_MODULES.filter((m) => m.segment === "USOS");
@@ -115,33 +98,13 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
           </div>
         </div>
 
-        {/* Auto-Detection Indicator & Re-center Action */}
+        {/* Spacecraft Condition Monitor Badge (Independent from Crew Auto-Detection) */}
         <div className="flex items-center gap-2">
-          {isAutoDetected ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <span>Auto-Detected Crew Position</span>
-              {astronautId && <strong className="font-mono">({astronautId})</strong>}
-            </span>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-mono bg-slate-100 text-slate-700 border border-slate-200">
-                <MapPin className="h-3 w-3 text-amber-600 shrink-0" />
-                <span>Station Remote Sensor View</span>
-              </span>
-              {astronautId && (
-                <button
-                  type="button"
-                  onClick={handleResetToAstronaut}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-colors cursor-pointer"
-                  title="Re-align with astronaut's detected compartment"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Auto-Detect</span>
-                </button>
-              )}
-            </div>
-          )}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+            <Radio className="h-3 w-3 text-sky-600 shrink-0" />
+            <span>Spacecraft Environmental Monitor</span>
+            <span className="font-mono text-slate-500">· 14 Stations</span>
+          </span>
         </div>
       </div>
 

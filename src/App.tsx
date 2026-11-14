@@ -10,6 +10,7 @@ import {
   FileText,
   LayoutDashboard,
   Lock,
+  MapPin,
   Radar,
   RefreshCw,
   Settings as SettingsIcon,
@@ -31,6 +32,7 @@ import { AlertsDeck } from "./features/alerts";
 import { SettingsView } from "./features/settings";
 import { HealthReportModal } from "./features/health-report";
 import { useSimulationSandbox } from "./features/simulation";
+import { getAstronautDetectedLocation } from "./features/topology";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
 import { fetchHealth } from "./services/api";
@@ -506,19 +508,30 @@ export default function App() {
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 flex items-center gap-3">
-              <AstronautAvatar
-                astronautId={activeAstronautId}
-                size="sm"
-                label={activeAstronaut?.callsign ?? activeAstronautId}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs font-semibold text-slate-900">
-                  {activeAstronaut?.callsign ?? activeAstronautId}
-                </p>
-                <p className="truncate text-[11px] text-slate-500">
-                  {activeAstronaut?.crew_role ?? "Crew"}
-                </p>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-2">
+              <div className="flex items-center gap-3">
+                <AstronautAvatar
+                  astronautId={activeAstronautId}
+                  size="sm"
+                  label={activeAstronaut?.callsign ?? activeAstronautId}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-xs font-semibold text-slate-900">
+                    {activeAstronaut?.callsign ?? activeAstronautId}
+                  </p>
+                  <p className="truncate text-[11px] text-slate-500">
+                    {activeAstronaut?.crew_role ?? "Crew"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto-Detected Astronaut Physical Compartment */}
+              <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-800 bg-emerald-50/90 border border-emerald-200/80 px-2 py-1 rounded-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                <span className="truncate">
+                  Station: <strong>{getAstronautDetectedLocation(activeAstronautId).moduleShortName}</strong> · {getAstronautDetectedLocation(activeAstronautId).location}
+                </span>
               </div>
             </div>
 

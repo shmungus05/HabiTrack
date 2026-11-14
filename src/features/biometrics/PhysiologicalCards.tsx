@@ -18,9 +18,11 @@ import {
   Thermometer,
   ArrowUpRight,
   ArrowDownRight,
+  MapPin,
 } from "lucide-react";
 import { usePhysiologicalTelemetry } from "./usePhysiologicalStore";
 import { useBiomedicalSettings } from "../settings";
+import { getAstronautDetectedLocation } from "../topology";
 import { formatSigned } from "../../lib/format";
 
 interface PhysiologicalCardsProps {
@@ -72,6 +74,7 @@ export const PhysiologicalCards: React.FC<PhysiologicalCardsProps> = ({
   const vitals = usePhysiologicalTelemetry(astronautId);
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
+  const detectedStation = getAstronautDetectedLocation(astronautId);
 
   const cards = [
     {
@@ -162,6 +165,11 @@ export const PhysiologicalCards: React.FC<PhysiologicalCardsProps> = ({
           </h3>
           <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
             {vitals.callsign}
+          </span>
+          <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <MapPin className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+            <span>Station: {detectedStation.moduleShortName} ({detectedStation.location})</span>
           </span>
         </div>
         <span className="text-[11px] text-slate-500 font-mono">

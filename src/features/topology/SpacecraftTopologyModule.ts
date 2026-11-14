@@ -307,6 +307,7 @@ export const ISS_COMPARTMENTS = ISS_14_MODULES;
 
 /**
  * Crew Member Physical Auto-Detected Stations
+ * Auto-detection tracking identifies each astronaut's physical location on board the ISS.
  */
 export const ASTRONAUT_DETECTED_LOCATIONS: Record<string, { moduleId: string; location: string }> = {
   "ASTRO-01": { moduleId: "harmony", location: "Sleeping quarters" },
@@ -314,51 +315,59 @@ export const ASTRONAUT_DETECTED_LOCATIONS: Record<string, { moduleId: string; lo
   "ASTRO-03": { moduleId: "tranquility", location: "Exercise area" },
 };
 
+export interface AstronautStationPosition {
+  moduleId: string;
+  moduleName: string;
+  moduleShortName: string;
+  segment: "USOS" | "ROS";
+  location: string;
+}
+
+/**
+ * Returns the auto-detected onboard compartment and sensor location for a given astronaut.
+ * Used exclusively on astronaut cards, profile headers, and crew telemetry badges.
+ */
+export function getAstronautDetectedLocation(astronautId?: string): AstronautStationPosition {
+  const target = (astronautId && ASTRONAUT_DETECTED_LOCATIONS[astronautId]) || {
+    moduleId: "harmony",
+    location: "Sleeping quarters",
+  };
+  const mod = ISS_14_MODULES.find((m) => m.id === target.moduleId) ?? ISS_14_MODULES[7];
+  return {
+    moduleId: target.moduleId,
+    moduleName: mod.name,
+    moduleShortName: mod.shortName,
+    segment: mod.segment,
+    location: target.location,
+  };
+}
+
 export interface StationLocationState {
   selectedModuleId: string;
   selectedLocation: string;
-  autoDetectedAstronautId: string | null;
-  isAutoDetected: boolean;
   setSelectedModule: (moduleId: string) => void;
   setSelectedLocation: (location: string) => void;
   setManualModuleAndLocation: (moduleId: string, location: string) => void;
-  autoDetectForAstronaut: (astronautId: string) => void;
 }
 
-export const useStationLocationStore = create<StationLocationState>((set, get) => ({
+export const useStationLocationStore = create<StationLocationState>((set) => ({
   selectedModuleId: "harmony",
-  selectedLocation: "Sleeping quarters",
-  autoDetectedAstronautId: "ASTRO-01",
-  isAutoDetected: true,
+  selectedLocation: "General cabin area",
 
   setSelectedModule: (moduleId: string) => {
     const mod = ISS_14_MODULES.find((m) => m.id === moduleId) ?? ISS_14_MODULES[7];
     set({
       selectedModuleId: mod.id,
       selectedLocation: mod.sensorLocations[0],
-      isAutoDetected: false,
     });
   },
 
   setSelectedLocation: (location: string) => {
-    set({ selectedLocation: location, isAutoDetected: false });
+    set({ selectedLocation: location });
   },
 
   setManualModuleAndLocation: (moduleId: string, location: string) => {
-    set({ selectedModuleId: moduleId, selectedLocation: location, isAutoDetected: false });
-  },
-
-  autoDetectForAstronaut: (astronautId: string) => {
-    const target = ASTRONAUT_DETECTED_LOCATIONS[astronautId] ?? {
-      moduleId: "harmony",
-      location: "General cabin area",
-    };
-    set({
-      selectedModuleId: target.moduleId,
-      selectedLocation: target.location,
-      autoDetectedAstronautId: astronautId,
-      isAutoDetected: true,
-    });
+    set({ selectedModuleId: moduleId, selectedLocation: location });
   },
 }));
 
