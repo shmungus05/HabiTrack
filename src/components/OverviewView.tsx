@@ -44,6 +44,7 @@ import { useCommsStore } from "../stores/commsStore";
 import { useRoleStore } from "../stores/roleStore";
 import { AstronautOnly, SurgeonOnly } from "../features/shared";
 import { DossierModal, type DossierSourceData } from "../features/dossier";
+import { EventRationaleDisplay, parseEventRationale } from "./EventRationaleDisplay";
 import type {
   Astronaut,
   Baselines,
@@ -612,7 +613,7 @@ function AstronautOverview({
             {eventActive
               ? (activeScenario === "co2_spike"
                   ? "Elevated cabin CO₂ (4,350 PPM). Verify Node 2 ventilation diffuser fans are operational and rehydrate."
-                  : activeEvent?.rationale ?? "Atmospheric telemetry excursion detected.")
+                  : parseEventRationale(activeEvent?.rationale ?? "", activeEvent?.event_type ?? "").summary)
               : "No multi-signal concordance event is active for your profile."}
           </p>
           <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-slate-500">
@@ -1158,9 +1159,10 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
                   <h3 className="mt-2.5 text-lg font-semibold tracking-tight text-slate-900">
                     {titleCase(activeEvent.event_type)}
                   </h3>
-                  <p className="mt-1.5 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-600">
-                    {activeEvent.rationale}
-                  </p>
+                  <EventRationaleDisplay
+                    rationale={activeEvent.rationale}
+                    eventType={activeEvent.event_type}
+                  />
                 </div>
                 <div className="flex flex-col items-stretch gap-2 shrink-0">
                   <Button

@@ -33,6 +33,7 @@ import {
 import { useAssistantStore, type AssistantTab, type ChatMessage } from "../stores/assistantStore";
 import { EvidenceCard } from "./EvidenceCard";
 import { ProviderStatusBadge } from "./ProviderStatusBadge";
+import { parseEventRationale } from "./EventRationaleDisplay";
 import { Badge } from "./ui";
 
 const FALLBACK_DISCLAIMER =
@@ -480,8 +481,8 @@ export function AssistantDrawer() {
                 <h3 className="mt-2 text-sm font-semibold text-foreground">
                   {titleCase(activeEvent.event_type)}
                 </h3>
-                <p className="mt-1 text-xs leading-relaxed text-secondary">
-                  {activeEvent.rationale}
+                <p className="mt-1 text-xs leading-relaxed text-secondary font-medium">
+                  {parseEventRationale(activeEvent.rationale, activeEvent.event_type).summary}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
