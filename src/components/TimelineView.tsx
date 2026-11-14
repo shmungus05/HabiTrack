@@ -309,13 +309,54 @@ export function TimelineView({
       return m;
     });
 
-    // Append continuous live telemetry point aligned to current live moment
-    const isoNow = new Date(nowMs).toISOString();
-    const liveCo2Val = hasCo2 ? 4350 : (envTelemetry.co2 || 2250);
-    const liveTempVal = hasThermal ? 27.4 : (envTelemetry.temp || 22.8);
-    const liveRadVal = hasSaa ? 0.48 : (envTelemetry.rad || 0.19);
+    // Generate high-resolution live streaming points up to nowMs (for smooth 1h/6h and real-time live streaming)
+    const lastPoolTimeMs = pool.length ? new Date(pool[pool.length - 1].timestamp).getTime() : nowMs - 60000;
+    const livePoints: Measurement[] = [];
 
-    const livePoints: Measurement[] = [
+    // Dense real-time live points for the recent window leading to nowMs (every 60s)
+    const recentWindowStartMs = Math.max(nowMs - 2 * 3600 * 1000, lastPoolTimeMs);
+    const stepMs = 60 * 1000; // 1-minute live granularity
+
+    for (let t = recentWindowStartMs; t < nowMs; t += stepMs) {
+      const iso = new Date(t).toISOString();
+      const orbitPhase = (t / (92.68 * 60 * 1000)) * 2 * Math.PI;
+      const diurnalPhase = (t / (24 * 3600 * 1000)) * 2 * Math.PI;
+      const noise = Math.sin(t * 0.001) * 12 + Math.cos(t * 0.0023) * 8;
+
+      let co2Val = Math.round(envTelemetry.co2 + 120 * Math.sin(diurnalPhase) + 40 * Math.cos(orbitPhase) + noise);
+      let tempVal = Number(((envTelemetry.temp || 22.8) + 0.4 * Math.sin(diurnalPhase) + Math.sin(t * 0.001) * 0.1).toFixed(1));
+      let radVal = Number(((envTelemetry.rad || 0.19) + 0.01 * Math.sin(diurnalPhase) + Math.cos(t * 0.001) * 0.003).toFixed(3));
+      let humVal = Number(((envTelemetry.humidity || 43.5) + 1.5 * Math.sin(diurnalPhase)).toFixed(1));
+      let pressVal = Number((101.3 + Math.sin(t * 0.0005) * 0.05).toFixed(2));
+
+      if (hasCo2) co2Val = 4350;
+      if (hasThermal) tempVal = 27.4;
+      if (hasSaa) radVal = 0.48;
+
+      livePoints.push(
+        { id: null, astronaut_id: astronautId, stream_id: "stream_eda_co2", timestamp: iso, value: co2Val, quality_status: "VALID", is_synthetic: true, provenance_category: null },
+        { id: null, astronaut_id: astronautId, stream_id: "stream_eda_temp", timestamp: iso, value: tempVal, quality_status: "VALID", is_synthetic: true, provenance_category: null },
+        { id: null, astronaut_id: astronautId, stream_id: "stream_eda_humidity", timestamp: iso, value: humVal, quality_status: "VALID", is_synthetic: true, provenance_category: null },
+        { id: null, astronaut_id: astronautId, stream_id: "stream_eda_radiation", timestamp: iso, value: radVal, quality_status: "VALID", is_synthetic: true, provenance_category: null },
+        { id: null, astronaut_id: astronautId, stream_id: "stream_eda_pressure", timestamp: iso, value: pressVal, quality_status: "VALID", is_synthetic: true, provenance_category: null },
+      );
+    }
+
+    // Exact continuous live telemetry point aligned to current exact second (nowMs)
+    const isoNow = new Date(nowMs).toISOString();
+    const liveCo2Val = hasCo2
+      ? 4350
+      : Math.round(envTelemetry.co2 + Math.sin(nowMs / 2500) * 15 + Math.cos(nowMs / 6000) * 10);
+    const liveTempVal = hasThermal
+      ? 27.4
+      : Number(((envTelemetry.temp || 22.8) + Math.sin(nowMs / 4000) * 0.15).toFixed(1));
+    const liveRadVal = hasSaa
+      ? 0.48
+      : Number(((envTelemetry.rad || 0.19) + Math.sin(nowMs / 7000) * 0.004).toFixed(3));
+    const liveHumVal = Number(((envTelemetry.humidity || 43.5) + Math.cos(nowMs / 5000) * 0.3).toFixed(1));
+    const livePressVal = Number((101.3 + Math.sin(nowMs / 9000) * 0.04).toFixed(2));
+
+    const exactNowPoints: Measurement[] = [
       {
         id: null,
         astronaut_id: astronautId,
@@ -351,7 +392,7 @@ export function TimelineView({
         astronaut_id: astronautId,
         stream_id: "stream_eda_humidity",
         timestamp: isoNow,
-        value: envTelemetry.humidity || 43.5,
+        value: liveHumVal,
         quality_status: "VALID",
         is_synthetic: true,
         provenance_category: null,
@@ -361,14 +402,14 @@ export function TimelineView({
         astronaut_id: astronautId,
         stream_id: "stream_eda_pressure",
         timestamp: isoNow,
-        value: 101.3,
+        value: livePressVal,
         quality_status: "VALID",
         is_synthetic: true,
         provenance_category: null,
       },
     ];
 
-    return [...mapped, ...livePoints];
+    return [...mapped, ...livePoints, ...exactNowPoints];
   }, [measurements, hasCo2, hasThermal, hasSaa, liveNow, astronautId, envTelemetry, isSimulation, currentTimeMs]);
 
   // Handle Quick Hour window presets (1h, 6h, 24h, 7d, 30d, all)
@@ -376,7 +417,8 @@ export function TimelineView({
     if (zoomRange) {
       return zoomRange;
     }
-    const endMs = timeWindow.endMs;
+    const activeMomentMs = isSimulation ? currentTimeMs : liveNow;
+
     if (selectedRange === "all" || !measurements.length) {
       return [
         new Date(timeWindow.startMs).toISOString(),
@@ -395,9 +437,13 @@ export function TimelineView({
         : selectedRange === "30d"
         ? 24 * 30
         : 24 * 180;
-    const startMs = Math.max(timeWindow.startMs, endMs - hours * 60 * 60 * 1000);
+
+    const spanMs = hours * 60 * 60 * 1000;
+    const startMs = Math.max(timeWindow.startMs, activeMomentMs - spanMs);
+    const endMs = Math.min(timeWindow.endMs, Math.max(startMs + spanMs, activeMomentMs));
+
     return [new Date(startMs).toISOString(), new Date(endMs).toISOString()];
-  }, [zoomRange, selectedRange, timeWindow, measurements.length]);
+  }, [zoomRange, selectedRange, timeWindow, measurements.length, isSimulation, currentTimeMs, liveNow]);
 
   const figure = useMemo(() => {
     const traces: Data[] = [];
@@ -590,11 +636,11 @@ export function TimelineView({
             },
           ]
         : [],
-      uirevision: isSimulation ? "sim_active" : astronautId,
+      uirevision: isSimulation ? `sim_${selectedRange}` : `live_${selectedRange}_${astronautId}`,
     };
 
     return { traces, layout: layout as unknown as Partial<Layout> };
-  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange, isSimulation, currentTimeMs]);
+  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange, isSimulation, currentTimeMs, selectedRange]);
 
   const config = useMemo(
     () =>
@@ -612,27 +658,9 @@ export function TimelineView({
   const handleSelectRange = useCallback(
     (range: HourRange) => {
       setSelectedRange(range);
-      if (range === "all") {
-        setZoomRange(null);
-      } else {
-        const endMs = timeWindow.endMs;
-        const hours =
-          range === "1h"
-            ? 1
-            : range === "6h"
-            ? 6
-            : range === "24h"
-            ? 24
-            : range === "7d"
-            ? 24 * 7
-            : range === "30d"
-            ? 24 * 30
-            : 24 * 180;
-        const startMs = Math.max(timeWindow.startMs, endMs - hours * 60 * 60 * 1000);
-        setZoomRange([new Date(startMs).toISOString(), new Date(endMs).toISOString()]);
-      }
+      setZoomRange(null);
     },
-    [timeWindow, setZoomRange],
+    [setZoomRange],
   );
 
   const handleRelayout = useCallback(

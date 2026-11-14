@@ -50,18 +50,18 @@ export function generate180DayTelemetry(config: TelemetryConfig): Measurement[] 
   const hasSaa = activeScenarios.includes("saa_transit");
 
   // Multi-scale time points generator:
-  // 1. Historical (day -180 to day -2): 4 samples per day (every 6h)
-  // 2. Recent 48 hours to now: sample every 10 minutes (288 points)
+  // 1. Historical (day -180 to day -2): dense 30-minute interval (ensures 1h & 6h windows work anywhere in the 180-day mission)
+  // 2. Recent 48 hours to now: high-frequency 5-minute sampling
   const timestamps: number[] = [];
 
   const recentCutoffMs = nowMs - 48 * 3600 * 1000;
-  const historicalStepMs = 6 * 3600 * 1000; // 6 hours
+  const historicalStepMs = 30 * 60 * 1000; // 30 minutes
 
   for (let t = startMs; t < recentCutoffMs; t += historicalStepMs) {
     timestamps.push(t);
   }
 
-  const recentStepMs = 10 * 60 * 1000; // 10 minutes
+  const recentStepMs = 5 * 60 * 1000; // 5 minutes
   for (let t = recentCutoffMs; t <= nowMs; t += recentStepMs) {
     timestamps.push(t);
   }

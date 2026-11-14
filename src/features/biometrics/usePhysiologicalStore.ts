@@ -168,5 +168,5 @@ export function usePhysiologicalTelemetry(astronautId?: string): PhysiologicalVi
       autonomicFlagged,
       statusLabel,
     };
-  }, [currentAstronaut, targetId, hasCo2, hasThermal, hasSaa, isNominal, tick]);
+  }, [currentAstronaut, targetId, hasCo2, hasThermal, hasSaa, isNominal, tick, missionMode, simTimeMs, activeTimeMs]);
 }
