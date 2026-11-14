@@ -557,6 +557,6 @@ export async function fetchProviderStatus(): Promise<ProviderStatusResponse> {
     gemini_available: true,
     ollama_available: false,
     gemini_audio_testing_enabled: false,
-    active_model_name: "Mastra First-Response Workflow (Client-Side)",
+    active_model_name: "HabiTrack Standby Co-Pilot",
   };
 }

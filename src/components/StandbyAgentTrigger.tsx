@@ -62,7 +62,7 @@ export const StandbyAgentTrigger: React.FC = () => {
         if (isOpen) {
           closeDrawer();
         } else {
-          openDrawer("checklists");
+          openDrawer("chat");
         }
       }
       // Alt+V: Toggle Voice PTT
@@ -127,76 +127,63 @@ export const StandbyAgentTrigger: React.FC = () => {
   return (
     <aside
       aria-label="Standby AI Assistant"
-      className="fixed bottom-4 right-4 z-40 flex items-center gap-2 select-none"
+      className="fixed bottom-5 right-5 z-40 flex items-center select-none"
     >
-      {/* Standby Trigger Pill */}
-      <div
-        className={`group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white border transition-colors duration-150 cursor-pointer shadow-elevated ${
+      {/* Single Unified HabiTrack AI Floating Action Trigger */}
+      <button
+        type="button"
+        onClick={() => openDrawer("chat")}
+        className={`group relative flex items-center gap-2.5 p-2 pr-3.5 rounded-full bg-white/95 backdrop-blur-md border transition-all duration-200 cursor-pointer shadow-elevated hover:shadow-lg active:scale-95 ${
           latchedRule
             ? "border-amber-300 hover:border-amber-400"
             : "border-slate-200 hover:border-slate-300"
-        }`}
-        onClick={() => openDrawer(latchedRule ? "checklists" : "evidence")}
-        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open HabiTrack AI (Ctrl+K)"}
+        } ${isRecording ? "ring-2 ring-red-500/50 border-red-500" : ""}`}
+        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open HabiTrack AI (Ctrl+K · Alt+V Voice)"}
       >
-        <span
-          className={`w-2 h-2 rounded-full shrink-0 ${
-            latchedRule ? "bg-amber-500" : "bg-sky-600"
-          }`}
-        />
-
-        <span className="text-xs font-semibold tracking-tight text-slate-900 whitespace-nowrap">
-          HabiTrack AI
-        </span>
-
-        {latchedRule && (
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-mono font-medium">
-            {latchedRule.rule_id}
-          </span>
-        )}
-
-        <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[11px] font-mono text-slate-600">
-          Ctrl K
-        </kbd>
-      </div>
-
-      {/* Push-to-Talk Mic Button */}
-      <button
-        type="button"
-        title={isRecording ? "Release to Send (Alt+V)" : "Push-to-Talk Voice (Alt+V)"}
-        className={`relative flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-150 cursor-pointer shadow-elevated ${
-          isRecording
-            ? "bg-red-600 border-red-600 text-white scale-105"
-            : "bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900"
-        }`}
-        onMouseDown={startListening}
-        onMouseUp={stopListening}
-        onTouchStart={startListening}
-        onTouchEnd={stopListening}
-      >
-        {/* Dynamic Waveform Energy Aura */}
+        {/* Dynamic Waveform Energy Aura during Voice Dictation */}
         {isRecording && (
           <span
-            className="absolute inset-0 rounded-full border border-red-400/70 pointer-events-none animate-ping"
+            className="absolute inset-0 rounded-full border-2 border-red-400/80 pointer-events-none animate-ping"
             style={{
-              transform: `scale(${1.0 + energyLevel * 0.8})`,
+              transform: `scale(${1.0 + energyLevel * 0.5})`,
               opacity: 0.3 + energyLevel * 0.7,
             }}
           />
         )}
-        <svg
-          className="w-4 h-4 relative z-10"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+
+        {/* HabiTrack Official Brand Emblem */}
+        <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-50 border border-slate-200/80 overflow-hidden p-0.5 shadow-2xs">
+          <img
+            src="/Logo.png"
+            alt="HabiTrack Logo"
+            className="h-full w-full object-contain rounded-full"
           />
-        </svg>
+        </span>
+
+        {/* Label and Status */}
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold tracking-tight whitespace-nowrap ${isRecording ? "text-red-600 animate-pulse" : "text-slate-900"}`}>
+            {isRecording ? "Listening..." : "HabiTrack AI"}
+          </span>
+
+          {latchedRule && !isRecording && (
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-mono font-bold">
+              {latchedRule.rule_id}
+            </span>
+          )}
+
+          <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">
+            Ctrl K
+          </kbd>
+        </div>
+
+        {/* Latched Flight Rule Notification Indicator */}
+        {latchedRule && (
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 border-2 border-white" />
+          </span>
+        )}
       </button>
     </aside>
   );
