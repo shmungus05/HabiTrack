@@ -34,7 +34,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
   };
 
   return (
-    <div className="relative h-screen max-h-screen w-full flex flex-col justify-between bg-[#f8fafc] text-slate-800 font-sans selection:bg-blue-100 overflow-hidden px-4 py-4 sm:py-6">
+    <div className="relative min-h-screen w-full flex flex-col justify-between bg-[#f8fafc] text-slate-800 font-sans selection:bg-blue-100 overflow-x-hidden px-4 py-6 sm:py-8">
       {/* Subtle ambient light glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-80 w-[600px] rounded-full bg-blue-100/40 blur-3xl" />
@@ -45,32 +45,32 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
       {/* Top Header: Brand Pill + Heading */}
       <header className="relative z-10 mx-auto flex flex-col items-center text-center shrink-0">
         {/* Brand Pill matching mockup */}
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-2xs">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-white px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-2xs">
           <span className="grid h-4 w-4 place-items-center rounded-full bg-[#2563eb] text-white">
             <Rocket className="h-2.5 w-2.5" />
           </span>
-          <span className="font-bold tracking-tight text-[11px] sm:text-xs">
+          <span className="font-bold tracking-tight text-xs">
             StarBound · Habitat Trace
           </span>
         </div>
 
         {/* Title & Subtitle */}
-        <h1 className="mt-2.5 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
           Select Your Mission Path
         </h1>
-        <p className="mt-1 max-w-md text-xs sm:text-sm text-slate-500 leading-normal px-2">
+        <p className="mt-2 max-w-lg text-sm text-slate-500 leading-normal px-2">
           Choose your specialization to begin your journey into the final frontier.
         </p>
       </header>
 
-      {/* Middle Content: 2 Cards side-by-side matching mockup */}
-      <main className="relative z-10 mx-auto flex w-full max-w-3xl lg:max-w-4xl flex-1 items-center justify-center my-auto py-2">
-        <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7">
+      {/* Middle Content: 2 Cards side-by-side with taller Y-axis */}
+      <main className="relative z-10 mx-auto flex w-full max-w-3xl lg:max-w-4xl flex-1 items-center justify-center my-auto py-6 sm:py-8">
+        <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
           {/* Card 1: Astronaut / Field Mission */}
-          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-xl">
+          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl">
             <div className="flex flex-col items-center text-center">
-              {/* Photo */}
-              <div className="relative aspect-[16/10.5] sm:h-44 md:h-48 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
+              {/* Photo Viewport - Taller Y-axis */}
+              <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
                 <img
                   src="/imagery/astronaut-mission.jpg"
                   alt="Astronaut Field Mission"
@@ -82,27 +82,27 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
               </div>
 
               {/* Tag / Badge */}
-              <div className="mt-4">
-                <span className="inline-block rounded-full bg-[#e0f2fe] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0284c7]">
+              <div className="mt-5">
+                <span className="inline-block rounded-full bg-[#e0f2fe] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#0284c7]">
                   Field Mission
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="mt-2.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
                 Astronaut
               </h2>
-              <p className="mt-1.5 text-xs sm:text-sm text-slate-500 leading-snug px-2 min-h-[36px] flex items-center justify-center">
+              <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed px-2 max-w-[320px]">
                 Train for orbital operations, extravehicular activities, and planetary exploration.
               </p>
             </div>
 
             {/* Action Button */}
-            <div className="mt-5 pt-1">
+            <div className="mt-7 pt-1">
               <button
                 type="button"
                 onClick={() => handleSelectRole("astronaut")}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm py-2.5 sm:py-3 px-5 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
               >
                 Initialize Mission
               </button>
@@ -110,10 +110,10 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
           </div>
 
           {/* Card 2: Flight Surgeon / Medical Ops */}
-          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-xl">
+          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl">
             <div className="flex flex-col items-center text-center">
-              {/* Photo */}
-              <div className="relative aspect-[16/10.5] sm:h-44 md:h-48 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
+              {/* Photo Viewport - Taller Y-axis */}
+              <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
                 <img
                   src="/imagery/flight-surgeon.jpg"
                   alt="Flight Surgeon Medical Operations"
@@ -125,27 +125,27 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
               </div>
 
               {/* Tag / Badge */}
-              <div className="mt-4">
-                <span className="inline-block rounded-full bg-[#dcfce7] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#16a34a]">
+              <div className="mt-5">
+                <span className="inline-block rounded-full bg-[#dcfce7] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#16a34a]">
                   Medical Ops
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="mt-2.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
                 Flight Surgeon
               </h2>
-              <p className="mt-1.5 text-xs sm:text-sm text-slate-500 leading-snug px-2 min-h-[36px] flex items-center justify-center">
+              <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed px-2 max-w-[320px]">
                 Manage crew health, monitor physiological data, and direct aerospace medical support.
               </p>
             </div>
 
             {/* Action Button */}
-            <div className="mt-5 pt-1">
+            <div className="mt-7 pt-1">
               <button
                 type="button"
                 onClick={() => handleSelectRole("flight_surgeon")}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm py-2.5 sm:py-3 px-5 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
               >
                 Enter Command Center
               </button>
