@@ -76,12 +76,14 @@ function PacketRow({ packet }: { packet: OutboxPacket }) {
           </p>
           <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-muted">
             <Clock3 className="h-3 w-3 text-sky-600" />
-            {new Date(packet.createdAt).toLocaleTimeString([], {
+            {new Date(packet.createdAt).toLocaleTimeString("en-US", {
+              timeZone: "UTC",
               hour: "2-digit",
               minute: "2-digit",
               second: "2-digit",
               hour12: false,
-            })}
+            })}{" "}
+            UTC
             {packet.status === "TRANSMITTING" ? (
               <>
                 <span>·</span>

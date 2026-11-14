@@ -31,16 +31,10 @@ import { formatDateTime, titleCase } from "../lib/format";
 import { Badge, Button } from "./ui";
 import { SymptomChatbotModule } from "../features/symptoms/SymptomChatbotModule";
 import { useCommsStore } from "../stores/commsStore";
+import { ISS_14_MODULES, useStationLocationStore } from "../features/topology";
+import { PhysiologicalCards } from "../features/biometrics";
 
 const SYMPTOM_CODES = ["HEADACHE", "FATIGUE", "DIZZINESS", "NAUSEA"] as const;
-const CABIN_MODULES = [
-  "Node 2 (Harmony)",
-  "US Lab (Destiny)",
-  "Columbus Orbital Facility",
-  "JEM Kibo",
-  "Node 1 (Unity)",
-  "Cupola",
-] as const;
 
 interface LocalSymptomEntry {
   id: string;
@@ -98,8 +92,15 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   // Manual Form States
   const [symptomCode, setSymptomCode] = useState<(typeof SYMPTOM_CODES)[number]>("HEADACHE");
   const [severity, setSeverity] = useState(2);
-  const [cabinModule, setCabinModule] = useState<string>("Node 2 (Harmony)");
+  const { selectedModuleId, selectedLocation } = useStationLocationStore();
+  const currentStationMod = ISS_14_MODULES.find((m) => m.id === selectedModuleId);
+  const defaultCabinLocation = `${currentStationMod?.name ?? selectedModuleId} (${selectedLocation})`;
+  const [cabinModule, setCabinModule] = useState<string>(defaultCabinLocation);
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setCabinModule(`${currentStationMod?.name ?? selectedModuleId} (${selectedLocation})`);
+  }, [selectedModuleId, selectedLocation, currentStationMod]);
 
   const [reports, setReports] = useState<SymptomReport[]>([]);
   const [localDiary, setLocalDiary] = useState<LocalSymptomEntry[]>(() => {
@@ -170,7 +171,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         id: `sym-${Date.now()}`,
         symptom: titleCase(symptomCode),
         severity: severity >= 4 ? "Severe" : severity >= 2 ? "Moderate" : "Mild",
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
+        time: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         location: cabinModule,
         duration: "30 mins",
         description: notes.trim() || `Reported during mission tasks in ${cabinModule}.`,
@@ -285,6 +286,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         </div>
       </div>
 
+      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
+      <PhysiologicalCards astronautId={astronautId} />
+
       {notice && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
@@ -307,7 +311,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
               id: `sym-${Date.now()}`,
               symptom: symptom.slice(0, 30),
               severity: "Moderate",
-              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
+              time: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
               location: loc,
               duration: "30 mins",
               description: symptom,
@@ -477,17 +481,30 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             </div>
 
             <div>
-              <label className="block text-secondary font-semibold mb-1.5">Spacecraft Compartment</label>
+              <label className="block text-secondary font-semibold mb-1.5">Spacecraft Compartment &amp; Sensor Location</label>
               <select
                 value={cabinModule}
                 onChange={(e) => setCabinModule(e.target.value)}
                 className="w-full h-10 px-3.5 rounded-lg bg-white border border-border text-foreground text-xs focus:outline-none focus:border-accent cursor-pointer"
               >
-                {CABIN_MODULES.map((m) => (
-                  <option key={m} value={m} className="bg-surface text-foreground">
-                    {m}
-                  </option>
-                ))}
+                <optgroup label="USOS — U.S. Orbital Segment (8 Modules)">
+                  {ISS_14_MODULES.filter((m) => m.segment === "USOS").flatMap((m) =>
+                    m.sensorLocations.map((loc) => (
+                      <option key={`${m.id}-${loc}`} value={`${m.name} (${loc})`}>
+                        {m.name} — {loc}
+                      </option>
+                    ))
+                  )}
+                </optgroup>
+                <optgroup label="ROS — Russian Orbital Segment (6 Modules)">
+                  {ISS_14_MODULES.filter((m) => m.segment === "ROS").flatMap((m) =>
+                    m.sensorLocations.map((loc) => (
+                      <option key={`${m.id}-${loc}`} value={`${m.name} (${loc})`}>
+                        {m.name} — {loc}
+                      </option>
+                    ))
+                  )}
+                </optgroup>
               </select>
             </div>
 

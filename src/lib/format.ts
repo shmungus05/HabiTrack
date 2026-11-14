@@ -93,13 +93,16 @@ export function formatDateTime(value: string | null): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return (
+    date.toLocaleString("en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }) + " UTC"
+  );
 }
 
 export function formatTime(value: string | null): string {
@@ -110,11 +113,14 @@ export function formatTime(value: string | null): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return (
+    date.toLocaleTimeString("en-US", {
+      timeZone: "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }) + " UTC"
+  );
 }
 
 export function formatSigned(value: number, digits = 1): string {

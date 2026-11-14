@@ -82,7 +82,14 @@ const EMPTY_STATE = {
 };
 
 function formatNow(): string {
-  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return (
+    new Date().toLocaleTimeString("en-US", {
+      timeZone: "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }) + " UTC"
+  );
 }
 
 export const useAssistantStore = create<AssistantState>((set, get) => ({

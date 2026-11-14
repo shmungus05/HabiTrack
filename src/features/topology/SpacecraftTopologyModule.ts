@@ -1,78 +1,410 @@
 /**
- * Isolated Deep Module: Spacecraft Compartment Topology & Sensor Allocation
- * Models key ISS modules and their ECLSS sensor allocations.
+ * Spacecraft Compartment Topology & Sensor Allocation Module
+ *
+ * Full 14-Module International Space Station (ISS) Architecture:
+ * - ROS (Russian Orbital Segment - 6 Modules): Zvezda, Zarya, Nauka, Poisk, Rassvet, Prichal
+ * - USOS (U.S. Orbital Segment - 8 Modules): Unity, Harmony, Destiny, Columbus, Kibo, Tranquility, Cupola, Quest Airlock
+ *
+ * Synchronized across Astronaut and Flight Surgeon perspectives with auto-detection per crew member.
  */
+
+import { create } from "zustand";
+
+export type OrbitalSegment = "ROS" | "USOS";
 
 export interface SpacecraftModule {
   id: string;
   name: string;
+  shortName: string;
+  segment: OrbitalSegment;
   function: string;
-  primarySensors: string[];
+  sensorLocations: string[];
+  primarySensors?: string[];
+  essentialSensorLocations?: string[];
   nominalCO2: number;
   nominalTemp: number;
+  nominalPressure: number; // kPa
   nominalHumidity: number;
-  nominalRad: number;
+  nominalRad: number; // mGy/d
+  locationOffsets?: Record<
+    string,
+    {
+      co2Offset?: number;
+      tempOffset?: number;
+      radOffset?: number;
+      pressureOffset?: number;
+      humidityOffset?: number;
+    }
+  >;
 }
 
-export const ISS_COMPARTMENTS: SpacecraftModule[] = [
+export const ISS_14_MODULES: SpacecraftModule[] = [
+  // =========================================================================
+  // ROS – Russian Orbital Segment (6 Modules)
+  // =========================================================================
   {
-    id: "node2",
-    name: "Node 2 (Harmony)",
-    function: "Crew Quarters & Forward Utility",
-    primarySensors: ["MCA ppCO2-N2", "THC-Temp-2", "AQM-2"],
-    nominalCO2: 3197,
+    id: "zvezda",
+    name: "Zvezda Service Module",
+    shortName: "Zvezda",
+    segment: "ROS",
+    function: "Russian Segment Life Support & Flight Control Core",
+    sensorLocations: ["General cabin area", "Sleeping quarters", "Ventilation outlet"],
+    nominalCO2: 2420,
     nominalTemp: 22.8,
-    nominalHumidity: 43.9,
+    nominalPressure: 101.3,
+    nominalHumidity: 44.0,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "General cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Sleeping quarters": { co2Offset: 260, tempOffset: -0.6, radOffset: -0.01, humidityOffset: 1.5 },
+      "Ventilation outlet": { co2Offset: -170, tempOffset: -1.0, radOffset: 0, humidityOffset: -2.0 },
+    },
+  },
+  {
+    id: "zarya",
+    name: "Zarya Functional Cargo Block (FGB)",
+    shortName: "Zarya",
+    segment: "ROS",
+    function: "Station Power Distribution, Fuel Storage & Cargo Corridor",
+    sensorLocations: ["General cabin area", "Storage area", "Ventilation outlet"],
+    nominalCO2: 2350,
+    nominalTemp: 22.0,
+    nominalPressure: 101.3,
+    nominalHumidity: 43.5,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "General cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Storage area": { co2Offset: -140, tempOffset: -1.0, radOffset: 0, humidityOffset: -2.5 },
+      "Ventilation outlet": { co2Offset: -200, tempOffset: -0.5, radOffset: 0, humidityOffset: -3.0 },
+    },
+  },
+  {
+    id: "nauka",
+    name: "Nauka Multipurpose Laboratory Module",
+    shortName: "Nauka",
+    segment: "ROS",
+    function: "Primary Russian Scientific Research & Experiment Facilities",
+    sensorLocations: ["Laboratory area", "Experiment workspace", "Ventilation outlet"],
+    nominalCO2: 2300,
+    nominalTemp: 22.4,
+    nominalPressure: 101.3,
+    nominalHumidity: 42.5,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "Laboratory area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Experiment workspace": { co2Offset: 80, tempOffset: 0.2, radOffset: 0, humidityOffset: 0.5 },
+      "Ventilation outlet": { co2Offset: -120, tempOffset: -0.5, radOffset: 0, humidityOffset: -1.5 },
+    },
+  },
+  {
+    id: "poisk",
+    name: "Poisk Mini-Research Module 2 (MRM-2)",
+    shortName: "Poisk",
+    segment: "ROS",
+    function: "EVA Airlock & Spacecraft Docking Compartment",
+    sensorLocations: ["Main cabin area", "Airlock area", "Ventilation outlet"],
+    nominalCO2: 2280,
+    nominalTemp: 21.8,
+    nominalPressure: 101.3,
+    nominalHumidity: 41.5,
     nominalRad: 0.20,
+    locationOffsets: {
+      "Main cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Airlock area": { co2Offset: -180, tempOffset: -0.9, radOffset: 0.01, pressureOffset: -0.1 },
+      "Ventilation outlet": { co2Offset: -230, tempOffset: -0.6, radOffset: 0, humidityOffset: -1.5 },
+    },
+  },
+  {
+    id: "rassvet",
+    name: "Rassvet Mini-Research Module 1 (MRM-1)",
+    shortName: "Rassvet",
+    segment: "ROS",
+    function: "Cargo Storage & Payload Science Stowage",
+    sensorLocations: ["Main cabin area", "Storage area", "Ventilation outlet"],
+    nominalCO2: 2240,
+    nominalTemp: 21.9,
+    nominalPressure: 101.3,
+    nominalHumidity: 42.0,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "Main cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Storage area": { co2Offset: -90, tempOffset: -1.1, radOffset: 0, humidityOffset: -2.0 },
+      "Ventilation outlet": { co2Offset: -160, tempOffset: -0.6, radOffset: 0, humidityOffset: -2.5 },
+    },
+  },
+  {
+    id: "prichal",
+    name: "Prichal Nodal Module (UM)",
+    shortName: "Prichal",
+    segment: "ROS",
+    function: "Multi-Port Spacecraft Docking Hub",
+    sensorLocations: ["Main cabin area", "Docking interface area", "Ventilation outlet"],
+    nominalCO2: 2180,
+    nominalTemp: 21.5,
+    nominalPressure: 101.3,
+    nominalHumidity: 41.0,
+    nominalRad: 0.20,
+    locationOffsets: {
+      "Main cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Docking interface area": { co2Offset: -130, tempOffset: -1.1, radOffset: 0.01, pressureOffset: -0.1 },
+      "Ventilation outlet": { co2Offset: -170, tempOffset: -0.5, radOffset: 0, humidityOffset: -2.0 },
+    },
+  },
+
+  // =========================================================================
+  // USOS – U.S. Orbital Segment (8 Modules)
+  // =========================================================================
+  {
+    id: "unity",
+    name: "Unity (Node 1)",
+    shortName: "Unity",
+    segment: "USOS",
+    function: "Central Connecting Node & Galley / Dining Corridor",
+    sensorLocations: ["Central passage", "Connecting hatch area", "Ventilation outlet"],
+    nominalCO2: 2380,
+    nominalTemp: 22.7,
+    nominalPressure: 101.3,
+    nominalHumidity: 44.0,
+    nominalRad: 0.20,
+    locationOffsets: {
+      "Central passage": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Connecting hatch area": { co2Offset: -90, tempOffset: -0.6, radOffset: 0 },
+      "Ventilation outlet": { co2Offset: -190, tempOffset: -1.0, radOffset: 0, humidityOffset: -2.5 },
+    },
+  },
+  {
+    id: "harmony",
+    name: "Harmony (Node 2)",
+    shortName: "Harmony",
+    segment: "USOS",
+    function: "Forward Utility Node, Crew Quarters & ECLSS CDRA Bay",
+    sensorLocations: ["General cabin area", "Sleeping quarters", "Ventilation outlet"],
+    nominalCO2: 2450,
+    nominalTemp: 22.8,
+    nominalPressure: 101.3,
+    nominalHumidity: 43.9,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "General cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Sleeping quarters": { co2Offset: 300, tempOffset: -0.7, radOffset: 0, humidityOffset: 2.1 },
+      "Ventilation outlet": { co2Offset: -240, tempOffset: -1.0, radOffset: 0, humidityOffset: -2.4 },
+    },
   },
   {
     id: "destiny",
-    name: "US Laboratory (Destiny)",
-    function: "Primary Science Research Core",
-    primarySensors: ["ARS-CO2-Dest", "Lab-THC-1", "TEPC-Radiation"],
-    nominalCO2: 2950,
+    name: "Destiny (US Laboratory)",
+    shortName: "Destiny",
+    segment: "USOS",
+    function: "Primary U.S. Microgravity Research Facility",
+    sensorLocations: ["Laboratory area", "Experiment workspace", "Ventilation outlet"],
+    nominalCO2: 2200,
     nominalTemp: 22.1,
+    nominalPressure: 101.3,
     nominalHumidity: 44.5,
     nominalRad: 0.19,
+    locationOffsets: {
+      "Laboratory area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Experiment workspace": { co2Offset: 80, tempOffset: 0.3, radOffset: 0 },
+      "Ventilation outlet": { co2Offset: -100, tempOffset: -0.5, radOffset: 0, humidityOffset: -3.5 },
+    },
   },
   {
     id: "columbus",
     name: "Columbus Orbital Facility",
-    function: "ESA European Research Module",
-    primarySensors: ["COL-ECLSS-1", "COL-Temp-A", "RAM-04"],
-    nominalCO2: 2880,
-    nominalTemp: 22.4,
+    shortName: "Columbus",
+    segment: "USOS",
+    function: "ESA European Space Agency Science Research Module",
+    sensorLocations: ["Laboratory area", "Experiment workspace", "Ventilation outlet"],
+    nominalCO2: 2180,
+    nominalTemp: 22.3,
+    nominalPressure: 101.3,
     nominalHumidity: 42.8,
     nominalRad: 0.18,
+    locationOffsets: {
+      "Laboratory area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Experiment workspace": { co2Offset: 70, tempOffset: 0.2, radOffset: 0 },
+      "Ventilation outlet": { co2Offset: -90, tempOffset: -0.6, radOffset: 0, humidityOffset: -2.3 },
+    },
   },
   {
     id: "kibo",
-    name: "JEM Kibo",
-    function: "JAXA Japanese Experiment Module",
-    primarySensors: ["JEM-ECLSS-CO2", "JEM-THC-1", "RAM-05"],
-    nominalCO2: 2790,
-    nominalTemp: 21.9,
-    nominalHumidity: 45.1,
+    name: "Kibo (Japanese Experiment Module)",
+    shortName: "Kibo",
+    segment: "USOS",
+    function: "JAXA Japanese Space Agency Pressurized Research Laboratory",
+    sensorLocations: ["Laboratory area", "Experiment workspace", "Ventilation outlet"],
+    nominalCO2: 2150,
+    nominalTemp: 22.0,
+    nominalPressure: 101.3,
+    nominalHumidity: 45.0,
     nominalRad: 0.19,
+    locationOffsets: {
+      "Laboratory area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Experiment workspace": { co2Offset: 70, tempOffset: 0.2, radOffset: 0 },
+      "Ventilation outlet": { co2Offset: -90, tempOffset: -0.5, radOffset: 0, humidityOffset: -4.0 },
+    },
   },
   {
-    id: "node1",
-    name: "Node 1 (Unity)",
-    function: "Central Galley & Connecting Node",
-    primarySensors: ["Unity-ARS-CO2", "Unity-THC-1", "RAM-02"],
-    nominalCO2: 3040,
-    nominalTemp: 23.0,
-    nominalHumidity: 44.2,
-    nominalRad: 0.21,
+    id: "tranquility",
+    name: "Tranquility (Node 3)",
+    shortName: "Tranquility",
+    segment: "USOS",
+    function: "ECLSS Advanced Water Recovery, Waste Management & Exercise Gym",
+    sensorLocations: ["General cabin area", "Exercise area", "Ventilation outlet"],
+    nominalCO2: 2520,
+    nominalTemp: 23.4,
+    nominalPressure: 101.3,
+    nominalHumidity: 45.5,
+    nominalRad: 0.19,
+    locationOffsets: {
+      "General cabin area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Exercise area": { co2Offset: 660, tempOffset: 1.4, radOffset: 0, humidityOffset: 3.5 },
+      "Ventilation outlet": { co2Offset: -170, tempOffset: -1.1, radOffset: 0, humidityOffset: -2.5 },
+    },
   },
   {
     id: "cupola",
     name: "Cupola Observation Module",
-    function: "Earth Observation & Robotics Workstation",
-    primarySensors: ["Cupola-THC-Aux", "RAM-08-Window"],
-    nominalCO2: 2620,
-    nominalTemp: 21.2,
+    shortName: "Cupola",
+    segment: "USOS",
+    function: "7-Window Earth Observation Dome & Canadarm2 Robotic Control",
+    sensorLocations: ["Observation area", "Window area"],
+    nominalCO2: 2120,
+    nominalTemp: 21.4,
+    nominalPressure: 101.3,
     nominalHumidity: 39.5,
-    nominalRad: 0.28,
+    nominalRad: 0.25,
+    locationOffsets: {
+      "Observation area": { co2Offset: 0, tempOffset: 0, radOffset: -0.01 },
+      "Window area": { co2Offset: -40, tempOffset: -0.8, radOffset: 0.03, humidityOffset: -1.5 },
+    },
+  },
+  {
+    id: "quest",
+    name: "Quest Joint Airlock",
+    shortName: "Quest Airlock",
+    segment: "USOS",
+    function: "Primary USOS Spacewalk EVA Staging & Depressurization Chamber",
+    sensorLocations: ["Equipment preparation area", "Crew airlock area"],
+    nominalCO2: 2100,
+    nominalTemp: 21.0,
+    nominalPressure: 101.2,
+    nominalHumidity: 40.5,
+    nominalRad: 0.20,
+    locationOffsets: {
+      "Equipment preparation area": { co2Offset: 0, tempOffset: 0, radOffset: 0 },
+      "Crew airlock area": { co2Offset: -120, tempOffset: -0.8, radOffset: 0.02, pressureOffset: -0.1, humidityOffset: -3.0 },
+    },
   },
 ];
+
+// Backward-compatibility export alias
+export const ISS_COMPARTMENTS = ISS_14_MODULES;
+
+/**
+ * Crew Member Physical Auto-Detected Stations
+ */
+export const ASTRONAUT_DETECTED_LOCATIONS: Record<string, { moduleId: string; location: string }> = {
+  "ASTRO-01": { moduleId: "harmony", location: "Sleeping quarters" },
+  "ASTRO-02": { moduleId: "destiny", location: "Laboratory area" },
+  "ASTRO-03": { moduleId: "tranquility", location: "Exercise area" },
+};
+
+export interface StationLocationState {
+  selectedModuleId: string;
+  selectedLocation: string;
+  autoDetectedAstronautId: string | null;
+  isAutoDetected: boolean;
+  setSelectedModule: (moduleId: string) => void;
+  setSelectedLocation: (location: string) => void;
+  setManualModuleAndLocation: (moduleId: string, location: string) => void;
+  autoDetectForAstronaut: (astronautId: string) => void;
+}
+
+export const useStationLocationStore = create<StationLocationState>((set, get) => ({
+  selectedModuleId: "harmony",
+  selectedLocation: "Sleeping quarters",
+  autoDetectedAstronautId: "ASTRO-01",
+  isAutoDetected: true,
+
+  setSelectedModule: (moduleId: string) => {
+    const mod = ISS_14_MODULES.find((m) => m.id === moduleId) ?? ISS_14_MODULES[7];
+    set({
+      selectedModuleId: mod.id,
+      selectedLocation: mod.sensorLocations[0],
+      isAutoDetected: false,
+    });
+  },
+
+  setSelectedLocation: (location: string) => {
+    set({ selectedLocation: location, isAutoDetected: false });
+  },
+
+  setManualModuleAndLocation: (moduleId: string, location: string) => {
+    set({ selectedModuleId: moduleId, selectedLocation: location, isAutoDetected: false });
+  },
+
+  autoDetectForAstronaut: (astronautId: string) => {
+    const target = ASTRONAUT_DETECTED_LOCATIONS[astronautId] ?? {
+      moduleId: "harmony",
+      location: "General cabin area",
+    };
+    set({
+      selectedModuleId: target.moduleId,
+      selectedLocation: target.location,
+      autoDetectedAstronautId: astronautId,
+      isAutoDetected: true,
+    });
+  },
+}));
+
+/**
+ * Computes localized real-time telemetry based on the active ISS module and sensor location,
+ * overlaid with any live simulation anomalies.
+ */
+export function computeModuleTelemetry(
+  moduleId: string,
+  location: string,
+  activeScenarios: string[] = [],
+  activeScenario = "nominal",
+) {
+  const mod = ISS_14_MODULES.find((m) => m.id === moduleId) ?? ISS_14_MODULES[7];
+  const locOffset = mod.locationOffsets?.[location] || {};
+
+  let co2 = mod.nominalCO2 + (locOffset.co2Offset || 0);
+  let temp = mod.nominalTemp + (locOffset.tempOffset || 0);
+  let pressureKpa = mod.nominalPressure + (locOffset.pressureOffset || 0);
+  let rad = mod.nominalRad + (locOffset.radOffset || 0);
+  let humidity = mod.nominalHumidity + (locOffset.humidityOffset || 0);
+
+  const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
+  const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
+  const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
+
+  if (hasCo2) {
+    co2 = 4350;
+  }
+  if (hasThermal) {
+    temp = 27.4;
+  }
+  if (hasSaa) {
+    rad = 0.480;
+  }
+
+  // Convert pressure in kPa to mmHg for downstream display math
+  const pressureMmHg = pressureKpa * 7.50062;
+
+  return {
+    module: mod,
+    location,
+    co2,
+    temp,
+    pressureKpa,
+    pressureMmHg,
+    rad,
+    humidity,
+    hasCo2,
+    hasThermal,
+    hasSaa,
+  };
+}

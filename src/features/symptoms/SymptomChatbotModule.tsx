@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { mastra } from "../../mastra";
 import type { EnvironmentalSnapshot } from "../risk/ClinicalRiskModule";
+import { useStationLocationStore, ISS_14_MODULES } from "../topology";
 
 export interface InterimActionItem {
   id: string;
@@ -109,7 +110,9 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
   ]);
 
   const [input, setInput] = useState("");
-  const [selectedModule, setSelectedModule] = useState("Auto-Detect");
+  const { selectedModuleId, selectedLocation } = useStationLocationStore();
+  const currentStationMod = ISS_14_MODULES.find((m) => m.id === selectedModuleId);
+  const currentStationLabel = `${currentStationMod?.name ?? selectedModuleId} (${selectedLocation})`;
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [viewingPacket, setViewingPacket] = useState<SurgeonHandoffPacket | null>(null);
@@ -184,7 +187,7 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
     const userMsg: MessageItem = {
       id: `usr-${Date.now()}`,
       sender: "user",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
       content: query,
     };
 
@@ -200,7 +203,7 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
 
       const triageResult = await workflow.execute({
         symptomText: query,
-        compartmentOverride: selectedModule !== "Auto-Detect" ? selectedModule : undefined,
+        compartmentOverride: currentStationLabel,
         currentSnapshot: {
           co2Ppm: currentSnapshot.co2Ppm,
           tempC: currentSnapshot.tempC,
@@ -220,7 +223,7 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
       const aiMsg: MessageItem = {
         id: `ai-${Date.now()}`,
         sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         content: responseContent,
         headline: triageResult.headline,
         location: triageResult.compartmentName,
@@ -243,9 +246,9 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
       const fallbackMsg: MessageItem = {
         id: `ai-${Date.now()}`,
         sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         content: `Evaluated symptom against telemetry baseline. Verify ventilation and rest profile while awaiting flight surgeon review. (Telemetry system operational).`,
-        location: selectedModule !== "Auto-Detect" ? selectedModule : "General Station Bay",
+        location: currentStationLabel,
         snapshot: currentSnapshot,
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -509,22 +512,11 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
         }}
         className="pt-3 border-t border-border flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0"
       >
-        <div className="flex items-center gap-1.5 sm:w-48">
-          <Compass className="w-4 h-4 text-sky-600 shrink-0" />
-          <select
-            aria-label="Compartment Location"
-            value={selectedModule}
-            onChange={(e) => setSelectedModule(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl bg-white border border-border text-foreground text-xs focus:outline-none focus:border-sky-600 cursor-pointer shadow-2xs"
-          >
-            <option value="Auto-Detect">Module: Auto-Detect</option>
-            <option value="Node 2 Harmony">Node 2 Harmony</option>
-            <option value="Destiny US Lab">US Lab Destiny</option>
-            <option value="Columbus">Columbus Lab</option>
-            <option value="Kibo JEM">Kibo JEM</option>
-            <option value="Unity Node 1">Node 1 Unity</option>
-            <option value="Cupola">Cupola</option>
-          </select>
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-subtle border border-border text-[11px] font-mono text-secondary shrink-0" title={`Synchronized Station Location: ${currentStationLabel}`}>
+          <Compass className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+          <span className="truncate max-w-[150px] sm:max-w-[190px]">
+            {currentStationMod?.name ?? selectedModuleId} · {selectedLocation}
+          </span>
         </div>
 
         <div className="flex flex-1 items-center gap-2">
