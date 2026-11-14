@@ -66,10 +66,23 @@ export function parseStreamIds(streamIds: string): string[] {
 }
 
 export function prettyStream(streamId: string): string {
-  return streamId
-    .replace(/^stream_/, "")
-    .replace(/_/g, " ")
-    .toUpperCase();
+  switch (streamId) {
+    case "stream_eda_co2":
+      return "CO₂ (PPM)";
+    case "stream_eda_temp":
+      return "Temperature (°C)";
+    case "stream_eda_humidity":
+      return "Humidity (%)";
+    case "stream_eda_radiation":
+      return "Radiation (mGy/day)";
+    case "stream_eda_pressure":
+      return "Pressure (kPa)";
+    default:
+      return streamId
+        .replace(/^stream_/, "")
+        .replace(/_/g, " ")
+        .toUpperCase();
+  }
 }
 
 export function formatDateTime(value: string | null): string {

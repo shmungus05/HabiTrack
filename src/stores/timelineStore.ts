@@ -8,11 +8,9 @@ import { create } from "zustand";
 export const TELEMETRY_STREAMS = [
   "stream_eda_co2",
   "stream_eda_temp",
+  "stream_eda_humidity",
+  "stream_eda_radiation",
   "stream_eda_pressure",
-  "stream_sim_hr",
-  "stream_sim_hrv",
-  "stream_sim_spo2",
-  "stream_sim_temp",
 ] as const;
 
 export type TelemetryStreamId = (typeof TELEMETRY_STREAMS)[number];
