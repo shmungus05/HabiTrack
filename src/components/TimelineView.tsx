@@ -42,6 +42,7 @@ import {
   titleCase,
 } from "../lib/format";
 import { Button } from "./ui";
+import { HuaweiHealthPanel } from "./HuaweiHealthPanel";
 
 const Plot = createPlotlyComponent(Plotly);
 
@@ -56,6 +57,8 @@ const STREAM_COLORS: Record<string, string> = {
 
 interface TimelineViewProps {
   astronautId: string;
+  onOpenHealthImport?: () => void;
+  healthImportRevision?: number;
 }
 
 interface TimelineData {
@@ -89,7 +92,11 @@ function toTrace(points: Measurement[]): { x: string[]; y: number[] } {
   };
 }
 
-export function TimelineView({ astronautId }: TimelineViewProps) {
+export function TimelineView({
+  astronautId,
+  onOpenHealthImport,
+  healthImportRevision = 0,
+}: TimelineViewProps) {
   const [data, setData] = useState<TimelineData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +134,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
 
   useEffect(() => {
     void load();
-  }, [load, reloadToken]);
+  }, [load, reloadToken, healthImportRevision]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -554,6 +561,12 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
             })}
           </div>
         </div>
+      ) : null}
+      {measurements.some((m) => m.provenance_category === "HUAWEI_HEALTH") ? (
+        <HuaweiHealthPanel
+          measurements={measurements}
+          onOpenImport={() => onOpenHealthImport?.()}
+        />
       ) : null}
     </div>
   );

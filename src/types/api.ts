@@ -6,7 +6,8 @@ export type CalibrationStatus = "CALIBRATING" | "CALIBRATED";
 export type ProvenanceCategory =
   | "AUTHENTIC_NASA_EDA"
   | "SYNTHETIC_SIMULATION"
-  | "CREW_REPORTED";
+  | "CREW_REPORTED"
+  | "HUAWEI_HEALTH";
 export type QualityStatus = "VALID" | "SUSPECT" | "IMPUTED" | "STALE" | "GAP";
 export type SeverityLevel = "INFO" | "OBSERVE" | "INVESTIGATE";
 export type UncertaintyLevel = "LOW" | "MODERATE" | "HIGH";
