@@ -93,10 +93,13 @@ export function usePhysiologicalTelemetry(astronautId?: string): PhysiologicalVi
       hr = baselineHr + 27; // e.g. 92 bpm
       rmssd = 24; // severe depression from 55 ms baseline
       spo2 = Number((baselineSpo2 - 1.2).toFixed(1)); // mild desaturation
-    } else if (hasThermal) {
-      // Heat surge autonomic stress
-      hr = baselineHr + 15; // 80 bpm
-      coreTemp = 37.6; // +0.6 °C core elevation
+    }
+    if (hasThermal) {
+      // Heat surge autonomic stress & core temperature rise
+      coreTemp = Number((baselineCoreTemp + 0.6).toFixed(1)); // +0.6 °C core elevation (e.g. 37.6 °C)
+      if (!hasCo2) {
+        hr = baselineHr + 15; // 80 bpm compensatory cardiac response
+      }
     }
 
     // Micro-fluctuations aligned with live clock
