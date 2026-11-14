@@ -17,15 +17,7 @@ import {
   TriangleAlert,
   Clock,
   Heart,
-  Zap,
-  Play,
-  Pause,
-  Square,
-  RotateCcw,
-  CheckCircle2,
   AlertTriangle,
-  Wind,
-  Thermometer,
 } from "lucide-react";
 import Plotly from "plotly.js-basic-dist-min";
 import type { Config, Data, Layout } from "plotly.js";
@@ -226,17 +218,14 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     };
   }, [measurements]);
 
-  const [simulationState, simulationControls] = useSimulationSandbox();
-  const { activeScenario, isAnomalyActive } = simulationState;
+  const [simulationState] = useSimulationSandbox();
+  const { activeScenario } = simulationState;
   const activeScenarios =
     simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
   const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
   const hasThermal =
     activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
-  const isCo2Active = hasCo2;
-  const isThermalActive = hasThermal;
-  const isSaaActive = hasSaa;
   const isNominalActive = !hasCo2 && !hasThermal && !hasSaa;
 
   const { selectedModuleId, selectedLocation } = useStationLocationStore();
@@ -247,10 +236,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     activeScenario,
   );
 
-  // Live real-time clock advancement & mission dataset simulation playback
-  const [isSimulationRunning, setIsSimulationRunning] = useState(false);
-  const [simPlaybackMs, setSimPlaybackMs] = useState<number | null>(null);
-  const [simSpeed, setSimSpeed] = useState<1 | 60 | 1440 | 7200>(1440);
+  // Live real-time clock advancement
   const [liveNow, setLiveNow] = useState(() => Date.now());
 
   // Keep real-time UTC ticking every second
@@ -261,67 +247,13 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // When simulation is started, playback begins from Day 1 (timeWindow.startMs) and advances to current UTC
-  useEffect(() => {
-    if (!isSimulationRunning) return;
-
-    const intervalMs = 200;
-    // Step sizes per 200ms:
-    // 1x: 200ms real UTC speed
-    // 60x: 12,000ms (1 min/sec)
-    // 1440x: 17,280,000ms (~4.8h per tick, 1 day/sec -> 180 days in 3 min)
-    // 7200x: 86,400,000ms (1 day per tick, 5 days/sec -> 180 days in ~36 seconds)
-    const stepMs =
-      simSpeed === 1
-        ? 200
-        : simSpeed === 60
-        ? 60 * 200
-        : simSpeed === 1440
-        ? Math.round(24 * 3600 * 1000 * 0.2)
-        : Math.round(5 * 24 * 3600 * 1000 * 0.2);
-
-    const timer = setInterval(() => {
-      setSimPlaybackMs((prev) => {
-        const current = prev ?? timeWindow.startMs;
-        const next = current + stepMs;
-        if (next >= timeWindow.endMs) {
-          return timeWindow.endMs;
-        }
-        return next;
-      });
-    }, intervalMs);
-
-    return () => clearInterval(timer);
-  }, [isSimulationRunning, simSpeed, timeWindow.startMs, timeWindow.endMs]);
-
-  const currentSimTime =
-    isSimulationRunning && simPlaybackMs !== null ? simPlaybackMs : liveNow;
-
-  const handleStartSimulation = () => {
-    setIsSimulationRunning(true);
-    setSimPlaybackMs(timeWindow.startMs); // Start exactly from Day 1
-  };
-
-  const handleStopSimulation = () => {
-    setIsSimulationRunning(false);
-    setSimPlaybackMs(null); // Reset back to nominal
-    simulationControls.resetNominal(); // Reset any active simulation anomalies
-    setSelectedRange("all"); // Reset range
-    setZoomRange(null);
-  };
-
   const activeMeasurements = useMemo(() => {
     if (!measurements.length) return [];
 
-    const nowMs = currentSimTime;
+    const nowMs = liveNow;
     const anomalyWindowMs = 90 * 60 * 1000; // Recent 90-minute anomaly window
 
-    // When simulation is active, reveal only data points up to the current simulated moment (Day 1 -> currentSimTime)
-    const pool = isSimulationRunning
-      ? measurements.filter((m) => new Date(m.timestamp).getTime() <= nowMs)
-      : measurements;
-
-    const mapped = pool.map((m) => {
+    const mapped = measurements.map((m) => {
       const ptMs = new Date(m.timestamp).getTime();
       const timeToNow = nowMs - ptMs;
 
@@ -356,7 +288,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
       return m;
     });
 
-    // Append continuous live telemetry point aligned to current simulation moment
+    // Append continuous live telemetry point aligned to current live moment
     const isoNow = new Date(nowMs).toISOString();
     const liveCo2Val = hasCo2 ? 4350 : (envTelemetry.co2 || 2250);
     const liveTempVal = hasThermal ? 27.4 : (envTelemetry.temp || 22.8);
@@ -416,14 +348,14 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     ];
 
     return [...mapped, ...livePoints];
-  }, [measurements, hasCo2, hasThermal, hasSaa, currentSimTime, isSimulationRunning, astronautId, envTelemetry]);
+  }, [measurements, hasCo2, hasThermal, hasSaa, liveNow, astronautId, envTelemetry]);
 
   // Handle Quick Hour window presets (1h, 6h, 24h, 7d, 30d, all)
   const effectiveRange = useMemo(() => {
     if (zoomRange) {
       return zoomRange;
     }
-    const endMs = isSimulationRunning ? currentSimTime : timeWindow.endMs;
+    const endMs = timeWindow.endMs;
     if (selectedRange === "all" || !measurements.length) {
       return [
         new Date(timeWindow.startMs).toISOString(),
@@ -444,7 +376,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         : 24 * 180;
     const startMs = Math.max(timeWindow.startMs, endMs - hours * 60 * 60 * 1000);
     return [new Date(startMs).toISOString(), new Date(endMs).toISOString()];
-  }, [zoomRange, selectedRange, timeWindow, measurements.length, currentSimTime, isSimulationRunning]);
+  }, [zoomRange, selectedRange, timeWindow, measurements.length]);
 
   const figure = useMemo(() => {
     const traces: Data[] = [];
@@ -619,29 +551,12 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         showticklabels: false,
         fixedrange: true,
       },
-      shapes: isSimulationRunning
-        ? [
-            {
-              type: "line",
-              xref: "x",
-              yref: "paper",
-              x0: new Date(currentSimTime).toISOString(),
-              x1: new Date(currentSimTime).toISOString(),
-              y0: 0,
-              y1: 1,
-              line: {
-                color: "#0284c7",
-                width: 2,
-                dash: "dot",
-              },
-            },
-          ]
-        : [],
-      uirevision: isSimulationRunning ? "sim_active" : astronautId,
+      shapes: [],
+      uirevision: astronautId,
     };
 
     return { traces, layout: layout as unknown as Partial<Layout> };
-  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange, isSimulationRunning, currentSimTime]);
+  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange]);
 
   const config = useMemo(
     () =>
@@ -720,17 +635,11 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     )} → ${formatDateTime(new Date(timeWindow.endMs).toISOString())} (NASA EDA Long-Duration Flight Increment · 180 Days)`;
   }, [measurements.length, timeWindow]);
 
-  const totalSpanMs = Math.max(1, timeWindow.endMs - timeWindow.startMs);
-  const elapsedMs = Math.max(0, currentSimTime - timeWindow.startMs);
-  const currentMissionDay = Math.min(180, Math.max(1, Math.floor(elapsedMs / (24 * 3600 * 1000)) + 1));
-  const progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalSpanMs) * 100));
-
-  const simUtcString = new Date(currentSimTime).toISOString().replace("T", " ").slice(0, 19) + " UTC";
   const liveRealUtcString = new Date(liveNow).toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
   const vitals = usePhysiologicalTelemetry(astronautId);
 
-  // Derive latest values from the visible activeMeasurements stream up to currentSimTime
+  // Derive latest values from the visible activeMeasurements stream
   const co2Stream = streamPoints(activeMeasurements, "stream_eda_co2");
   const tempStream = streamPoints(activeMeasurements, "stream_eda_temp");
   const humStream = streamPoints(activeMeasurements, "stream_eda_humidity");
@@ -755,20 +664,27 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
             Environmental Trends
           </h2>
-          {isSimulationRunning ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-300">
-              <span className="h-2 w-2 rounded-full bg-sky-600 animate-ping" />
-              Simulated UTC: <span className="font-mono font-bold">{simUtcString}</span>
-              <span className="text-[10px] text-sky-600 font-mono">(Day {currentMissionDay}/180)</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live UTC: <span className="font-mono font-bold">{liveRealUtcString}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Live UTC: <span className="font-mono font-bold">{liveRealUtcString}</span>
+          </span>
+          {!isNominalActive && (
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+              <span>
+                {[
+                  hasCo2 && "CO₂ SPIKE",
+                  hasThermal && "OVERHEAT",
+                  hasSaa && "SAA RADIATION",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}{" "}
+                ACTIVE (SETTINGS)
+              </span>
             </span>
           )}
           <span className="text-xs text-muted font-mono hidden md:inline-block">
-            {isSimulationRunning ? `Simulating Flight Day ${currentMissionDay}` : windowLabel}
+            {windowLabel}
           </span>
         </div>
 
@@ -805,195 +721,6 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
             {isLoading ? "Syncing" : "Refresh"}
           </Button>
         </div>
-      </div>
-
-      {/* Interactive Simulation Controls Bar — Starts from Day 1 to Current UTC & Resets on Stop */}
-      <div className="p-3.5 sm:p-4 rounded-xl glass-panel bg-white border border-border shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-2.5">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-sky-600 shrink-0" />
-            <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">
-              {isSimulationRunning
-                ? "Mission Playback Simulation Active (Day 1 → Current UTC)"
-                : "Real-Time Simulation Controls · NASA EDA Archival Telemetry"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isSimulationRunning ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-sky-100 border border-sky-300 text-sky-900 text-[10px] font-bold animate-pulse flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-600 animate-ping" />
-                <span>SIMULATION ACTIVE · DAY {currentMissionDay} OF 180 ({progressPercent.toFixed(1)}%)</span>
-              </span>
-            ) : !isNominalActive ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                <span>
-                  {[
-                    isCo2Active && "CO₂ SPIKE",
-                    isThermalActive && "OVERHEAT",
-                    isSaaActive && "SAA RADIATION",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}{" "}
-                  ACTIVE
-                </span>
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span>Simulation Idle · Synced to Current Live UTC</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Buttons Row: Start/Stop + Multi-Select Anomalies + Speed */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Main Play / Stop & Reset Button */}
-            {!isSimulationRunning ? (
-              <button
-                type="button"
-                onClick={handleStartSimulation}
-                className="py-1.5 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Start simulation playback from Day 1 advancing toward current live UTC"
-              >
-                <Play className="w-3.5 h-3.5 fill-white shrink-0" />
-                <span>Start Simulation (Day 1)</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStopSimulation}
-                className="py-1.5 px-3.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
-                title="Stop simulation and reset back to nominal live UTC"
-              >
-                <Square className="w-3.5 h-3.5 fill-white shrink-0" />
-                <span>Stop &amp; Reset</span>
-              </button>
-            )}
-
-            {/* Multi-Select Anomaly Buttons */}
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("co2_spike")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isCo2Active
-                  ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-2 ring-amber-400 font-bold"
-                  : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
-              }`}
-              title="Toggle CO₂ Spike anomaly"
-            >
-              <Wind className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>⚡ CO₂ Spike (+1,650 PPM)</span>
-              {isCo2Active && <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("thermal_overheat")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isThermalActive
-                  ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-2 ring-orange-400 font-bold"
-                  : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
-              }`}
-              title="Toggle Overheat anomaly"
-            >
-              <Thermometer className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-              <span>🌡️ Overheat (+4.8 °C)</span>
-              {isThermalActive && <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("saa_transit")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isSaaActive
-                  ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-2 ring-purple-400 font-bold"
-                  : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
-              }`}
-              title="Toggle SAA Radiation anomaly"
-            >
-              <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-              <span>☢️ SAA Radiation (0.48 mGy/d)</span>
-              {isSaaActive && <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                simulationControls.resetNominal();
-                if (isSimulationRunning) {
-                  handleStopSimulation();
-                }
-              }}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isNominalActive && !isSimulationRunning
-                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
-                  : "border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800"
-              }`}
-              title="Reset all active anomalies to nominal baselines"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>🔄 Reset Nominal</span>
-            </button>
-          </div>
-
-          {/* Simulation Speed Multipliers */}
-          <div className="flex items-center gap-2 border-l border-border/80 pl-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Speed:</span>
-            <div className="flex items-center rounded-lg bg-surface-subtle border border-border p-0.5 text-xs font-mono">
-              {([
-                { spd: 1, label: "1x (Real UTC)" },
-                { spd: 60, label: "60x" },
-                { spd: 1440, label: "1D/s (1440x)" },
-                { spd: 7200, label: "5D/s (7200x)" },
-              ] as const).map(({ spd, label }) => (
-                <button
-                  key={spd}
-                  type="button"
-                  onClick={() => setSimSpeed(spd)}
-                  className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                    simSpeed === spd
-                      ? "bg-white text-sky-700 font-bold shadow-2xs"
-                      : "text-muted hover:text-foreground"
-                  }`}
-                  title={`${label} playback speed`}
-                >
-                  {spd === 1 ? "1x" : spd === 60 ? "60x" : spd === 1440 ? "1D/s" : "5D/s"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Mission Playback Progress Scrubber (Shown whenever simulation is active) */}
-        {isSimulationRunning && (
-          <div className="pt-2 border-t border-slate-100 space-y-1.5 animate-fadeIn">
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-600">
-              <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-                <span>Day 1 (Mission Start)</span>
-              </span>
-              <span className="font-bold text-sky-800">
-                Playing: Day {currentMissionDay} of 180 · {simUtcString}
-              </span>
-              <span className="text-slate-500">
-                Day 180 (Live UTC: {liveRealUtcString})
-              </span>
-            </div>
-            <div className="relative flex items-center">
-              <input
-                type="range"
-                min={timeWindow.startMs}
-                max={timeWindow.endMs}
-                value={currentSimTime}
-                onChange={(e) => setSimPlaybackMs(Number(e.target.value))}
-                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Stream Toggle Bar & Station Telemetry Pill in Clean White Theme */}
