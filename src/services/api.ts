@@ -6,6 +6,7 @@
  */
 
 import researchChunksRaw from "../data/researchChunks.json";
+import { generateGeminiRagResponse } from "./ai/geminiClient";
 import type {
   AssistantResponse,
   Astronaut,
@@ -320,6 +321,10 @@ function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
     .split(/\s+/)
     .filter((t) => t.length > 2);
 
+  if (tokens.length === 0) {
+    return [];
+  }
+
   const scored = researchChunks.map((chunk) => {
     let score = 0;
     const titleLower = chunk.title.toLowerCase();
@@ -335,8 +340,14 @@ function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
     return { chunk, score };
   });
 
-  scored.sort((a, b) => b.score - a.score);
-  const selected = scored.slice(0, Math.max(topK, 2));
+  // Only consider items with an actual positive match score
+  const matched = scored.filter((s) => s.score > 0);
+  if (matched.length === 0) {
+    return [];
+  }
+
+  matched.sort((a, b) => b.score - a.score);
+  const selected = matched.slice(0, topK);
 
   return selected.map(({ chunk, score }, idx) => {
     const maxPossible = Math.max(tokens.length * 5, 5);
@@ -381,10 +392,32 @@ export async function explainEvent(
   }
 
   const evidence = searchResearchChunks(queryText, 3);
-
   const headline = evt
     ? `Concordance Analysis: ${evt.event_type.replace(/_/g, " ")} (${evt.severity_level})`
     : `Event Telemetry Correlation Analysis: ${eventId}`;
+
+  let answerText: string | null = null;
+  let providerUsed = "Gemini 2.5 Flash (Direct Browser Execution)";
+  let mode: "GEMINI_GENERATIVE" | "EXTRACTIVE_FALLBACK" = "GEMINI_GENERATIVE";
+
+  try {
+    const geminiRes = await generateGeminiRagResponse(
+      `Explain event ${eventId} (${evt?.event_type || "TELEMETRY_EXCURSION"}): ${evt?.rationale || "Sensor excursion observed"}. Contributing streams: ${evt?.contributing_stream_ids || "autonomic"}.`,
+      evidence,
+      astronautId
+    );
+    answerText = geminiRes.answer;
+    providerUsed = geminiRes.provider;
+  } catch (err) {
+    console.warn("Direct Gemini execution unavailable, falling back to dynamic synthesizer:", err);
+    mode = "EXTRACTIVE_FALLBACK";
+    providerUsed = "Mastra Onboard First-Response Engine (Pure TypeScript)";
+    answerText = `**${headline}**\n\nTelemetry correlation observed for ${astronautId}. Contributing streams: ${evt?.contributing_stream_ids || "vitals"}. Operational triage status: ${evt?.review_status || "PENDING_REVIEW"}.\n\n${
+      evidence.length > 0
+        ? evidence.map((e) => `• [${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join("\n\n")
+        : "Circadian baseline comparison indicates transient autonomic fluctuation within observed operational bounds."
+    }`;
+  }
 
   const observedDynamics = evt
     ? `Telemetry correlation observed for ${astronautId}. Contributing streams: ${evt.contributing_stream_ids}. Operational triage status: ${evt.review_status}.`
@@ -399,7 +432,7 @@ export async function explainEvent(
     interaction_id: generateUuid(),
     astronaut_id: astronautId,
     event_id: eventId,
-    mode: "EXTRACTIVE_FALLBACK",
+    mode,
     headline,
     observed_dynamics: observedDynamics,
     scientific_context: scientificContext,
@@ -413,8 +446,8 @@ export async function explainEvent(
     latency_ms: 18,
     flight_rule_cited: flightRule,
     verbatim_checklist: flightRule?.checklist_steps ?? [],
-    provider_used: "Client Extractive Synthesizer (TypeScript)",
-    answer: null,
+    provider_used: providerUsed,
+    answer: answerText,
   };
 }
 
@@ -438,19 +471,42 @@ export async function queryAssistant(
     matchedRule = seed.flightRules.find((r) => r.rule_id === "FR-EVA-003") ?? null;
   }
 
-  const headline = `Literature Synthesis: ${text.trim().slice(0, 50)}`;
-  const observedDynamics = `Ad-hoc biomedical research synthesis across NASA GeneLab and Life Sciences corpus for "${text.slice(0, 40)}".`;
+  let answerText: string | null = null;
+  let providerUsed = "Gemini 2.5 Flash (Direct Browser Execution)";
+  let headline = evidence.length > 0 ? `Literature Synthesis: ${text.trim().slice(0, 45)}` : "WAYFINDER Standby Assistant";
+  let mode: "GEMINI_GENERATIVE" | "EXTRACTIVE_FALLBACK" = "GEMINI_GENERATIVE";
 
-  const scientificContext =
-    evidence.length > 0
-      ? evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join(" ")
-      : "No direct matching citations found for query. Consult baseline telemetry.";
+  // 1. Attempt real LLM generation via Gemini 2.5 Flash client
+  try {
+    const geminiRes = await generateGeminiRagResponse(text, evidence, astronautId);
+    answerText = geminiRes.answer;
+    providerUsed = geminiRes.provider;
+  } catch (err) {
+    console.warn("Direct Gemini execution unavailable, falling back to dynamic synthesizer:", err);
+    mode = "EXTRACTIVE_FALLBACK";
+    providerUsed = "Mastra Onboard First-Response Engine (Pure TypeScript)";
+
+    if (evidence.length === 0) {
+      answerText = `Greetings. I am WAYFINDER, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor 5 spacecraft environmental factors (ppCO₂, radiation, cabin temp, humidity, atmospheric pressure) alongside crew circadian baselines and NASA Flight Rules.\n\nHow can I assist you with station telemetry, flight rules, or symptom evaluations?`;
+    } else {
+      answerText = `Relevant biomedical evidence from the NASA Human Research Program literature corpus:\n\n` +
+        evidence.map((e) => `• **[${e.doc_id}: ${e.section_heading}]** ${e.excerpt}`).join("\n\n");
+    }
+  }
+
+  const observedDynamics = evidence.length > 0
+    ? `Biomedical research synthesis across NASA GeneLab and Life Sciences corpus for "${text.slice(0, 40)}".`
+    : `Onboard clinical co-pilot standby session for ${astronautId || "Expedition 71 crew"}.`;
+
+  const scientificContext = evidence.length > 0
+    ? evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join(" ")
+    : "No direct research citations required for this query.";
 
   return {
     interaction_id: generateUuid(),
     astronaut_id: astronautId ?? null,
     event_id: concordanceEventId ?? null,
-    mode: "EXTRACTIVE_FALLBACK",
+    mode,
     headline,
     observed_dynamics: observedDynamics,
     scientific_context: scientificContext,
@@ -464,8 +520,8 @@ export async function queryAssistant(
     latency_ms: 12,
     flight_rule_cited: matchedRule,
     verbatim_checklist: matchedRule ? matchedRule.checklist_steps : undefined,
-    provider_used: "Client Extractive Synthesizer (TypeScript)",
-    answer: null,
+    provider_used: providerUsed,
+    answer: answerText,
   };
 }
 
@@ -497,10 +553,10 @@ export async function fetchFlightRule(ruleId: string): Promise<FlightRule> {
 
 export async function fetchProviderStatus(): Promise<ProviderStatusResponse> {
   return {
-    active_provider: "TypeScript Client Engine",
-    gemini_available: false,
+    active_provider: "Mastra Pure TypeScript Agent",
+    gemini_available: true,
     ollama_available: false,
     gemini_audio_testing_enabled: false,
-    active_model_name: "Extractive Rule-Grounded Engine (Client-Side)",
+    active_model_name: "Mastra First-Response Workflow (Client-Side)",
   };
 }

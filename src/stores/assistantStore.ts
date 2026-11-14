@@ -142,6 +142,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         activeExplanation: explanation,
         latchedRule: rule,
         isLoading: false,
+        activeTab: rule ? "checklists" : "chat",
         messages: [...state.messages, botMsg],
       }));
     } catch (error) {
@@ -205,6 +206,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         activeExplanation: response,
         latchedRule: rule,
         isLoading: false,
+        activeTab: rule ? "checklists" : state.activeTab,
         messages: [...state.messages, botMsg],
       }));
     } catch (error) {
