@@ -20,13 +20,18 @@ export * from "./agents/firstResponderAgent";
 export const mastra = new Mastra({
   agents: {
     firstResponder: firstResponderAgent,
+    "first-responder-agent": firstResponderAgent,
   },
   workflows: {
     clinicalTriage: clinicalTriageWorkflow,
+    "clinical-triage-workflow": clinicalTriageWorkflow,
   },
   tools: {
     telemetry: telemetryTool,
+    "get-compartment-telemetry": telemetryTool,
     flightRules: flightRulesTool,
+    "get-flight-rule": flightRulesTool,
     researchRag: researchRagTool,
+    "search-research-rag": researchRagTool,
   },
 });

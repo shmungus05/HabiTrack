@@ -58,6 +58,42 @@ export const telemetryTool = createTool({
       };
     }
 
+    if (cid.includes("columbus")) {
+      return {
+        compartmentName: "Columbus European Module",
+        co2Ppm: Math.round(snap.co2Ppm * 0.98),
+        tempC: snap.tempC + 0.2,
+        humidityPct: Math.max(25, snap.humidityPct - 5), // Low humidity
+        radiationRateMGy: snap.radiationRateMGy,
+        pressureMmHg: snap.pressureMmHg,
+        airflowProfile: "Moderate Forced Circulation (Dry Cabin)",
+      };
+    }
+
+    if (cid.includes("kibo") || cid.includes("jem")) {
+      return {
+        compartmentName: "Kibo JEM Module",
+        co2Ppm: Math.round(snap.co2Ppm * 0.95),
+        tempC: snap.tempC,
+        humidityPct: snap.humidityPct,
+        radiationRateMGy: snap.radiationRateMGy,
+        pressureMmHg: snap.pressureMmHg,
+        airflowProfile: "Standard Japanese Experiment Module Airflow",
+      };
+    }
+
+    if (cid.includes("cupola")) {
+      return {
+        compartmentName: "Cupola Observation Module",
+        co2Ppm: snap.co2Ppm,
+        tempC: snap.tempC - 1.2, // Radiative heat loss via windows
+        humidityPct: snap.humidityPct,
+        radiationRateMGy: Number((snap.radiationRateMGy * 1.35).toFixed(2)), // Reduced shielding
+        pressureMmHg: snap.pressureMmHg,
+        airflowProfile: "Localized Low-Flow Observation Envelope",
+      };
+    }
+
     return {
       compartmentName: "General Station Habitat",
       co2Ppm: snap.co2Ppm,

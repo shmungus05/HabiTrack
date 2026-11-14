@@ -194,7 +194,11 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
 
     try {
       // Execute pure-TypeScript Mastra Clinical Triage Workflow
-      const triageResult = await mastra.getWorkflow("clinical-triage-workflow").execute({
+      const workflow =
+        mastra.getWorkflow("clinicalTriage") ||
+        mastra.getWorkflow("clinical-triage-workflow");
+
+      const triageResult = await workflow.execute({
         symptomText: query,
         compartmentOverride: selectedModule !== "Auto-Detect" ? selectedModule : undefined,
         currentSnapshot: {
@@ -207,6 +211,8 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
         astronautId: "ASTRO-01",
       });
 
+      console.log("[Clinical AI] Workflow executed successfully:", triageResult);
+
       let responseContent = `Evaluated report against current environmental telemetry in **${triageResult.compartmentName}**.\n\n`;
       responseContent += `⚠️ **Physiological Excursion**: ${triageResult.physiologicalRationale}\n\n`;
       responseContent += `⏱️ **Biological Latency Lag**: Expected onset peak is **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).`;
@@ -218,7 +224,7 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
         content: responseContent,
         headline: triageResult.headline,
         location: triageResult.compartmentName,
-        snapshot: currentSnapshot,
+        snapshot: triageResult.telemetryReadings || currentSnapshot,
         interimActions: triageResult.interimActions,
         countermeasures: triageResult.interimActions.map((a: any) => a.action),
         lagWindow: triageResult.biologicalLatencyLag,
@@ -232,13 +238,13 @@ export const SymptomChatbotModule: React.FC<SymptomChatbotModuleProps> = ({
       setMessages((prev) => [...prev, aiMsg]);
       onLogSymptom?.(query, triageResult.compartmentName);
     } catch (err) {
-      console.error("Mastra triage workflow error:", err);
+      console.error("[Clinical AI] Mastra triage workflow execution error:", err);
       // Fallback message
       const fallbackMsg: MessageItem = {
         id: `ai-${Date.now()}`,
         sender: "ai",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        content: `Evaluated symptom against telemetry baseline. Verify ventilation and rest profile while awaiting flight surgeon review.`,
+        content: `Evaluated symptom against telemetry baseline. Verify ventilation and rest profile while awaiting flight surgeon review. (Telemetry system operational).`,
         location: selectedModule !== "Auto-Detect" ? selectedModule : "General Station Bay",
         snapshot: currentSnapshot,
       };

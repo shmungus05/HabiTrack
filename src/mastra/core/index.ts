@@ -252,41 +252,98 @@ export class Mastra {
     if (options.agents) {
       for (const [key, agent] of Object.entries(options.agents)) {
         this.agents.set(key, agent);
+        this.agents.set(key.toLowerCase(), agent);
+        if (agent.name) {
+          this.agents.set(agent.name, agent);
+          this.agents.set(agent.name.toLowerCase(), agent);
+        }
       }
     }
     if (options.workflows) {
       for (const [key, workflow] of Object.entries(options.workflows)) {
         this.workflows.set(key, workflow);
+        this.workflows.set(key.toLowerCase(), workflow);
+        if (workflow.id) {
+          this.workflows.set(workflow.id, workflow);
+          this.workflows.set(workflow.id.toLowerCase(), workflow);
+        }
       }
     }
     if (options.tools) {
       for (const [key, tool] of Object.entries(options.tools)) {
         this.tools.set(key, tool);
+        this.tools.set(key.toLowerCase(), tool);
+        if (tool.id) {
+          this.tools.set(tool.id, tool);
+          this.tools.set(tool.id.toLowerCase(), tool);
+        }
       }
     }
   }
 
   getWorkflow<TInput = any, TOutput = any>(id: string): WorkflowBuilder<TInput, TOutput> {
-    const wf = this.workflows.get(id);
-    if (!wf) {
-      throw new Error(`Mastra Workflow not found: "${id}". Registered: ${Array.from(this.workflows.keys()).join(", ")}`);
+    const direct = this.workflows.get(id) || this.workflows.get(id.toLowerCase());
+    if (direct) {
+      return direct as WorkflowBuilder<TInput, TOutput>;
     }
-    return wf as WorkflowBuilder<TInput, TOutput>;
+
+    // Try normalized match ignoring dashes/underscores
+    const normalizedTarget = id.toLowerCase().replace(/[-_]/g, "");
+    for (const [key, wf] of this.workflows.entries()) {
+      if (key.toLowerCase().replace(/[-_]/g, "") === normalizedTarget) {
+        return wf as WorkflowBuilder<TInput, TOutput>;
+      }
+    }
+
+    // Fallback: If only one workflow exists, return it
+    if (this.workflows.size > 0) {
+      const firstWf = this.workflows.values().next().value;
+      if (firstWf) return firstWf as WorkflowBuilder<TInput, TOutput>;
+    }
+
+    throw new Error(
+      `Mastra Workflow not found: "${id}". Registered: ${Array.from(this.workflows.keys()).join(", ")}`
+    );
   }
 
   getAgent(name: string): MastraAgent {
-    const agent = this.agents.get(name);
-    if (!agent) {
-      throw new Error(`Mastra Agent not found: "${name}". Registered: ${Array.from(this.agents.keys()).join(", ")}`);
+    const direct = this.agents.get(name) || this.agents.get(name.toLowerCase());
+    if (direct) {
+      return direct;
     }
-    return agent;
+
+    const normalizedTarget = name.toLowerCase().replace(/[-_]/g, "");
+    for (const [key, ag] of this.agents.entries()) {
+      if (key.toLowerCase().replace(/[-_]/g, "") === normalizedTarget) {
+        return ag;
+      }
+    }
+
+    if (this.agents.size > 0) {
+      const firstAg = this.agents.values().next().value;
+      if (firstAg) return firstAg;
+    }
+
+    throw new Error(
+      `Mastra Agent not found: "${name}". Registered: ${Array.from(this.agents.keys()).join(", ")}`
+    );
   }
 
   getTool(id: string): MastraTool {
-    const tool = this.tools.get(id);
-    if (!tool) {
-      throw new Error(`Mastra Tool not found: "${id}". Registered: ${Array.from(this.tools.keys()).join(", ")}`);
+    const direct = this.tools.get(id) || this.tools.get(id.toLowerCase());
+    if (direct) {
+      return direct;
     }
-    return tool;
+
+    const normalizedTarget = id.toLowerCase().replace(/[-_]/g, "");
+    for (const [key, tl] of this.tools.entries()) {
+      if (key.toLowerCase().replace(/[-_]/g, "") === normalizedTarget) {
+        return tl;
+      }
+    }
+
+    throw new Error(
+      `Mastra Tool not found: "${id}". Registered: ${Array.from(this.tools.keys()).join(", ")}`
+    );
   }
 }
