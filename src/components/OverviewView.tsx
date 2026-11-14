@@ -44,6 +44,7 @@ import { useRoleStore } from "../stores/roleStore";
 import { AstronautOnly, SurgeonOnly } from "../features/shared";
 import { HealthReportModal, type HealthReportSourceData } from "../features/health-report";
 import { EventRationaleDisplay, parseEventRationale } from "./EventRationaleDisplay";
+import { HuaweiHealthPanel } from "./HuaweiHealthPanel";
 import type {
   Astronaut,
   Baselines,
@@ -79,6 +80,8 @@ import { useActiveMissionTime } from "../stores/missionStore";
 
 interface OverviewViewProps {
   astronautId: string;
+  onOpenHealthImport?: () => void;
+  healthImportRevision?: number;
 }
 
 interface OverviewData {
@@ -791,7 +794,11 @@ function AstronautOverview({
   );
 }
 
-export function OverviewView({ astronautId }: OverviewViewProps) {
+export function OverviewView({
+  astronautId,
+  onOpenHealthImport,
+  healthImportRevision = 0,
+}: OverviewViewProps) {
   const { isSimulation, currentMissionDay } = useActiveMissionTime();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loadedAstronautId, setLoadedAstronautId] = useState<string | null>(null);
@@ -853,7 +860,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
 
   useEffect(() => {
     void load();
-  }, [load, isSimulation, currentMissionDay]);
+  }, [load, isSimulation, currentMissionDay, healthImportRevision]);
 
   const activeEvent = useMemo<HealthEvent | null>(() => {
     // Inject real-time simulated concordance events when a simulation scenario is active
@@ -1134,15 +1141,21 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
     <div className="space-y-6">
       <AstronautOnly>
         {data ? (
-          <AstronautOverview
-            astronautId={astronautId}
-            data={data}
-            quickLogging={quickLogging}
-            quickNotice={quickNotice}
-            onQuickLog={(code) => void quickLogSymptom(code)}
-            activeScenario={activeScenario}
-            activeScenarios={activeScenarios}
-          />
+          <div className="space-y-6">
+            <AstronautOverview
+              astronautId={astronautId}
+              data={data}
+              quickLogging={quickLogging}
+              quickNotice={quickNotice}
+              onQuickLog={(code) => void quickLogSymptom(code)}
+              activeScenario={activeScenario}
+              activeScenarios={activeScenarios}
+            />
+            <HuaweiHealthPanel
+              measurements={measurements}
+              onOpenImport={() => onOpenHealthImport?.()}
+            />
+          </div>
         ) : null}
       </AstronautOnly>
 
@@ -1292,6 +1305,11 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
 
       {/* Synchronized Physiological Telemetry & Circadian Envelope */}
       <PhysiologicalCards astronautId={astronautId} />
+
+      <HuaweiHealthPanel
+        measurements={measurements}
+        onOpenImport={() => onOpenHealthImport?.()}
+      />
 
       {/* Segmented Sub-section Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-100/80 p-1.5">

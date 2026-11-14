@@ -9,6 +9,7 @@ import researchChunksRaw from "../data/researchChunks.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
 import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator";
 import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore";
+import { getImportedHuaweiMeasurements } from "./healthImportStorage";
 import type {
   AssistantResponse,
   Astronaut,
@@ -186,13 +187,17 @@ export async function fetchMeasurements(
   windowHours = 4320,
   maxPoints = 20000
 ): Promise<Measurement[]> {
+  const [importedHuawei] = await Promise.all([
+    getImportedHuaweiMeasurements(astronautId).catch(() => [] as Measurement[]),
+  ]);
+
   const records = generate180DayTelemetry({
     astronautId,
     nowMs: Date.now(),
     durationDays: 180,
   });
 
-  if (records.length === 0) return [];
+  if (records.length === 0) return importedHuawei;
   const newestTime = new Date(records[records.length - 1].timestamp).getTime();
   const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
 
@@ -200,17 +205,17 @@ export async function fetchMeasurements(
     (m) => new Date(m.timestamp).getTime() >= cutoffTime
   );
 
-  if (filtered.length <= maxPoints) {
-    return filtered;
+  let result = filtered;
+  if (filtered.length > maxPoints) {
+    const step = Math.ceil(filtered.length / maxPoints);
+    const downsampled: Measurement[] = [];
+    for (let i = 0; i < filtered.length; i += step) {
+      downsampled.push(filtered[i]);
+    }
+    result = downsampled;
   }
 
-  // Downsample evenly to maxPoints if requested
-  const step = Math.ceil(filtered.length / maxPoints);
-  const downsampled: Measurement[] = [];
-  for (let i = 0; i < filtered.length; i += step) {
-    downsampled.push(filtered[i]);
-  }
-  return downsampled;
+  return importedHuawei.length > 0 ? [...result, ...importedHuawei] : result;
 }
 
 export async function fetchBaselines(astronautId: string): Promise<Baselines> {
