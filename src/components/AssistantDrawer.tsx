@@ -28,7 +28,6 @@ import {
   Microscope,
   Radio,
   Send,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -53,7 +52,6 @@ import {
   type SurgeonHandoffPacket,
 } from "../stores/assistantStore";
 import { EvidenceCard } from "./EvidenceCard";
-import { ProviderStatusBadge } from "./ProviderStatusBadge";
 import { parseEventRationale } from "./EventRationaleDisplay";
 import { Badge } from "./ui";
 
@@ -207,10 +205,10 @@ export function AssistantDrawer() {
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative flex flex-col w-full max-w-6xl h-[90vh] max-h-[940px] rounded-[32px] bg-white border border-slate-200/90 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.25)] overflow-hidden transition-all duration-200 animate-in zoom-in-95"
+          className="relative flex flex-col w-full max-w-7xl h-[95vh] max-h-[1050px] rounded-[32px] bg-white border border-slate-200/90 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.25)] overflow-hidden transition-all duration-200 animate-in zoom-in-95"
         >
           {/* Top Header */}
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-6 sm:px-8 py-4">
+          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-6 sm:px-8 py-3.5">
             <div className="flex min-w-0 items-center gap-3.5">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-sky-200 bg-sky-50 text-sky-600 shadow-xs">
                 <Sparkles className="h-5 w-5" />
@@ -220,12 +218,13 @@ export function AssistantDrawer() {
                   <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
                     HABITRACK CLINICAL CO-PILOT
                   </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Mastra 5-Factor
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Standby Online
                   </span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <ProviderStatusBadge />
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono">
+                  <span>ISS Expedition 71 · Autonomous Flight Decision Support</span>
                 </div>
               </div>
             </div>
@@ -320,31 +319,33 @@ export function AssistantDrawer() {
             {/* Tab 1: Conversational Chatbot & Triage */}
             {activeTab === "chat" && (
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Quick Suggestion Chips */}
-                <div className="px-6 sm:px-8 py-2.5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-2 overflow-x-auto shrink-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono shrink-0">
-                    Quick Prompts:
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {CLINICAL_SUGGESTIONS.map((sug) => (
-                      <button
-                        key={sug}
-                        type="button"
-                        onClick={() => submitQuery(sug)}
-                        className="px-3 py-1 rounded-full text-xs font-medium bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-                      >
-                        {sug}
-                      </button>
-                    ))}
+                {/* Quick Suggestion Chips (compact header bar when in active conversation) */}
+                {messages.length > 1 && (
+                  <div className="px-6 sm:px-8 py-2 bg-slate-50/60 border-b border-slate-100 flex items-center gap-2 overflow-x-auto shrink-0">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono shrink-0">
+                      Quick Prompts:
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {CLINICAL_SUGGESTIONS.map((sug) => (
+                        <button
+                          key={sug}
+                          type="button"
+                          onClick={() => submitQuery(sug)}
+                          className="px-2.5 py-1 rounded-full text-xs font-medium bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                        >
+                          {sug}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Messages Stream */}
                 <div
                   ref={chatScrollRef}
                   className="drawer-scroll flex-1 overflow-y-auto px-6 sm:px-8 py-6"
                 >
-                  <div className="max-w-4xl mx-auto w-full space-y-5">
+                  <div className="max-w-5xl mx-auto w-full space-y-6">
                     {messages.map((msg) => {
                       const isUser = msg.sender === "user";
                       const isExpanded = Boolean(expandedSources[msg.id]);
@@ -359,25 +360,35 @@ export function AssistantDrawer() {
                         >
                           {/* Message Bubble */}
                           <div
-                            className={`rounded-[24px] p-5 text-xs sm:text-[13px] leading-relaxed space-y-3.5 transition-all ${
+                            className={`rounded-[28px] p-5 sm:p-6 text-sm leading-relaxed space-y-4 transition-all ${
                               isUser
-                                ? "max-w-[85%] bg-sky-50/90 border border-sky-200 text-slate-900 rounded-tr-sm shadow-xs font-medium"
-                                : "max-w-[92%] bg-white border border-slate-200 text-slate-900 rounded-tl-sm shadow-card"
+                                ? "max-w-[85%] sm:max-w-[75%] bg-slate-900 border border-slate-800 text-white rounded-tr-md shadow-xs font-medium"
+                                : "w-full max-w-full bg-white border border-slate-200/90 text-slate-900 rounded-tl-md shadow-card"
                             }`}
                           >
                             {/* Header line for sender and location */}
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono pb-2 border-b border-slate-100">
+                            <div
+                              className={`flex flex-wrap items-center justify-between gap-2 text-xs font-mono pb-2 border-b ${
+                                isUser ? "border-slate-800 text-slate-400" : "border-slate-100 text-slate-500"
+                              }`}
+                            >
                               <div className="flex items-center gap-2">
                                 <span
                                   className={`font-bold ${
-                                    isUser ? "text-sky-800" : "text-sky-700 uppercase tracking-wider text-[11px]"
+                                    isUser ? "text-sky-300 text-xs" : "text-sky-700 uppercase tracking-wider text-[11px]"
                                   }`}
                                 >
                                   {isUser ? "Astronaut (Crew)" : "HabiTrack Flight Co-Pilot"}
                                 </span>
                                 {msg.location && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[11px]">
-                                    <Compass className="w-3 h-3 text-sky-600" />
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] ${
+                                      isUser
+                                        ? "bg-slate-800 text-slate-300 border border-slate-700"
+                                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    }`}
+                                  >
+                                    <Compass className="w-3 h-3 text-sky-400" />
                                     {msg.location}
                                   </span>
                                 )}
@@ -392,9 +403,37 @@ export function AssistantDrawer() {
                             </div>
 
                             {/* Content text */}
-                            <div className="whitespace-pre-wrap font-sans leading-relaxed text-slate-800">
+                            <div
+                              className={`whitespace-pre-wrap font-sans text-sm sm:text-[14.5px] leading-relaxed ${
+                                isUser ? "text-slate-100" : "text-slate-800"
+                              }`}
+                            >
                               {msg.text}
                             </div>
+
+                            {/* ChatGPT / Perplexity Style Starter Prompt Cards on Welcome */}
+                            {!isUser && msg.id === "welcome-msg" && messages.length <= 1 && (
+                              <div className="pt-3 border-t border-slate-100 space-y-3">
+                                <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block font-bold">
+                                  Suggested Inquiries
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                  {CLINICAL_SUGGESTIONS.map((sug) => (
+                                    <button
+                                      key={sug}
+                                      type="button"
+                                      onClick={() => submitQuery(sug)}
+                                      className="text-left p-3.5 rounded-2xl bg-slate-50/80 hover:bg-sky-50 border border-slate-200/80 hover:border-sky-300 text-xs font-medium text-slate-700 hover:text-sky-900 transition-all cursor-pointer shadow-2xs group flex flex-col justify-between"
+                                    >
+                                      <span className="leading-snug">{sug}</span>
+                                      <span className="text-[10px] font-mono text-slate-400 group-hover:text-sky-600 mt-2.5 flex items-center gap-1">
+                                        Ask Co-Pilot →
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Embedded 5-Factor Telemetry Scorecard */}
                             {!isUser && msg.snapshot && (
@@ -600,7 +639,7 @@ export function AssistantDrawer() {
                     {isLoading && (
                       <div className="flex items-center gap-3 p-4 max-w-[80%] rounded-[24px] bg-white border border-slate-200 text-xs sm:text-[13px] text-sky-700 shadow-card">
                         <span className="w-2.5 h-2.5 rounded-full bg-sky-600 animate-pulse shrink-0" />
-                        <span>Executing Mastra 5-factor triage &amp; NASA RAG synthesis...</span>
+                        <span>Synthesizing flight rules &amp; clinical telemetry...</span>
                       </div>
                     )}
 
@@ -615,7 +654,7 @@ export function AssistantDrawer() {
 
                 {/* Persistent Chat Input Bar (Perplexity Command Dock) */}
                 <div className="p-4 sm:p-5 border-t border-slate-200/80 bg-white/95 backdrop-blur-md space-y-2 shrink-0">
-                  <form onSubmit={handleQuerySubmit} className="max-w-4xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <form onSubmit={handleQuerySubmit} className="max-w-5xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                     {/* Compartment Selector */}
                     <div className="flex items-center gap-2 sm:w-48 shrink-0 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2">
                       <Compass className="w-4 h-4 text-sky-600 shrink-0" />
@@ -641,7 +680,7 @@ export function AssistantDrawer() {
                         value={inputQuery}
                         onChange={(e) => setInputQuery(e.target.value)}
                         placeholder="Ask or report symptoms (e.g., 'Throbbing headache in Node 2')..."
-                        className="flex-1 px-3 py-1.5 bg-transparent text-xs sm:text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none font-sans"
+                        className="flex-1 px-3 py-2 bg-transparent text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-sans"
                       />
 
                       {/* Microphone Dictation Button */}
@@ -671,11 +710,11 @@ export function AssistantDrawer() {
                     </div>
                   </form>
 
-                  <div className="max-w-4xl mx-auto flex items-center justify-between px-2 text-[11px] text-slate-400 font-mono">
+                  <div className="max-w-5xl mx-auto flex items-center justify-between px-2 text-[11px] text-slate-400 font-mono">
                     <span>Press Enter to send · Esc to close · Alt+V for Voice PTT</span>
                     <span className="hidden sm:flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      5-Factor Corroboration Active
+                      Telemetry Corroboration Active
                     </span>
                   </div>
                 </div>
@@ -897,20 +936,6 @@ export function AssistantDrawer() {
               </div>
             )}
           </div>
-
-          {/* Docked Immutable Epistemic Disclaimer Footer */}
-          <footer className="shrink-0 border-t border-slate-100 bg-slate-50/90 px-6 sm:px-8 py-3 flex items-center justify-between gap-4 text-xs">
-            <div className="flex items-start sm:items-center gap-2 text-slate-500">
-              <ShieldAlert className="mt-0.5 sm:mt-0 h-4 w-4 shrink-0 text-amber-600" />
-              <p className="text-[11px] leading-relaxed text-slate-500">
-                {activeExplanation?.disclaimer ??
-                  "Non-Causal Decision Support: Temporal correlation indicates co-occurrence only and does not establish clinical causation. Ground flight surgeon review required."}
-              </p>
-            </div>
-            <div className="hidden lg:flex items-center gap-2 shrink-0 text-[11px] font-mono text-slate-400">
-              <span>ECLSS / BMR / PR-72</span>
-            </div>
-          </footer>
         </div>
       </div>
 

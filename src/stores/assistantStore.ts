@@ -119,7 +119,7 @@ const DEFAULT_SNAPSHOT: TelemetrySnapshot = {
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: "welcome-msg",
   sender: "assistant",
-  text: "Hello, I am HabiTrack Standby Assistant. Ask me directly about any symptoms, telemetry excursions, or mission procedures. I will provide direct answers grounded in certified NASA Flight Rules, live 5-factor compartment telemetry, and research documents.",
+  text: "Hello, I am HabiTrack Standby Assistant. Ask me directly about any symptoms, telemetry excursions, or mission procedures. I will provide direct answers grounded in certified NASA Flight Rules, live compartment telemetry, and research documents.",
   timestamp: "Ready",
   snapshot: DEFAULT_SNAPSHOT,
 };
