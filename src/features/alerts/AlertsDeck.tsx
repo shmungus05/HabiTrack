@@ -509,51 +509,14 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
           </div>
         </div>
 
-        {/* Quick Simulation Injectors to test alerts in real time */}
-        <div className="flex items-center gap-1.5 ml-auto">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 hidden sm:inline">
-            Test Injector:
-          </span>
-          <button
-            onClick={() => simulationControls.injectScenario("co2_spike")}
-            className={`px-2 py-1 rounded text-[11px] font-semibold cursor-pointer border transition-all ${
-              activeScenario === "co2_spike"
-                ? "bg-amber-100 border-amber-300 text-amber-800 shadow-xs"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-amber-50"
-            }`}
-          >
-            ⚡ CO₂ Spike
-          </button>
-          <button
-            onClick={() => simulationControls.injectScenario("thermal_overheat")}
-            className={`px-2 py-1 rounded text-[11px] font-semibold cursor-pointer border transition-all ${
-              activeScenario === "thermal_overheat"
-                ? "bg-orange-100 border-orange-300 text-orange-800 shadow-xs"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-orange-50"
-            }`}
-          >
-            🌡️ Overheat
-          </button>
-          <button
-            onClick={() => simulationControls.injectScenario("saa_transit")}
-            className={`px-2 py-1 rounded text-[11px] font-semibold cursor-pointer border transition-all ${
-              activeScenario === "saa_transit"
-                ? "bg-purple-100 border-purple-300 text-purple-800 shadow-xs"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-purple-50"
-            }`}
-          >
-            ☢️ SAA
-          </button>
-          {isAnomalyActive && (
-            <button
-              onClick={() => simulationControls.resetNominal()}
-              className="px-2 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 text-[11px] font-semibold cursor-pointer flex items-center gap-1"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
-          )}
-        </div>
+        {/* Active Simulation Status Notice */}
+        {isAnomalyActive && (
+          <div className="flex items-center gap-2 ml-auto text-xs">
+            <span className="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[11px] animate-pulse">
+              ⚡ Live Anomaly Active: {activeScenario.replace(/_/g, " ").toUpperCase()}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Explanatory Note */}

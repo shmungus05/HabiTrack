@@ -20,6 +20,7 @@ import {
   HeartPulse,
   Layers,
   Radio,
+  RotateCcw,
   Satellite,
   ShieldAlert,
   Sparkles,
@@ -66,7 +67,7 @@ import { EdaStreamController } from "../features/eda";
 import { ClinicalRiskMatrix } from "../features/risk";
 import { SpacecraftModuleSelector } from "../features/topology";
 import { ContextualTriageBanner } from "../features/triage";
-import { SimulationSandboxPanel } from "../features/simulation";
+import { useSimulationSandbox } from "../features/simulation";
 
 interface OverviewViewProps {
   astronautId: string;
@@ -426,7 +427,7 @@ function MultiFactorHealthGauge({
   );
 }
 
-export type OverviewSubSection = "vitals" | "atmospheric" | "risk" | "sandbox" | "all";
+export type OverviewSubSection = "vitals" | "atmospheric" | "risk" | "all";
 
 const QUICK_SYMPTOMS = [
   { code: "HEADACHE", label: "Frontal Headache" },
@@ -447,12 +448,12 @@ interface AstronautOverviewProps {
   quickLogging: string | null;
   quickNotice: string | null;
   onQuickLog: (code: string) => void;
+  activeScenario?: string;
 }
 
 /**
  * Astronaut perspective: three glanceable cards plus a one-tap symptom grid.
- * No scrubbers, no anomaly injectors, no threshold sliders — cognitive load is
- * reserved for the crewmember's own status and immediate action.
+ * Responds to real-time telemetry and injected anomaly scenarios instantly.
  */
 function AstronautOverview({
   astronautId,
@@ -461,20 +462,37 @@ function AstronautOverview({
   quickLogging,
   quickNotice,
   onQuickLog,
+  activeScenario = "nominal",
 }: AstronautOverviewProps) {
   const { astronaut } = data;
-  const hr = latestValue(data, "stream_sim_hr");
-  const rmssd = latestValue(data, "stream_sim_hrv");
-  const spo2 = latestValue(data, "stream_sim_spo2");
-  const temp = latestValue(data, "stream_sim_temp");
-  const co2 = latestValue(data, "stream_eda_co2");
+  let hr = latestValue(data, "stream_sim_hr");
+  let rmssd = latestValue(data, "stream_sim_hrv");
+  let spo2 = latestValue(data, "stream_sim_spo2");
+  let temp = latestValue(data, "stream_sim_temp");
+  let co2 = latestValue(data, "stream_eda_co2");
 
-  const co2Value = co2 ?? 3197;
-  const co2Elevated = co2Value >= 3500;
+  let co2Value = co2 ? (co2 < 100 ? Math.round(co2 * 750) : Math.round(co2)) : 3197;
+  let cabinTemp = 22.8;
+  let radValue = "0.200 mGy/d";
+
+  // Apply live real-time simulation scenario overrides
+  if (activeScenario === "co2_spike") {
+    co2Value = 4350;
+    hr = (hr ?? 65) + 27.2;
+    rmssd = Math.max(18, (rmssd ?? 55) - 30.5);
+  } else if (activeScenario === "thermal_overheat") {
+    cabinTemp = 27.4;
+    temp = (temp ?? 37.0) + 0.6;
+    hr = (hr ?? 65) + 15.0;
+  } else if (activeScenario === "saa_transit") {
+    radValue = "0.480 mGy/d";
+  }
+
+  const co2Elevated = co2Value >= 3500 || activeScenario === "co2_spike";
   const hrDelta = hr !== null && astronaut ? hr - astronaut.resting_hr : 0;
   const rmssdDelta = rmssd !== null && astronaut ? rmssd - astronaut.resting_rmssd : 0;
-  const autonomicFlagged = Math.abs(hrDelta) > 8 || rmssdDelta < -10;
-  const eventActive = activeEvent !== null;
+  const autonomicFlagged = Math.abs(hrDelta) > 8 || rmssdDelta < -10 || activeScenario === "co2_spike";
+  const eventActive = activeEvent !== null || activeScenario === "co2_spike" || activeScenario === "thermal_overheat";
 
   return (
     <div className="space-y-6">
@@ -528,13 +546,13 @@ function AstronautOverview({
             <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
               <dt className="text-slate-500">Cabin temp</dt>
               <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                22.8 °C
+                {cabinTemp.toFixed(1)} °C
               </dd>
             </div>
             <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
               <dt className="text-slate-500">Radiation</dt>
               <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                0.200 mGy/d
+                {radValue}
               </dd>
             </div>
           </dl>
@@ -592,12 +610,14 @@ function AstronautOverview({
           </p>
           <p className="mt-1 text-xs leading-relaxed text-slate-600">
             {eventActive
-              ? activeEvent?.rationale
+              ? (activeScenario === "co2_spike"
+                  ? "Elevated cabin CO₂ (4,350 PPM). Verify Node 2 ventilation diffuser fans are operational and rehydrate."
+                  : activeEvent?.rationale ?? "Atmospheric telemetry excursion detected.")
               : "No multi-signal concordance event is active for your profile."}
           </p>
           <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-slate-500">
             {eventActive
-              ? `Flight rule review · ${activeEvent?.severity_level}`
+              ? `Flight rule review · ${activeScenario === "co2_spike" ? "FR-ECLSS-001 (CRITICAL)" : activeEvent?.severity_level ?? "OBSERVE"}`
               : "Certified flight rule B13-101.B within limits"}
           </p>
         </article>
@@ -659,6 +679,8 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const isDrawerOpen = useAssistantStore((state) => state.isOpen);
   const role = useRoleStore((state) => state.role);
   const isAstronaut = role === "astronaut";
+  const [simulationState, simulationControls] = useSimulationSandbox();
+  const { activeScenario, isAnomalyActive } = simulationState;
 
   const [dossierOpen, setDossierOpen] = useState(false);
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
@@ -856,19 +878,60 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const eventTheme = activeEvent ? severityTheme(activeEvent.severity_level) : null;
   const profileCalibrated = astronaut?.calibration_status === "CALIBRATED";
 
-  // Environmental snapshot values for the 5-Factor Health Gauge
-  const latestCo2 = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_co2") ?? 3197;
-  const latestCabinTemp = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_temp") ?? 22.8;
+  // Environmental snapshot values for the 5-Factor Health Gauge with real-time simulation overrides
+  let rawCo2 = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_co2") ?? 3.0;
+  let latestCo2 = rawCo2 < 100 ? Math.round(rawCo2 * 750) : Math.round(rawCo2);
+  let latestCabinTemp = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_temp") ?? 22.8;
   const latestPressure = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_pressure") ?? 758.2;
-  const latestHr = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_sim_hr");
-  const latestRmssd = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_sim_hrv");
+  let latestHr = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_sim_hr") ?? (astronaut?.resting_hr ?? 65);
+  let latestRmssd = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_sim_hrv") ?? (astronaut?.resting_rmssd ?? 55);
+
+  if (activeScenario === "co2_spike") {
+    latestCo2 = 4350;
+    latestHr = latestHr + 27.2;
+    latestRmssd = Math.max(18, latestRmssd - 30.5);
+  } else if (activeScenario === "thermal_overheat") {
+    latestCabinTemp = 27.4;
+    latestHr = latestHr + 15.0;
+  }
+
   const gaugeAutonomicFlag =
     (latestHr !== null && astronaut ? Math.abs(latestHr - astronaut.resting_hr) > 8 : false) ||
-    (latestRmssd !== null && astronaut ? latestRmssd - astronaut.resting_rmssd < -10 : false);
-  const gaugeHrLabel = latestHr !== null ? `${latestHr.toFixed(0)} bpm` : `${astronaut?.resting_hr ?? 65} bpm`;
+    (latestRmssd !== null && astronaut ? latestRmssd - astronaut.resting_rmssd < -10 : false) ||
+    activeScenario === "co2_spike";
+  const gaugeHrLabel = `${latestHr.toFixed(0)} bpm`;
 
   return (
     <div className="space-y-6">
+      {/* Live Real-Time Anomaly Active Banner */}
+      {isAnomalyActive && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 animate-pulse" />
+            <div>
+              <span className="font-bold text-amber-900 uppercase tracking-wider text-[11px]">
+                Live Real-Time Simulation Override: {activeScenario.replace(/_/g, " ").toUpperCase()}
+              </span>
+              <p className="text-amber-800 text-[11px] mt-0.5">
+                {activeScenario === "co2_spike"
+                  ? "Simulating elevated cabin CO₂ (+2.8 mmHg / 4,350 PPM) in Node 2 with autonomic tachycardia (+27 bpm) and RMSSD depression (-31 ms). Telemetry reacting across all views."
+                  : activeScenario === "thermal_overheat"
+                  ? "Thermal loop anomaly active: cabin ambient temperature elevated to 27.4 °C with compensatory autonomic acceleration."
+                  : "South Atlantic Anomaly orbital transit active: radiation flux elevated to 0.480 mGy/d."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => simulationControls.resetNominal()}
+            className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3 py-1.5 text-xs cursor-pointer flex items-center gap-1.5 shadow-2xs transition-colors"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset to Nominal</span>
+          </button>
+        </div>
+      )}
+
       <AstronautOnly>
         {data ? (
           <AstronautOverview
@@ -878,6 +941,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             quickLogging={quickLogging}
             quickNotice={quickNotice}
             onQuickLog={(code) => void quickLogSymptom(code)}
+            activeScenario={activeScenario}
           />
         ) : null}
       </AstronautOnly>
@@ -943,11 +1007,23 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
           const points = streamPoints(measurements, definition.streamId);
           const latest = points.at(-1);
           const baseline = astronaut ? astronaut[definition.baselineKey] : 0;
-          const value = latest?.value ?? baseline;
+          let value = latest?.value ?? baseline;
+
+          // Apply real-time simulation overrides to KPI values
+          if (definition.key === "hr" && activeScenario === "co2_spike") {
+            value = value + 27.2;
+          } else if (definition.key === "rmssd" && activeScenario === "co2_spike") {
+            value = Math.max(18, value - 30.5);
+          } else if (definition.key === "temp" && activeScenario === "thermal_overheat") {
+            value = 27.4;
+          } else if (definition.key === "hr" && activeScenario === "thermal_overheat") {
+            value = value + 15.0;
+          }
+
           const delta = value - baseline;
           const alert = definition.warn(delta);
           const Icon = definition.icon;
-          const sparkValues = points.slice(-60).map((point) => point.value);
+          const sparkValues = [...points.slice(-60).map((point) => point.value), value];
 
           return (
             <article
@@ -1010,7 +1086,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             { id: "vitals" as const, label: "Vitals & Concordance", icon: Activity },
             { id: "atmospheric" as const, label: "Atmospheric & EDA", icon: Wind },
             { id: "risk" as const, label: "Clinical Risk & Triage", icon: ShieldAlert },
-            { id: "sandbox" as const, label: "Simulation Sandbox", icon: Sparkles },
             { id: "all" as const, label: "Command View (All)", icon: Layers },
           ].map((sec) => {
             const active = activeSection === sec.id;
@@ -1055,12 +1130,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
         </section>
       )}
 
-      {/* Simulation Sandbox Sub-section */}
-      {(activeSection === "sandbox" || activeSection === "all") && (
-        <section className="space-y-6">
-          <SimulationSandboxPanel />
-        </section>
-      )}
 
       {/* Vitals & Concordance Sub-section */}
       {(activeSection === "vitals" || activeSection === "all") && (
