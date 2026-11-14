@@ -67,7 +67,7 @@ import { EdaStreamController } from "../features/eda";
 import { ClinicalRiskMatrix } from "../features/risk";
 import { SpacecraftModuleSelector } from "../features/topology";
 import { ContextualTriageBanner } from "../features/triage";
-import { SimulationSandboxPanel, useSimulationSandbox } from "../features/simulation";
+import { useSimulationSandbox } from "../features/simulation";
 
 interface OverviewViewProps {
   astronautId: string;
@@ -427,7 +427,7 @@ function MultiFactorHealthGauge({
   );
 }
 
-export type OverviewSubSection = "vitals" | "atmospheric" | "risk" | "sandbox" | "all";
+export type OverviewSubSection = "vitals" | "atmospheric" | "risk" | "all";
 
 const QUICK_SYMPTOMS = [
   { code: "HEADACHE", label: "Frontal Headache" },
@@ -1086,7 +1086,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             { id: "vitals" as const, label: "Vitals & Concordance", icon: Activity },
             { id: "atmospheric" as const, label: "Atmospheric & EDA", icon: Wind },
             { id: "risk" as const, label: "Clinical Risk & Triage", icon: ShieldAlert },
-            { id: "sandbox" as const, label: "Simulation Sandbox", icon: Sparkles },
             { id: "all" as const, label: "Command View (All)", icon: Layers },
           ].map((sec) => {
             const active = activeSection === sec.id;
@@ -1131,12 +1130,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
         </section>
       )}
 
-      {/* Simulation Sandbox Sub-section */}
-      {(activeSection === "sandbox" || activeSection === "all") && (
-        <section className="space-y-6">
-          <SimulationSandboxPanel />
-        </section>
-      )}
 
       {/* Vitals & Concordance Sub-section */}
       {(activeSection === "vitals" || activeSection === "all") && (
