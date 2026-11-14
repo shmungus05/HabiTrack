@@ -9,10 +9,20 @@ from wayfinder.core.storage import StorageManager
 
 
 def get_storage(request: Request) -> StorageManager:
-    """Returns the lifespan-initialized storage manager."""
-    return request.app.state.storage
+    """Returns the storage manager, lazily initializing if lifespan was skipped."""
+    storage = getattr(request.app.state, "storage", None)
+    if storage is None:
+        storage = StorageManager()
+        storage.ensure_initialized()
+        request.app.state.storage = storage
+    return storage
 
 
 def get_vector_store(request: Request) -> VectorStoreManager:
-    """Returns the lifespan-initialized in-memory vector store."""
-    return request.app.state.vector_store
+    """Returns the in-memory vector store, lazily initializing if lifespan was skipped."""
+    vector_store = getattr(request.app.state, "vector_store", None)
+    if vector_store is None:
+        storage = get_storage(request)
+        vector_store = VectorStoreManager(storage)
+        request.app.state.vector_store = vector_store
+    return vector_store

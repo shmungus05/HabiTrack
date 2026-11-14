@@ -222,6 +222,7 @@ def test_gemini_flash_lite_provider_generative_success(
     sample_evidence: list[CitedEvidence],
 ):
     """Verifies GeminiFlashLiteProvider parses structured JSON and returns GEMINI_GENERATIVE mode."""
+    pytest.importorskip("google.genai")
     provider = GeminiFlashLiteProvider(api_key="test_dummy_key_12345")
     assert asyncio.run(provider.is_available()) is True
 
@@ -263,6 +264,7 @@ def test_gemini_flash_lite_provider_guardrail_tripwire(
     sample_evidence: list[CitedEvidence],
 ):
     """Verifies that if Gemini outputs prohibited causal words, it triggers tripwire and falls back."""
+    pytest.importorskip("google.genai")
     provider = GeminiFlashLiteProvider(api_key="test_dummy_key_12345")
 
     causal_payload = {

@@ -17,7 +17,7 @@ from wayfinder.core.storage import StorageManager
 from wayfinder.api.routes import assistant, astronauts, events, health, symptoms, telemetry
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-WEB_DIST_DIR = REPO_ROOT / "web" / "dist"
+WEB_DIST_DIR = REPO_ROOT / "dist" if (REPO_ROOT / "dist").exists() else (REPO_ROOT / "web" / "dist")
 WEB_INDEX_FILE = WEB_DIST_DIR / "index.html"
 
 

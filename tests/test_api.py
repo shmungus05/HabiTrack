@@ -153,7 +153,7 @@ def test_health_reports_vector_store_ready(api_client):
     assert payload["status"] == "ok"
     assert payload["version"] == "3.0.0"
     assert payload["vector_store_chunks"] == 13
-    assert isinstance(payload["ollama_online"], bool)
+    assert payload["ollama_online"] is False
 
 
 def test_astronaut_endpoints_return_cohort_and_404(api_client):

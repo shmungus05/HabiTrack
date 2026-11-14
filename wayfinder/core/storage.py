@@ -31,7 +31,23 @@ from wayfinder.core.models import (
     SeverityTrigger,
 )
 
-DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "wayfinder.db")
+_BASE_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "wayfinder.db")
+_ENV_DB_PATH = os.environ.get("WAYFINDER_DB_PATH")
+
+if _ENV_DB_PATH:
+    DEFAULT_DB_PATH = _ENV_DB_PATH
+elif os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    _TMP_DB = "/tmp/wayfinder.db"
+    if not os.path.exists(_TMP_DB) and os.path.exists(_BASE_DB_PATH):
+        import shutil
+        try:
+            shutil.copyfile(_BASE_DB_PATH, _TMP_DB)
+        except Exception:
+            pass
+    DEFAULT_DB_PATH = _TMP_DB if os.path.exists(_TMP_DB) else _BASE_DB_PATH
+else:
+    DEFAULT_DB_PATH = _BASE_DB_PATH
+
 
 
 class StorageManager:

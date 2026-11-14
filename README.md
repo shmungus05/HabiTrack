@@ -100,7 +100,16 @@ Then open **http://localhost:8000**:
 | `http://localhost:8000/api/health` | Service health, version, vector chunk count |
 | `http://localhost:8000/docs` | OpenAPI / Swagger UI |
 
-The SPA is served from `web/dist/`, which is checked in. If the directory is absent or deleted, `create_app()` serves a diagnostic JSON payload describing how to rebuild it.
+The SPA is served from `dist/` (or `web/dist/`).
+
+### Deploying to Vercel (1-Click Unified Full-Stack)
+
+This repository is unified for direct deployment on Vercel:
+- **Vercel Frontend**: Vite static build (`npm run build` → `dist/`)
+- **Vercel Backend**: Python Serverless Functions (`api/index.py` → FastAPI API endpoints under `/api/*`)
+- **Config**: Configured via `vercel.json` and `requirements.txt`
+
+Simply connect this repository to Vercel and click **Deploy**.
 
 ### Frontend development (hot reload)
 
@@ -109,7 +118,6 @@ The SPA is served from `web/dist/`, which is checked in. If the directory is abs
 python -m wayfinder.server
 
 # Terminal 2 — Vite dev server on :5173 with /api proxied to :8000
-cd web
 npm install
 npm run dev
 ```
@@ -117,9 +125,8 @@ npm run dev
 Production rebuild:
 
 ```powershell
-cd web
 npm run tsc      # typecheck only
-npm run build    # tsc + vite build → web/dist/
+npm run build    # tsc + vite build → dist/
 ```
 
 ### Streamlit reference console (maintenance mode)

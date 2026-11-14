@@ -10,6 +10,7 @@ import {
   FileText,
   LayoutDashboard,
   Lock,
+  Radar,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldAlert,
