@@ -10,7 +10,6 @@ import {
   FileText,
   LayoutDashboard,
   Lock,
-  Radar,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldAlert,
@@ -189,8 +188,12 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
-              <Radar className="h-4 w-4" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white overflow-hidden p-0.5">
+              <img
+                src="/Logo.png"
+                alt="Habitat Trace Logo"
+                className="h-full w-full object-contain rounded-md"
+              />
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">

@@ -26,10 +26,12 @@ from wayfinder.ui.views.symptoms import render_symptoms_view
 from wayfinder.ui.views.research import render_research_view
 
 
+LOGO_PATH = REPO_ROOT / "Logo.png"
+
 # Page configuration
 st.set_page_config(
     page_title="WAYFINDER V1 — Offline Astronaut Health & Exposure",
-    page_icon="🚀",
+    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "🚀",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -130,6 +132,8 @@ if "timeline_range" not in st.session_state:
 
 # Sidebar Configuration
 with st.sidebar:
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=56)
     st.markdown('<h1 style="font-size: 1.6rem; margin-bottom: 0;">WAYFINDER <span style="color: #38bdf8; font-size: 1rem;">v2.0</span></h1>', unsafe_allow_html=True)
     st.markdown('<p style="color: #64748b; font-size: 0.8rem; margin-top: 0;">ISS Offline Multi-Astronaut Health Intelligence</p>', unsafe_allow_html=True)
     st.divider()
