@@ -23,29 +23,29 @@ export function severityTheme(severity: SeverityLevel): {
     case "INVESTIGATE":
       return {
         label: "Investigate",
-        text: "text-critical",
-        border: "border-critical/25",
-        background: "bg-critical/10",
-        dot: "bg-critical",
-        hex: "#f87171",
+        text: "text-red-700",
+        border: "border-red-200",
+        background: "bg-red-50",
+        dot: "bg-red-600",
+        hex: "#dc2626",
       };
     case "OBSERVE":
       return {
         label: "Observe",
-        text: "text-foreground",
-        border: "border-border-strong",
-        background: "bg-surface-elevated",
-        dot: "bg-foreground",
-        hex: "#d4d4d4",
+        text: "text-amber-700",
+        border: "border-amber-200",
+        background: "bg-amber-50",
+        dot: "bg-amber-500",
+        hex: "#d97706",
       };
     default:
       return {
         label: "Info",
-        text: "text-secondary",
-        border: "border-border",
-        background: "bg-surface-elevated",
-        dot: "bg-foreground",
-        hex: "#a3a3a3",
+        text: "text-sky-700",
+        border: "border-sky-200",
+        background: "bg-sky-50",
+        dot: "bg-sky-600",
+        hex: "#0284c7",
       };
   }
 }
@@ -53,11 +53,11 @@ export function severityTheme(severity: SeverityLevel): {
 export function uncertaintyTheme(uncertainty: UncertaintyLevel): string {
   switch (uncertainty) {
     case "LOW":
-      return "text-secondary border-border bg-surface-elevated";
+      return "text-emerald-700 border-emerald-200 bg-emerald-50";
     case "MODERATE":
-      return "text-foreground border-border-strong bg-surface-elevated";
+      return "text-amber-700 border-amber-200 bg-amber-50";
     default:
-      return "text-critical border-critical/40 bg-critical/10";
+      return "text-red-700 border-red-200 bg-red-50";
   }
 }
 

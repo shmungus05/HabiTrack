@@ -31,15 +31,15 @@ interface CommsModalProps {
 }
 
 const PACKET_STATUS_THEME: Record<PacketStatus, string> = {
-  PENDING_LOS: "border-border bg-surface-elevated text-muted",
-  TRANSMITTING: "border-border-strong bg-surface-subtle text-foreground",
-  DELIVERED: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  PENDING_LOS: "border-border bg-surface-subtle text-muted",
+  TRANSMITTING: "border-sky-200 bg-sky-50 text-sky-700",
+  DELIVERED: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
 const PACKET_TYPE_THEME: Record<PacketType, string> = {
   SYMPTOM_REPORT: "text-foreground",
   EVENT_ACK: "text-secondary",
-  DOSSIER_TRANSMIT: "text-accent-light",
+  DOSSIER_TRANSMIT: "text-sky-700",
 };
 
 function progressFor(packet: OutboxPacket): number {
@@ -58,24 +58,24 @@ function progressFor(packet: OutboxPacket): number {
 function PacketRow({ packet }: { packet: OutboxPacket }) {
   const progress = progressFor(packet);
   return (
-    <li className="rounded-lg border border-border bg-surface-elevated p-3">
+    <li className="rounded-xl glass-panel-subtle p-3.5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`font-mono text-[10px] font-semibold tracking-wider ${PACKET_TYPE_THEME[packet.type]}`}
+              className={`font-mono text-[11px] font-semibold tracking-wider ${PACKET_TYPE_THEME[packet.type]}`}
             >
               {packet.type.replace(/_/g, " ")}
             </span>
-            <span className="font-mono text-[10px] text-muted">
+            <span className="font-mono text-[11px] text-muted">
               {packet.packetId}
             </span>
           </div>
           <p className="mt-1 truncate text-xs font-medium text-foreground">
             {packet.title}
           </p>
-          <p className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-muted">
-            <Clock3 className="h-3 w-3" />
+          <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-muted">
+            <Clock3 className="h-3 w-3 text-sky-600" />
             {new Date(packet.createdAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -108,20 +108,20 @@ function PacketRow({ packet }: { packet: OutboxPacket }) {
         </span>
       </div>
 
-      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-subtle">
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
         <div
           className={`h-full rounded-full transition-[width] duration-200 ${
-            packet.status === "DELIVERED" ? "bg-emerald-400" : "bg-accent-light"
+            packet.status === "DELIVERED" ? "bg-emerald-600" : "bg-[#0284c7]"
           }`}
           style={{ width: `${(progress * 100).toFixed(1)}%` }}
         />
       </div>
 
       <details className="mt-2 group">
-        <summary className="cursor-pointer select-none text-[10px] font-medium uppercase tracking-wider text-muted hover:text-foreground">
+        <summary className="cursor-pointer select-none text-[11px] font-medium uppercase tracking-wider text-sky-700 hover:text-sky-800">
           Payload
         </summary>
-        <pre className="mt-1.5 max-h-40 overflow-auto rounded-md border border-border bg-canvas p-2 font-mono text-[10px] leading-relaxed text-secondary">
+        <pre className="mt-1.5 max-h-40 overflow-auto rounded-lg border border-border bg-white p-2.5 font-mono text-[11px] leading-relaxed text-secondary">
           {JSON.stringify(packet.payload, null, 2)}
         </pre>
       </details>
@@ -170,7 +170,7 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/30 p-4 backdrop-blur-[2px] sm:p-8"
       role="presentation"
       onClick={onClose}
     >
@@ -179,12 +179,12 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
         aria-modal="true"
         aria-label="Deep Space Communications Simulator"
         onClick={(event) => event.stopPropagation()}
-        className="my-auto w-full max-w-4xl overflow-hidden rounded-lg border border-border-strong bg-surface shadow-elevated"
+        className="my-auto w-full max-w-4xl overflow-hidden rounded-xl bg-white border border-border-strong shadow-elevated"
       >
         <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div>
-            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
-              <RadioTower className="h-3.5 w-3.5" />
+            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-sky-700">
+              <RadioTower className="h-3.5 w-3.5 text-sky-600" />
               Ground Downlink Simulation
             </p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
@@ -199,7 +199,7 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Close communications controller"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border bg-surface-elevated text-muted transition-colors hover:border-border-strong hover:text-foreground"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-subtle border border-border text-muted transition-colors hover:border-border-strong hover:text-foreground cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -210,17 +210,19 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
           <section className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
             <div className="space-y-3">
               <span className="field-label">Link state</span>
-              <div className="flex rounded-lg border border-border bg-canvas p-1">
+              <div className="flex rounded-xl glass-panel-subtle p-1 gap-1">
                 {(["AOS", "LOS"] as const).map((state) => (
                   <button
                     key={state}
                     type="button"
                     aria-pressed={linkState === state}
                     onClick={() => setLinkState(state)}
-                    className={`flex-1 rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                    className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors cursor-pointer border ${
                       linkState === state
-                        ? "bg-surface-subtle text-foreground border border-border-strong"
-                        : "border border-transparent text-muted hover:text-foreground"
+                        ? state === "AOS"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm"
+                          : "bg-red-50 text-red-700 border-red-200 shadow-sm"
+                        : "border-transparent text-muted hover:text-foreground"
                     }`}
                   >
                     {state === "AOS"
@@ -249,21 +251,21 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
                       type="button"
                       onClick={() => setLatency(preset.latencySeconds, preset.id)}
                       aria-pressed={active}
-                      className={`rounded-lg border p-3 text-left transition-colors ${
+                      className={`rounded-xl border p-3 text-left transition-all cursor-pointer glass-card-hover ${
                         active
-                          ? "border-border-strong bg-surface-subtle text-foreground"
-                          : "border-border bg-surface-elevated text-secondary hover:border-border-strong hover:text-foreground"
+                          ? "bg-sky-50 border-sky-200 text-foreground"
+                          : "glass-panel-subtle text-secondary hover:text-foreground"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold">
                           {preset.label}
                         </span>
-                        <span className="font-mono text-[10px] text-muted">
+                        <span className="font-mono text-[11px] text-sky-700">
                           {formatCommsDuration(preset.latencySeconds)}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[10px] leading-relaxed text-muted">
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
                         {preset.detail}
                       </p>
                     </button>
@@ -275,13 +277,13 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
 
           {/* Latency + time warp */}
           <section className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
-            <div className="space-y-2 rounded-lg border border-border bg-surface-elevated p-4">
+            <div className="space-y-2 rounded-xl glass-panel-subtle p-4">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="flex items-center gap-2 font-medium text-secondary">
-                  <Gauge className="h-3.5 w-3.5" />
+                  <Gauge className="h-3.5 w-3.5 text-sky-600" />
                   One-way latency
                 </span>
-                <span className="font-semibold text-foreground">
+                <span className="font-semibold text-sky-700">
                   {formatCommsDuration(latencySeconds)}
                 </span>
               </div>
@@ -293,15 +295,15 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
                 value={latencySeconds}
                 onChange={(event) => setLatency(Number(event.target.value))}
                 aria-label="One-way simulated latency in seconds"
-                className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-surface-subtle"
+                className="h-1.5 w-full accent-[#0284c7] cursor-pointer appearance-none rounded-lg bg-slate-200"
               />
-              <div className="flex justify-between font-mono text-[10px] text-faint">
+              <div className="flex justify-between font-mono text-[11px] text-muted">
                 <span>0 s (LEO relay)</span>
                 <span>1,440 s (24 min)</span>
               </div>
             </div>
 
-            <div className="space-y-2 rounded-lg border border-border bg-surface-elevated p-4">
+            <div className="space-y-2 rounded-xl glass-panel-subtle p-4">
               <span className="text-xs font-medium text-secondary">
                 Simulation time warp
               </span>
@@ -316,10 +318,10 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
                       type="button"
                       aria-pressed={active}
                       onClick={() => setSpeedMultiplier(multiplier)}
-                      className={`rounded-md border px-2 py-2 text-[11px] font-semibold transition-colors ${
+                      className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition-colors cursor-pointer ${
                         active
-                          ? "border-border-strong bg-surface-subtle text-foreground"
-                          : "border-border text-muted hover:text-foreground"
+                          ? "bg-sky-50 border-sky-200 text-sky-700"
+                          : "border-border bg-white text-muted hover:text-foreground"
                       }`}
                     >
                       {label}
@@ -327,7 +329,7 @@ export function CommsModal({ open, onClose }: CommsModalProps) {
                   );
                 })}
               </div>
-              <p className="text-[10px] leading-relaxed text-muted">
+              <p className="text-[11px] leading-relaxed text-muted">
                 Instant Delivery drains the outbox immediately; 60x makes a Mars
                 conjunction leg reviewable in ~21 seconds.
               </p>

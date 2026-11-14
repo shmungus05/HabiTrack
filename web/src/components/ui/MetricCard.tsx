@@ -32,17 +32,17 @@ export function MetricCard({
 
   return (
     <div
-      className={`relative flex flex-col justify-between rounded-lg border p-4 sm:p-5 transition-colors ${
+      className={`relative flex flex-col justify-between rounded-xl glass-panel glass-card-hover p-4 sm:p-5 ${
         warn
-          ? "border-border-strong bg-surface-elevated"
-          : "border-border bg-surface hover:border-border-strong"
+          ? "border-amber-200 bg-amber-50/40"
+          : ""
       }`}
     >
       <div>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {icon && (
-              <span className="grid h-6 w-6 place-items-center rounded-md border border-border bg-surface-elevated text-secondary">
+              <span className="grid h-7 w-7 place-items-center rounded-lg border border-border bg-surface-subtle text-sky-600">
                 {icon}
               </span>
             )}
@@ -52,13 +52,13 @@ export function MetricCard({
           </div>
           {warn && (
             <Badge variant="warning" dot>
-              Alert
+              Elevated
             </Badge>
           )}
         </div>
 
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-semibold tracking-tight text-foreground">
+          <span className="font-mono text-2xl font-semibold tracking-tight text-foreground tabular-nums">
             {value}
           </span>
           <span className="text-xs text-muted">
@@ -78,10 +78,10 @@ export function MetricCard({
             isZero
               ? "text-muted"
               : warn
-              ? "text-foreground"
+              ? "text-amber-700"
               : isUp
-              ? "text-foreground"
-              : "text-secondary"
+              ? "text-sky-700"
+              : "text-emerald-700"
           }`}
         >
           {!isZero &&
@@ -95,7 +95,7 @@ export function MetricCard({
       </div>
 
       {streamName && (
-        <span className="mt-1 font-mono text-[10px] uppercase tracking-wider text-muted">
+        <span className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted">
           {streamName}
         </span>
       )}

@@ -97,15 +97,15 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
             Hybrid BM25 + dense cosine retrieval over NASA HRR / OSDR passages.
           </p>
         </div>
-        <Badge variant="default">
+        <Badge variant="accent">
           <Sparkles className="h-3.5 w-3.5" />
           Reciprocal Rank Fusion
         </Badge>
       </div>
 
-      <div className="rounded-lg border border-border bg-surface p-4 sm:p-5">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-canvas px-3.5 py-2.5 transition-colors focus-within:border-accent-light">
-          <Search className="h-4 w-4 shrink-0 text-muted" />
+      <div className="rounded-xl glass-panel p-4 sm:p-5">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-subtle px-3.5 py-2.5 transition-colors focus-within:border-sky-500 focus-within:bg-white">
+          <Search className="h-4 w-4 shrink-0 text-sky-600" />
           <input
             value={queryText}
             onChange={(event) => setQueryText(event.target.value)}
@@ -114,9 +114,9 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
             aria-label="Research query"
           />
           {isLoading ? (
-            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-secondary" />
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-600" />
           ) : (
-            <span className="shrink-0 text-[10px] text-muted font-mono">
+            <span className="shrink-0 text-[11px] text-muted font-mono">
               debounce 500 ms
             </span>
           )}
@@ -131,7 +131,7 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
               key={example}
               type="button"
               onClick={() => chooseExample(example)}
-              className="rounded-md border border-border bg-surface-elevated px-2.5 py-1 text-xs text-secondary transition-colors hover:border-border-strong hover:text-foreground"
+              className="rounded-lg glass-panel-subtle px-2.5 py-1 text-xs text-secondary transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 cursor-pointer"
             >
               {example}
             </button>
@@ -140,15 +140,15 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
       </div>
 
       {error ? (
-        <div className="flex items-center gap-2 rounded-lg border border-critical/25 bg-critical/10 px-4 py-3 text-xs text-critical">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
           {error}
         </div>
       ) : null}
 
       {!queryText.trim() ? (
-        <div className="rounded-lg border border-border bg-surface flex flex-col items-center justify-center gap-3 p-12 text-center">
-          <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-elevated text-secondary">
+        <div className="rounded-xl glass-panel flex flex-col items-center justify-center gap-3 p-12 text-center">
+          <span className="grid h-11 w-11 place-items-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600">
             <Telescope className="h-5 w-5" />
           </span>
           <h3 className="text-sm font-semibold text-foreground">
@@ -165,14 +165,14 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
       {isLoading && !result ? (
         <div className="grid gap-3 xl:grid-cols-2">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="card h-40 animate-pulse bg-surface" />
+            <div key={index} className="glass-panel rounded-xl h-40 animate-pulse" />
           ))}
         </div>
       ) : null}
 
       {result ? (
         <div className="space-y-4">
-          <article className="rounded-lg border border-border bg-surface p-4 sm:p-6">
+          <article className="rounded-xl glass-panel p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
@@ -187,7 +187,7 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
                   <Badge variant="danger">Guardrail tripwire</Badge>
                 ) : null}
               </div>
-              <span className="text-xs text-muted font-mono">
+              <span className="text-xs text-sky-700 font-mono">
                 {result.latency_ms.toFixed(1)} ms
               </span>
             </div>
@@ -204,7 +204,7 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
                     key={caveat}
                     className="flex items-start gap-2 text-xs leading-relaxed text-muted"
                   >
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-faint" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
                     {caveat}
                   </li>
                 ))}
@@ -218,7 +218,7 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
             ))}
           </div>
 
-          <div className="rounded-lg border border-border bg-surface p-4 text-xs leading-relaxed text-muted">
+          <div className="rounded-xl glass-panel-subtle p-4 text-xs leading-relaxed text-muted">
             {result.disclaimer}
           </div>
         </div>

@@ -33,16 +33,18 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
 
   return (
     <section
-      className={`p-4 sm:p-6 bg-surface rounded-lg border border-border relative overflow-hidden ${className}`}
+      className={`p-5 sm:p-6 glass-panel rounded-xl relative overflow-hidden ${className}`}
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Compass className="w-3.5 h-3.5 text-muted" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">Station Environmental Architecture</span>
+            <Compass className="w-3.5 h-3.5 text-sky-600" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
+              Station Environmental Architecture
+            </span>
             <span className="text-[11px] font-mono text-muted">
-              ISS Orbital Complex
+              · ISS Orbital Complex
             </span>
           </div>
           <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
@@ -55,7 +57,7 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
 
         <div className="text-right hidden sm:block">
           <span className="text-xs font-mono text-muted">Active Node:</span>
-          <p className="text-sm font-semibold text-foreground font-mono">{activeModule.name}</p>
+          <p className="text-sm font-semibold text-sky-700 font-mono">{activeModule.name}</p>
         </div>
       </div>
 
@@ -67,21 +69,21 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
             <button
               key={mod.id}
               onClick={() => handleSelect(mod)}
-              className={`p-3 rounded-lg border text-left transition-colors cursor-pointer relative ${
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative glass-card-hover ${
                 isSelected
-                  ? "bg-surface-subtle border-border-strong border-l-2 border-l-accent-secondary text-foreground"
-                  : "bg-surface-elevated border-border text-muted hover:text-foreground hover:border-border-strong"
+                  ? "bg-sky-50 border-sky-300 border-l-2 border-l-sky-600 text-foreground"
+                  : "glass-panel-subtle text-secondary hover:text-foreground"
               }`}
             >
               <span className="block text-xs font-semibold truncate">{mod.name}</span>
-              <span className="block text-[10px] text-muted truncate mt-0.5">
+              <span className="block text-[11px] text-muted truncate mt-0.5">
                 {mod.function.split("&")[0].trim()}
               </span>
-              <div className="mt-2 flex items-center justify-between text-[10px] font-mono">
-                <span className={isSelected ? "text-foreground" : "text-faint"}>
+              <div className="mt-2 flex items-center justify-between text-[11px] font-mono">
+                <span className={isSelected ? "text-[#0284c7] font-semibold" : "text-muted"}>
                   {mod.nominalCO2} PPM
                 </span>
-                {isSelected && <CheckCircle2 className="w-3 h-3 text-foreground shrink-0" />}
+                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 shrink-0" />}
               </div>
             </button>
           );
@@ -89,23 +91,23 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
       </div>
 
       {/* Active Compartment Detail Card */}
-      <div className="mt-6 p-5 rounded-lg bg-surface-elevated border border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mt-6 p-5 rounded-xl glass-panel-subtle grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <span className="text-[10px] font-mono uppercase text-muted tracking-wider">
+          <span className="text-[11px] font-mono uppercase text-sky-700 tracking-wider">
             Operational Purpose
           </span>
           <p className="text-xs font-semibold text-foreground mt-1">{activeModule.function}</p>
         </div>
 
         <div>
-          <span className="text-[10px] font-mono uppercase text-muted tracking-wider">
+          <span className="text-[11px] font-mono uppercase text-sky-700 tracking-wider">
             ECLSS Sensor Array
           </span>
           <div className="flex flex-wrap gap-1.5 mt-1">
             {activeModule.primarySensors.map((sensor) => (
               <span
                 key={sensor}
-                className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-surface-subtle text-secondary border border-border"
+                className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-white text-secondary border border-border"
               >
                 {sensor}
               </span>
@@ -114,15 +116,15 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
         </div>
 
         <div>
-          <span className="text-[10px] font-mono uppercase text-muted tracking-wider">
+          <span className="text-[11px] font-mono uppercase text-sky-700 tracking-wider">
             Nominal Atmospheric Target
           </span>
-          <div className="flex items-center gap-3 mt-1 text-xs font-mono text-secondary">
-            <span>CO₂: {activeModule.nominalCO2} PPM</span>
-            <span>·</span>
-            <span>Temp: {activeModule.nominalTemp} °C</span>
-            <span>·</span>
-            <span>RH: {activeModule.nominalHumidity}%</span>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1 text-xs font-mono">
+            <span className="text-[#0284c7]">CO₂: {activeModule.nominalCO2} PPM</span>
+            <span className="text-muted">·</span>
+            <span className="text-[#ea580c]">Temp: {activeModule.nominalTemp} °C</span>
+            <span className="text-muted">·</span>
+            <span className="text-[#0891b2]">RH: {activeModule.nominalHumidity}%</span>
           </div>
         </div>
       </div>

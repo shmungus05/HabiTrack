@@ -116,14 +116,14 @@ export function AssistantDrawer() {
     <aside
       aria-hidden={!isOpen}
       aria-label="Standby AI assistant drawer"
-      className={`fixed inset-y-0 right-0 z-40 flex w-[540px] max-w-full flex-col border-l border-border bg-canvas/95 backdrop-blur-2xl shadow-2xl transition-transform duration-300 ease-out ${
+      className={`fixed inset-y-0 right-0 z-40 flex w-[540px] max-w-full flex-col border-l border-border bg-white shadow-elevated transition-transform duration-300 ease-out ${
         isOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
       }`}
     >
       {/* Top Header */}
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle bg-canvas px-5 py-3">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-white px-5 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-surface-elevated text-secondary">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600">
             <Sparkles className="h-4 w-4" />
           </span>
           <div className="min-w-0">
@@ -138,12 +138,12 @@ export function AssistantDrawer() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {activeTab === "chat" && messages.length > 1 && (
             <button
               type="button"
               onClick={clearChat}
-              className="grid h-8 w-8 place-items-center rounded-md border border-border bg-surface text-muted hover:text-critical hover:border-critical/40 transition-colors"
+              className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface-subtle text-muted hover:text-red-700 hover:border-red-200 transition-colors cursor-pointer"
               title="Clear conversation"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -152,7 +152,7 @@ export function AssistantDrawer() {
           <button
             type="button"
             onClick={closeDrawer}
-            className="grid h-8 w-8 place-items-center rounded-md border border-border bg-surface text-muted hover:text-foreground transition-colors"
+            className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface-subtle text-muted hover:text-foreground hover:border-border-strong transition-colors cursor-pointer"
             aria-label="Close assistant drawer"
           >
             <X className="h-4 w-4" />
@@ -161,14 +161,14 @@ export function AssistantDrawer() {
       </header>
 
       {/* Tabs Selector */}
-      <div className="flex items-center px-4 py-2 gap-1.5 border-b border-border-subtle bg-canvas">
+      <div className="flex items-center px-4 py-2 gap-1.5 border-b border-border bg-surface-subtle">
         <button
           type="button"
           onClick={() => setActiveTab("chat")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-tight transition-colors duration-200 ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-tight transition-colors duration-200 cursor-pointer border ${
             activeTab === "chat"
-              ? "bg-surface-subtle border border-border-strong text-foreground"
-              : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+              ? "bg-white border-sky-200 text-sky-700 shadow-sm"
+              : "text-muted hover:text-foreground hover:bg-white/60 border-transparent"
           }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
@@ -178,16 +178,16 @@ export function AssistantDrawer() {
         <button
           type="button"
           onClick={() => setActiveTab("checklists")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-tight transition-colors duration-200 ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-tight transition-colors duration-200 cursor-pointer border ${
             activeTab === "checklists"
-              ? "bg-surface-subtle border border-border-strong text-foreground"
-              : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+              ? "bg-white border-sky-200 text-sky-700 shadow-sm"
+              : "text-muted hover:text-foreground hover:bg-white/60 border-transparent"
           }`}
         >
           <FileCheck2 className="w-3.5 h-3.5" />
           <span>Flight Checklists</span>
           {checklistSteps.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-md bg-surface-hover text-secondary text-[10px] font-mono">
+            <span className="px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-700 text-[11px] font-mono">
               {checklistSteps.length}
             </span>
           )}
@@ -196,16 +196,16 @@ export function AssistantDrawer() {
         <button
           type="button"
           onClick={() => setActiveTab("evidence")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-tight transition-colors duration-200 ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium tracking-tight transition-colors duration-200 cursor-pointer border ${
             activeTab === "evidence"
-              ? "bg-surface-subtle border border-border-strong text-foreground"
-              : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+              ? "bg-white border-sky-200 text-sky-700 shadow-sm"
+              : "text-muted hover:text-foreground hover:bg-white/60 border-transparent"
           }`}
         >
           <Microscope className="w-3.5 h-3.5" />
           <span>Research RAG</span>
           {activeExplanation?.cited_evidence.length ? (
-            <span className="px-1.5 py-0.5 rounded-md bg-surface-hover text-secondary text-[10px] font-mono">
+            <span className="px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-700 text-[11px] font-mono">
               {activeExplanation.cited_evidence.length}
             </span>
           ) : null}
@@ -236,10 +236,10 @@ export function AssistantDrawer() {
                   >
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[90%] rounded-lg p-4 text-xs leading-relaxed ${
+                      className={`max-w-[90%] rounded-xl p-4 text-xs leading-relaxed ${
                         isUser
-                          ? "bg-surface-subtle border border-border-strong text-foreground rounded-br-sm"
-                          : "bg-surface-elevated border border-border text-foreground rounded-bl-sm"
+                          ? "bg-sky-50 border border-sky-200 text-foreground rounded-br-sm"
+                          : "bg-white border border-border text-foreground rounded-bl-sm shadow-card"
                       }`}
                     >
                       <div className="whitespace-pre-wrap font-sans">
@@ -256,9 +256,9 @@ export function AssistantDrawer() {
                                 useAssistantStore.getState().latchRule(rule);
                                 setActiveTab("checklists");
                               }}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-border text-secondary text-[11px] font-mono hover:text-foreground hover:border-border-strong transition-colors"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono hover:border-amber-300 transition-colors cursor-pointer"
                             >
-                              <FileCheck2 className="w-3 h-3" />
+                              <FileCheck2 className="w-3 h-3 text-amber-600" />
                               <span>Latched Rule: {rule.rule_id}</span>
                             </button>
                           )}
@@ -267,7 +267,7 @@ export function AssistantDrawer() {
                             <button
                               type="button"
                               onClick={() => toggleSourceExpand(msg.id)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-border text-secondary text-[11px] font-mono hover:text-foreground hover:border-border-strong transition-colors"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-subtle border border-border text-sky-700 text-[11px] font-mono hover:border-sky-300 transition-colors cursor-pointer"
                             >
                               <BookOpen className="w-3 h-3" />
                               <span>{evidenceList.length} Grounded Sources</span>
@@ -284,18 +284,18 @@ export function AssistantDrawer() {
                       {/* Expanded RAG Passages */}
                       {!isUser && isExpanded && evidenceList.length > 0 && (
                         <div className="mt-3 space-y-2 pt-2 border-t border-border">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-muted block mb-1">
+                          <span className="text-[11px] font-mono uppercase tracking-wider text-sky-700 block mb-1">
                             NASA Biomedical RAG Passages:
                           </span>
                           {evidenceList.map((item) => (
                             <div
                               key={item.chunk_id}
-                              className="p-2.5 rounded-md bg-surface border border-border text-[11px] text-secondary"
+                              className="p-2.5 rounded-lg bg-surface-subtle border border-border text-[11px] text-secondary"
                             >
                               <div className="font-semibold text-foreground">
                                 [{item.doc_id}] {item.title}
                               </div>
-                              <div className="text-[10px] text-muted font-mono mt-0.5">
+                              <div className="text-[11px] text-sky-700 font-mono mt-0.5">
                                 {item.section_heading}
                               </div>
                               <p className="mt-1 text-muted leading-normal italic">
@@ -308,7 +308,7 @@ export function AssistantDrawer() {
                     </div>
 
                     {/* Timestamp */}
-                    <span className="mt-1 px-1 text-[10px] font-mono text-faint">
+                    <span className="mt-1 px-1 text-[11px] font-mono text-muted">
                       {msg.timestamp}
                     </span>
                   </div>
@@ -317,22 +317,22 @@ export function AssistantDrawer() {
 
               {/* Bot Typing Indicator */}
               {isLoading && (
-                <div className="flex items-center gap-2 p-3 max-w-[70%] rounded-lg bg-surface-elevated border border-border text-xs text-muted">
-                  <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                <div className="flex items-center gap-2 p-3 max-w-[70%] rounded-xl bg-white border border-border text-xs text-sky-700">
+                  <span className="w-2 h-2 rounded-full bg-sky-600 animate-pulse" />
                   <span>Synthesizing answer from NASA flight rules & literature...</span>
                 </div>
               )}
 
               {error && (
-                <div className="flex items-start gap-2 rounded-lg border border-critical/25 bg-critical/10 p-3 text-xs text-critical">
-                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                   <span>{error}</span>
                 </div>
               )}
             </div>
 
             {/* Persistent Chat Input Bar */}
-            <div className="p-4 border-t border-border-subtle bg-canvas">
+            <div className="p-4 border-t border-border bg-white">
               <form onSubmit={handleQuerySubmit} className="flex items-center gap-2">
                 <input
                   ref={inputRef}
@@ -340,18 +340,18 @@ export function AssistantDrawer() {
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
                   placeholder="Ask WAYFINDER (e.g. 'I have a headache', 'Check CO2 rule')..."
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-surface-elevated border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-accent-light transition-colors font-sans"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-surface-subtle border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-sky-500 focus:bg-white transition-colors font-sans"
                 />
                 <button
                   type="submit"
                   disabled={!inputQuery.trim() || isLoading}
-                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-foreground hover:bg-secondary disabled:opacity-40 disabled:hover:bg-foreground text-canvas font-semibold transition-colors"
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:hover:bg-sky-600 text-white font-semibold shadow-sm transition-all cursor-pointer"
                   title="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </form>
-              <div className="mt-1.5 flex items-center justify-between px-2 text-[10px] text-faint font-mono">
+              <div className="mt-1.5 flex items-center justify-between px-2 text-[11px] text-muted font-mono">
                 <span>Enter to send · Alt+V voice PTT · Ctrl+K to toggle</span>
                 <span>Spaceflight Decision Support</span>
               </div>
@@ -363,26 +363,26 @@ export function AssistantDrawer() {
         {activeTab === "checklists" && (
           <div className="drawer-scroll flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {latchedRule ? (
-              <div className="rounded-lg border border-border bg-surface-elevated p-4 space-y-3">
+              <div className="rounded-xl bg-white border border-sky-200 p-4 space-y-3 shadow-card">
                 <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-md bg-surface-subtle text-foreground text-[11px] font-mono font-medium tracking-tight border border-border-strong">
+                  <span className="px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[11px] font-mono font-medium tracking-tight border border-sky-200">
                     {latchedRule.rule_id}
                   </span>
-                  <span className="text-[10px] font-mono text-muted">
+                  <span className="text-[11px] font-mono text-muted">
                     Revision: {latchedRule.revision_date}
                   </span>
                 </div>
                 <h3 className="text-sm font-semibold text-foreground tracking-tight leading-snug">
                   {latchedRule.title}
                 </h3>
-                <div className="text-xs text-secondary bg-surface rounded-md p-2.5 border border-border">
-                  <span className="text-muted font-mono text-[11px] block mb-1">
+                <div className="text-xs text-secondary bg-surface-subtle rounded-lg p-2.5 border border-border">
+                  <span className="text-sky-700 font-mono text-[11px] block mb-1">
                     Condition Threshold:
                   </span>
                   {latchedRule.condition_threshold}
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   <span>SHA-256 Provenance: {latchedRule.sha256_hash.slice(0, 12)}... (Verified NASA Certified)</span>
                 </div>
               </div>
@@ -391,7 +391,7 @@ export function AssistantDrawer() {
             {checklistSteps.length > 0 ? (
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted font-mono">
+                  <h4 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700 font-mono">
                     Operational Checklist Steps
                   </h4>
                   <span className="text-[11px] font-mono text-muted">
@@ -406,26 +406,26 @@ export function AssistantDrawer() {
                       <div
                         key={step.step_number}
                         onClick={() => toggleStep(step.step_number)}
-                        className={`group p-3 rounded-lg border transition-colors duration-200 cursor-pointer ${
+                        className={`group p-3.5 rounded-xl border transition-all duration-200 cursor-pointer bg-white ${
                           isDone
-                            ? "bg-surface border-border opacity-60"
-                            : "bg-surface-elevated border-border hover:border-border-strong"
+                            ? "border-border opacity-60"
+                            : "border-border glass-card-hover"
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <button
                             type="button"
-                            className="mt-0.5 text-muted group-hover:text-foreground transition-colors"
+                            className="mt-0.5 text-muted group-hover:text-sky-600 transition-colors cursor-pointer"
                           >
                             {isDone ? (
-                              <CheckCircle2 className="w-4 h-4 text-foreground" />
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                             ) : (
                               <Circle className="w-4 h-4" />
                             )}
                           </button>
                           <div className="flex-1 space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-mono font-medium text-muted">
+                              <span className="text-[11px] font-mono font-medium text-sky-700">
                                 Step {step.step_number} · {step.target_subsystem}
                               </span>
                             </div>
@@ -437,13 +437,13 @@ export function AssistantDrawer() {
                               {step.action}
                             </p>
                             {step.verification && (
-                              <div className="text-[11px] font-mono text-secondary bg-surface border border-border px-2 py-1 rounded-md">
+                              <div className="text-[11px] font-mono text-secondary bg-surface-subtle border border-border px-2.5 py-1 rounded-md">
                                 Verification: {step.verification}
                               </div>
                             )}
                             {step.caution_warning && (
-                              <div className="text-[11px] text-secondary bg-surface border border-border px-2 py-1 rounded-md flex items-center gap-1.5">
-                                <TriangleAlert className="w-3.5 h-3.5 shrink-0" />
+                              <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+                                <TriangleAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                 <span>{step.caution_warning}</span>
                               </div>
                             )}
@@ -455,7 +455,7 @@ export function AssistantDrawer() {
                 </div>
               </section>
             ) : (
-              <div className="p-8 text-center rounded-lg border border-dashed border-border text-faint text-xs">
+              <div className="p-8 text-center rounded-xl border border-dashed border-border text-muted text-xs">
                 No active flight rule latched. Ask a question or click an event to latch a certified checklist.
               </div>
             )}
@@ -466,7 +466,7 @@ export function AssistantDrawer() {
         {activeTab === "evidence" && (
           <div className="drawer-scroll flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {activeEvent && (
-              <div className="rounded-lg border border-border bg-surface-elevated p-4">
+              <div className="rounded-xl bg-white border border-border p-4 shadow-card">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span
                     className={`badge border ${uncertaintyTheme(
@@ -483,17 +483,17 @@ export function AssistantDrawer() {
                 <p className="mt-1 text-xs leading-relaxed text-secondary">
                   {activeEvent.rationale}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-1">
+                <div className="mt-3 flex flex-wrap gap-1.5">
                   {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
                     <span
                       key={stream}
-                      className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-muted"
+                      className="rounded-md border border-border bg-surface-subtle px-2 py-0.5 font-mono text-[11px] text-muted"
                     >
                       {prettyStream(stream)}
                     </span>
                   ))}
                   {activeEvent.peak_deviation_sigma !== null ? (
-                    <span className="rounded border border-border-strong bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                    <span className="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 font-mono text-[11px] text-sky-700">
                       peak {formatSigned(activeEvent.peak_deviation_sigma, 2)} σ
                     </span>
                   ) : null}
@@ -503,14 +503,14 @@ export function AssistantDrawer() {
 
             {activeExplanation ? (
               <div className="space-y-4">
-                <section className="rounded-lg border border-border bg-surface-elevated p-4">
+                <section className="rounded-xl bg-white border border-border p-4 shadow-card">
                   <h3 className="text-sm font-semibold leading-snug text-foreground">
                     {activeExplanation.headline}
                   </h3>
                 </section>
 
-                <section className="rounded-lg border border-border bg-surface-elevated p-4">
-                  <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted font-mono">
+                <section className="rounded-xl bg-white border border-border p-4 shadow-card">
+                  <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700 font-mono">
                     Observed dynamics
                   </h3>
                   <p className="mt-1.5 text-xs leading-relaxed text-secondary">
@@ -520,10 +520,10 @@ export function AssistantDrawer() {
 
                 <section>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted font-mono">
+                    <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700 font-mono">
                       Scientific context
                     </h3>
-                    <span className="text-xs text-secondary">
+                    <span className="text-xs text-sky-700 font-mono">
                       {activeExplanation.cited_evidence.length} cited
                     </span>
                   </div>
@@ -538,9 +538,9 @@ export function AssistantDrawer() {
                 </section>
 
                 {activeExplanation.study_caveats.length > 0 && (
-                  <section className="rounded-lg border border-border bg-surface-elevated p-4">
-                    <div className="flex items-center gap-2 text-secondary">
-                      <TriangleAlert className="h-3.5 w-3.5" />
+                  <section className="rounded-xl bg-amber-50/70 border border-amber-200 p-4">
+                    <div className="flex items-center gap-2 text-amber-800">
+                      <TriangleAlert className="h-3.5 w-3.5 text-amber-600" />
                       <h3 className="text-xs font-semibold text-foreground">Study caveats</h3>
                     </div>
                     <ul className="mt-2 space-y-1.5">
@@ -549,7 +549,7 @@ export function AssistantDrawer() {
                           key={caveat}
                           className="flex items-start gap-2 text-xs leading-relaxed text-secondary"
                         >
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted" />
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                           {caveat}
                         </li>
                       ))}
@@ -558,7 +558,7 @@ export function AssistantDrawer() {
                 )}
 
                 <div className="flex items-center justify-between text-xs text-muted pt-1">
-                  <span className="inline-flex items-center gap-1 font-mono">
+                  <span className="inline-flex items-center gap-1 font-mono text-sky-700">
                     <Clock3 className="h-3 w-3" />
                     {activeExplanation.latency_ms.toFixed(1)} ms
                   </span>
@@ -571,10 +571,10 @@ export function AssistantDrawer() {
       </div>
 
       {/* Docked Immutable Epistemic Disclaimer */}
-      <footer className="sticky bottom-0 shrink-0 border-t border-border-subtle bg-canvas p-3">
+      <footer className="sticky bottom-0 shrink-0 border-t border-border bg-surface-subtle p-3">
         <div className="flex items-start gap-2">
-          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-critical" />
-          <p className="text-[10px] leading-relaxed text-muted">
+          <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <p className="text-[11px] leading-relaxed text-muted">
             {activeExplanation?.disclaimer ?? FALLBACK_DISCLAIMER}
           </p>
         </div>

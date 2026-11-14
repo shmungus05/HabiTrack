@@ -6,7 +6,7 @@
 import {
   Activity,
   BookOpen,
-  Database,
+  Clock3,
   FileText,
   LayoutDashboard,
   Lock,
@@ -92,12 +92,30 @@ function crewShortName(callsign?: string): string {
   return parts[parts.length - 1] ?? callsign;
 }
 
+function formatCockpitClock(date: Date): { mmt: string; utc: string } {
+  const mmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Yangon",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+  const utc = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return { mmt, utc };
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<ViewKey>(() =>
     viewFromPath(window.location.pathname),
   );
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   const astronauts = useCohortStore((state) => state.astronauts);
   const activeAstronautId = useCohortStore((state) => state.activeAstronautId);
@@ -139,6 +157,11 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 10000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const navigate = (view: (typeof VIEWS)[number]) => {
     setActiveView(view.key);
     if (window.location.pathname !== view.path) {
@@ -155,42 +178,52 @@ export default function App() {
     ? "Local Ollama generative model online"
     : "Ollama offline — deterministic extractive synthesis active";
   const chunkCount = health?.vector_store_chunks ?? 0;
+  const clock = useMemo(() => formatCockpitClock(now), [now]);
+  const activeViewMeta = useMemo(
+    () => VIEWS.find((v) => v.key === activeView) ?? VIEWS[0],
+    [activeView],
+  );
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-canvas text-secondary font-sans selection:bg-accent-secondary/30">
-      <header className="sticky top-0 z-30 border-b border-border bg-canvas/90 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3.5">
-          <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-elevated text-foreground">
+    <div className="relative flex min-h-screen flex-col bg-canvas text-slate-700 font-sans selection:bg-sky-200/60">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
               <Radar className="h-4 w-4" />
             </span>
-            <div>
-              <h1 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
-                WAYFINDER{" "}
-                <span className="rounded bg-surface-subtle border border-border px-1.5 py-0.5 text-[10px] text-secondary font-mono">
-                  V5
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900">
+                  Habitat Trace
+                </h1>
+                <span className="hidden text-xs text-slate-400 sm:inline">/</span>
+                <span className="hidden truncate text-xs font-medium text-slate-500 sm:inline">
+                  {activeViewMeta.label}
                 </span>
-              </h1>
+              </div>
+              <p className="hidden font-mono text-[11px] text-slate-500 xl:block">
+                ISS Exp 72 · Wayfinder
+              </p>
             </div>
           </div>
 
           <div
             role="group"
             aria-label="Active perspective"
-            className="flex items-center gap-1 rounded-lg border border-border bg-canvas p-1"
+            className="flex shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5"
           >
             <button
               type="button"
               aria-pressed={isAstronaut}
               onClick={() => setRole("astronaut")}
               title="Astronaut perspective: glanceable status and quick symptom entry"
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
                 isAstronaut
-                  ? "border border-border-strong bg-surface-subtle text-foreground"
-                  : "border border-transparent text-muted hover:text-foreground"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span aria-hidden="true">🧑‍🚀</span>
               Astronaut
             </button>
             <button
@@ -198,80 +231,69 @@ export default function App() {
               aria-pressed={!isAstronaut}
               onClick={() => setRole("flight_surgeon")}
               title="Flight Surgeon perspective: full diagnostic depth"
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              className={`inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
                 !isAstronaut
-                  ? "border border-border-strong bg-surface-subtle text-foreground"
-                  : "border border-transparent text-muted hover:text-foreground"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span aria-hidden="true">🩺</span>
               Flight Surgeon
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Badge
               variant={calibrated ? "success" : "warning"}
               dot
               pulse={!calibrated}
+              className="hidden md:inline-flex"
             >
               {calibration}
             </Badge>
             <Badge
-              variant="default"
+              variant={ollamaOnline ? "accent" : "default"}
               title={ollamaTitle}
-              className="hidden lg:inline-flex"
+              className="hidden 2xl:inline-flex"
             >
               {ollamaOnline ? (
-                <Wifi className="h-3 w-3" />
+                <Wifi className="h-3 w-3 text-sky-600" />
               ) : (
-                <WifiOff className="h-3 w-3" />
+                <WifiOff className="h-3 w-3 text-slate-500" />
               )}
               {ollamaOnline ? "Ollama Online" : "Extractive Mode"}
             </Badge>
-            <Badge
-              variant="default"
-              title={ollamaTitle}
-              aria-label={ollamaOnline ? "Ollama online" : "Extractive mode"}
-              className="px-1.5 lg:hidden"
+            <div
+              className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] 2xl:flex"
+              title="Synchronized Myanmar Time (MMT, UTC+06:30) and Coordinated Universal Time (UTC)"
             >
-              {ollamaOnline ? (
-                <Wifi className="h-3.5 w-3.5" />
-              ) : (
-                <WifiOff className="h-3.5 w-3.5" />
-              )}
-            </Badge>
-            <span className="hidden items-center gap-1 font-mono text-xs text-secondary xl:inline-flex">
-              {chunkCount} chunks
-            </span>
-            <span
-              className="hidden items-center gap-1 font-mono text-[11px] text-secondary md:inline-flex xl:hidden"
-              title={`${chunkCount} vector store chunks`}
-            >
-              <Database className="h-3 w-3" />
-              {chunkCount}
-            </span>
-          </div>
+              <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+              <span className="font-semibold text-slate-900 tabular-nums">
+                {clock.mmt}
+              </span>
+              <span className="text-slate-500">MMT</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-500 tabular-nums">{clock.utc} UTC</span>
+            </div>
 
-          <div className="ml-auto flex flex-1 items-center justify-end gap-3 lg:flex-none">
             <CommsStatusChip />
             <Button
               size="sm"
               variant="default"
               onClick={() => setIsDossierOpen(true)}
-              leftIcon={<FileText className="h-3.5 w-3.5" />}
+              leftIcon={<FileText className="h-3.5 w-3.5 text-slate-600" />}
               title="Generate a structured clinical investigation dossier"
             >
               <span className="hidden sm:inline">Dossier</span>
             </Button>
+
             <div
               role="group"
               aria-label="Crew cohort"
-              className="flex items-center gap-1 rounded-lg border border-border bg-canvas p-1"
+              className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5"
             >
               {isAstronaut ? (
                 <span
-                  className="flex items-center gap-1 px-1.5 text-muted"
+                  className="flex items-center px-1.5 text-slate-400"
                   title="Cohort locked to the active crewmember in Astronaut perspective"
                 >
                   <Lock className="h-3 w-3" />
@@ -290,14 +312,14 @@ export default function App() {
                     title={
                       locked
                         ? "Locked in Astronaut perspective · medical privacy"
-                        : `${astronaut.callsign} · ${astronaut.crew_role} · ${astronaut.calibration_status}`
+                        : `${astronaut.callsign} (${astronaut.astronaut_id}) · ${astronaut.crew_role} · ${astronaut.calibration_status}`
                     }
                     onClick={() => selectAstronaut(astronaut.astronaut_id)}
-                    className={`group flex items-center gap-2 rounded-lg border px-1.5 py-1 text-left transition-colors ${
+                    className={`group flex items-center gap-1.5 rounded-md px-2 py-1 text-left cursor-pointer transition-colors ${
                       selected
-                        ? "border-border-strong bg-surface-subtle text-foreground"
-                        : "border-transparent text-secondary hover:border-border hover:bg-surface-elevated hover:text-foreground"
-                    } ${locked ? "cursor-not-allowed opacity-35 hover:border-transparent hover:bg-transparent" : ""}`}
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
+                    } ${locked ? "cursor-not-allowed opacity-35 hover:bg-transparent" : ""}`}
                   >
                     <AstronautAvatar
                       astronautId={astronaut.astronaut_id}
@@ -308,13 +330,8 @@ export default function App() {
                           : "opacity-80 saturate-[0.8] transition group-hover:opacity-100 group-hover:saturate-100"
                       }
                     />
-                    <span className="flex flex-col leading-tight">
-                      <span className="font-mono text-[11px] font-medium">
-                        {astronaut.astronaut_id}
-                      </span>
-                      <span className="hidden text-[10px] text-muted sm:block">
-                        {crewShortName(astronaut.callsign)}
-                      </span>
+                    <span className="hidden text-xs font-medium whitespace-nowrap md:inline">
+                      {crewShortName(astronaut.callsign)}
                     </span>
                   </button>
                 );
@@ -328,17 +345,21 @@ export default function App() {
                   .then(setHealth)
                   .catch(() => setHealth(null));
               }}
-              className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface text-muted transition-colors hover:border-border-strong hover:text-foreground"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 cursor-pointer transition-colors hover:border-slate-300 hover:text-slate-900"
               title="Refresh cohort and service health"
             >
               <RefreshCw
-                className={`h-3.5 w-3.5 ${isLoadingCohort ? "animate-spin" : ""}`}
+                className={`h-3.5 w-3.5 ${isLoadingCohort ? "animate-spin text-sky-600" : ""}`}
               />
             </button>
           </div>
         </div>
 
-        <nav className="mx-auto flex w-full max-w-[1800px] items-center gap-1.5 overflow-x-auto px-6 pb-2.5">
+        {/* Mobile / Tablet Navigation Strip */}
+        <nav
+          aria-label="Flight deck navigation"
+          className="flex items-center gap-1.5 overflow-x-auto border-t border-slate-100 px-4 py-2 lg:hidden"
+        >
           {VIEWS.map((view) => {
             const Icon = view.icon;
             const selected = activeView === view.key;
@@ -348,10 +369,10 @@ export default function App() {
                 type="button"
                 onClick={() => navigate(view)}
                 aria-current={selected ? "page" : undefined}
-                className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`inline-flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors ${
                   selected
-                    ? "bg-surface-subtle text-foreground border border-border-strong"
-                    : "text-muted hover:bg-surface-elevated hover:text-foreground border border-transparent"
+                    ? "border border-slate-200/80 bg-slate-100 text-slate-900 font-semibold"
+                    : "border border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -359,96 +380,199 @@ export default function App() {
               </button>
             );
           })}
-          <span className="ml-auto hidden items-center gap-2.5 sm:inline-flex">
-            <AstronautAvatar
-              astronautId={activeAstronautId}
-              size="sm"
-              status={calibration}
-              label={activeAstronaut?.callsign ?? activeAstronautId}
-            />
-            <span className="flex flex-col leading-tight">
-              <span className="font-mono text-[11px] text-secondary">
-                {activeAstronaut?.callsign ?? activeAstronautId}
-              </span>
-              <span className="text-[10px] text-muted">
-                {activeAstronaut?.crew_role ?? "Crew"}
-              </span>
-            </span>
-          </span>
         </nav>
       </header>
 
-      {isAnomalyActive ? (
-        <div className="mx-auto mt-3 w-full max-w-[1800px] px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200">
-            <span className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
-              <span className="font-semibold uppercase tracking-wider">
-                Simulation override active
-              </span>
-              <span className="text-amber-200/80">
-                · {activeScenario.replace(/_/g, " ")} injected telemetry is on screen
-              </span>
-            </span>
-            <button
-              type="button"
-              onClick={simulationControls.resetNominal}
-              className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 px-2.5 py-1 text-[11px] font-semibold text-amber-100 transition-colors hover:bg-amber-500/20"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Reset to nominal
-            </button>
+      {/* Cockpit Body: Sidebar + Main Content Area */}
+      <div className="relative z-10 mx-auto flex w-full max-w-[1800px] flex-1">
+        <aside
+          aria-label="Cockpit sidebar"
+          className="hidden lg:flex lg:w-56 shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4"
+        >
+          <div className="space-y-5">
+            <div>
+              <p className="px-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Flight Deck Views
+              </p>
+              <nav className="mt-2 space-y-1">
+                {VIEWS.map((view) => {
+                  const Icon = view.icon;
+                  const selected = activeView === view.key;
+                  return (
+                    <button
+                      key={view.key}
+                      type="button"
+                      onClick={() => navigate(view)}
+                      aria-current={selected ? "page" : undefined}
+                      className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-xs cursor-pointer transition-colors ${
+                        selected
+                          ? "border-slate-200/80 bg-slate-100 text-slate-900 font-semibold"
+                          : "border-transparent font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${
+                          selected ? "text-slate-900" : "text-slate-400"
+                        }`}
+                      />
+                      <span>{view.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3.5 space-y-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Telemetry Spectrum
+              </p>
+              <ul className="space-y-1.5 text-[11px]">
+                <li className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#0284c7]" />
+                    Carbon Dioxide (CO₂)
+                  </span>
+                  <span className="font-mono text-slate-500">PPM</span>
+                </li>
+                <li className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#d97706]" />
+                    Space Radiation
+                  </span>
+                  <span className="font-mono text-slate-500">mGy/d</span>
+                </li>
+                <li className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#ea580c]" />
+                    Cabin Temperature
+                  </span>
+                  <span className="font-mono text-slate-500">°C</span>
+                </li>
+                <li className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#0891b2]" />
+                    Relative Humidity
+                  </span>
+                  <span className="font-mono text-slate-500">%</span>
+                </li>
+                <li className="flex items-center justify-between text-slate-700">
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#059669]" />
+                    Pressure &amp; O₂
+                  </span>
+                  <span className="font-mono text-slate-500">mmHg</span>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
-      ) : null}
 
-      {isAstronaut && (activeView === "timeline" || activeView === "research") ? (
-        <div className="mx-auto mt-3 w-full max-w-[1800px] px-6">
-          <div className="rounded-lg border border-border bg-surface px-4 py-2 text-[11px] text-muted">
-            Viewing in Astronaut Perspective · Flight Surgeon diagnostic controls
-            minimized.
+          <div className="space-y-3">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 flex items-center gap-3">
+              <AstronautAvatar
+                astronautId={activeAstronautId}
+                size="sm"
+                status={calibration}
+                label={activeAstronaut?.callsign ?? activeAstronautId}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-mono text-xs font-semibold text-slate-900">
+                  {activeAstronaut?.callsign ?? activeAstronautId}
+                </p>
+                <p className="truncate text-[11px] text-slate-500">
+                  {activeAstronaut?.crew_role ?? "Crew"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 text-[11px]">
+              <div className="flex items-center justify-between font-mono font-medium text-slate-700">
+                <span>EXPEDITION 72</span>
+                <span>ISS / RR-1</span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                MMT {clock.mmt} · UTC {clock.utc}
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                {ollamaOnline ? "Ollama Online" : "Extractive Mode"} · {chunkCount} chunks
+              </p>
+            </div>
           </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {isAnomalyActive ? (
+            <div className="mt-4 w-full px-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+                <span className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
+                  <span className="font-semibold uppercase tracking-wider">
+                    Simulation override active
+                  </span>
+                  <span className="text-amber-700">
+                    · {activeScenario.replace(/_/g, " ")} injected telemetry is on screen
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={simulationControls.resetNominal}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 cursor-pointer transition-colors hover:bg-amber-100"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Reset to nominal
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {isAstronaut && (activeView === "timeline" || activeView === "research") ? (
+            <div className="mt-4 w-full px-4 sm:px-6">
+              <div className="rounded-xl glass-panel px-4 py-2 text-[11px] text-slate-500">
+                Viewing in Astronaut Perspective · Flight Surgeon diagnostic controls
+                minimized.
+              </div>
+            </div>
+          ) : null}
+
+          {cohortError ? (
+            <div className="mt-4 w-full px-4 sm:px-6">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                {cohortError}
+              </div>
+            </div>
+          ) : null}
+
+          <main className="w-full flex-1 px-4 py-6 pb-20 sm:px-6 sm:py-7 sm:pb-20">
+            {activeView === "overview" ? (
+              <OverviewView astronautId={activeAstronautId} />
+            ) : null}
+            {activeView === "timeline" ? (
+              <Suspense
+                fallback={
+                  <div className="card h-[calc(100vh-260px)] min-h-[640px] animate-pulse" />
+                }
+              >
+                <TimelineView astronautId={activeAstronautId} />
+              </Suspense>
+            ) : null}
+            {activeView === "symptoms" ? (
+              <SymptomsView astronautId={activeAstronautId} />
+            ) : null}
+            {activeView === "research" ? (
+              <ResearchView astronautId={activeAstronautId} />
+            ) : null}
+            {activeView === "alerts" ? <AlertsDeck /> : null}
+            {activeView === "settings" ? <SettingsView /> : null}
+          </main>
         </div>
-      ) : null}
+      </div>
 
-      {cohortError ? (
-        <div className="mx-auto mt-4 w-full max-w-[1800px] px-6">
-          <div className="rounded-lg border border-critical/25 bg-critical/10 px-4 py-3 text-xs text-critical">
-            {cohortError}
-          </div>
-        </div>
-      ) : null}
-
-      <main className="mx-auto w-full max-w-[1800px] flex-1 px-6 py-6 sm:py-8">
-        {activeView === "overview" ? (
-          <OverviewView astronautId={activeAstronautId} />
-        ) : null}
-        {activeView === "timeline" ? (
-          <Suspense
-            fallback={
-              <div className="card h-[calc(100vh-260px)] min-h-[640px] animate-pulse bg-surface" />
-            }
-          >
-            <TimelineView astronautId={activeAstronautId} />
-          </Suspense>
-        ) : null}
-        {activeView === "symptoms" ? (
-          <SymptomsView astronautId={activeAstronautId} />
-        ) : null}
-        {activeView === "research" ? (
-          <ResearchView astronautId={activeAstronautId} />
-        ) : null}
-        {activeView === "alerts" ? <AlertsDeck /> : null}
-        {activeView === "settings" ? <SettingsView /> : null}
-      </main>
-
-      <footer className="border-t border-border bg-canvas px-6 py-4">
+      <footer className="relative z-10 border-t border-border bg-white px-6 py-4">
         <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted">
-          <span>WAYFINDER V5 · ISS Expedition 71 · Clinical Decision Support</span>
+          <span>HABITAT TRACE · WAYFINDER · ISS Expedition 72 · Clinical Decision Support</span>
           <span>
             Non-causal temporal correlation · Flight surgeon verification required
           </span>
-          <span className="w-full text-[10px] text-muted">
+          <span className="w-full text-[11px] text-muted">
             Crew portraits: NASA (public domain) · illustrative stand-ins for the simulated crew
           </span>
         </div>

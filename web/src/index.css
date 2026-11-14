@@ -3,33 +3,65 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* DESIGN.md tokens — Expo obsidian palette. */
-  --color-canvas: #000000;
-  --color-surface: #0a0a0a;
-  --color-surface-elevated: #101010;
-  --color-surface-subtle: #161616;
-  --color-border: #242424;
-  --color-border-subtle: #1c1c1c;
-  --color-border-strong: #3a3a3a;
+  /* HABITAT TRACE Design System Tokens (Minimalist Light Theme) */
+  --bg-space: #f8fafc;
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --surface-base: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-card: #ffffff;
+  --surface-card-subtle: #f8fafc;
 
-  --color-foreground: #ffffff;
-  --color-secondary: #a3a3a3;
-  --color-muted: #737373;
-  --color-faint: #525252;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
 
-  --color-accent: #000000;
-  --color-accent-secondary: #0026a3;
-  --color-accent-light: #8b9dff;
-  --color-critical: #f87171;
+  --border-default: #e2e8f0;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-highlight: #cbd5e1;
+  --border-top-rim: #e2e8f0;
 
-  --font-sans: 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
-  --font-mono: 'JetBrains Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-strong: #cbd5e1;
+
+  --color-foreground: #0f172a;
+  --color-secondary: #334155;
+  --color-muted: #64748b;
+  --color-faint: #94a3b8;
+
+  --accent-primary: #0284c7;
+  --accent-secondary: #0369a1;
+  --color-accent: #0284c7;
+  --color-accent-secondary: #0369a1;
+  --color-accent-light: #0ea5e9;
+  --color-critical: #dc2626;
+
+  --status-nominal: #059669;
+  --status-caution: #d97706;
+  --status-critical: #dc2626;
+
+  --telemetry-co2: #0284c7;
+  --telemetry-rad: #d97706;
+  --telemetry-temp: #ea580c;
+  --telemetry-humidity: #0891b2;
+  --telemetry-pressure: #059669;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 html,
@@ -40,7 +72,7 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-canvas);
+  background-color: var(--bg-canvas);
   color: var(--color-secondary);
   font-family: var(--font-sans);
   font-size: 13px;
@@ -52,40 +84,85 @@ body {
 }
 
 ::selection {
-  background: rgba(0, 38, 163, 0.45);
-  color: #ffffff;
+  background: rgba(2, 132, 199, 0.15);
+  color: #0f172a;
 }
 
+/* Minimalist Scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-canvas);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #242424;
-  border-radius: 8px;
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
+  background: #94a3b8;
+}
+
+/* Native browser number spinner suppression */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Pointer ergonomics */
+button,
+select,
+a[href],
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
 }
 
 @layer components {
+  .glass-panel {
+    background: var(--surface-card);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  }
+
+  .glass-panel-subtle {
+    background: var(--surface-card-subtle);
+    border: 1px solid var(--border-default);
+  }
+
+  .glass-card-hover {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .glass-card-hover:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  }
+
   .card {
-    @apply rounded-lg border border-border bg-surface;
+    @apply rounded-xl glass-panel;
   }
 
   .card-elevated {
-    @apply rounded-lg border border-border-strong bg-surface-elevated;
+    @apply rounded-xl border border-border-strong bg-surface-elevated shadow-elevated;
   }
 
-  /* Data field label inside a stat grid, never a kicker above a heading. */
+  /* Data field label inside a stat grid (minimum 11px floor) */
   .field-label {
-    @apply text-[10px] font-medium uppercase tracking-wider text-muted;
+    @apply text-[11px] font-medium uppercase tracking-wider text-muted;
   }
 
   .display-title {
@@ -114,9 +191,9 @@ body {
   outline-offset: 2px;
 }
 
-/* Range inputs inherit the single interaction hue. */
+/* Range inputs inherit the sky telemetry accent. */
 input[type="range"] {
-  accent-color: var(--color-accent-secondary);
+  accent-color: #0284c7;
 }
 
 .plotly .modebar {
@@ -126,6 +203,98 @@ input[type="range"] {
 
 .plotly:hover .modebar {
   opacity: 0.65;
+}
+
+/* Guaranteed Light-Theme Overrides (immediate HMR even if tailwind.config.js was cached) */
+html,
+body,
+#root,
+.bg-canvas {
+  background-color: #f8fafc !important;
+}
+
+html,
+body {
+  color: #334155;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.font-sans {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+}
+
+.bg-surface,
+.bg-surface-elevated,
+.bg-surface-card {
+  background-color: #ffffff !important;
+}
+
+.bg-surface-subtle,
+.hover\:bg-surface-subtle:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.bg-surface-hover,
+.hover\:bg-surface-hover:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.text-foreground,
+.hover\:text-foreground:hover {
+  color: #0f172a !important;
+}
+
+.text-secondary,
+.hover\:text-secondary:hover {
+  color: #334155 !important;
+}
+
+.text-muted,
+.hover\:text-muted:hover {
+  color: #64748b !important;
+}
+
+.text-faint {
+  color: #94a3b8 !important;
+}
+
+.border-border,
+.border-border-rim,
+.hover\:border-border:hover {
+  border-color: #e2e8f0 !important;
+}
+
+.border-border-subtle {
+  border-color: #f1f5f9 !important;
+}
+
+.border-border-strong,
+.hover\:border-border-strong:hover {
+  border-color: #cbd5e1 !important;
+}
+
+.divide-border > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+.divide-border-subtle > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+
+.shadow-xs {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.shadow-card {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.shadow-elevated {
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
 }
 
 /* ---------------------------------------------------------------------------

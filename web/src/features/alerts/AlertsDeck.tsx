@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from "react";
-import { ShieldAlert, CheckCircle2, Check } from "lucide-react";
+import { ShieldAlert, CheckCircle2, Check, AlertCircle, AlertTriangle } from "lucide-react";
 
 export interface CabinAlertItem {
   id: string;
@@ -103,14 +103,14 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
 
   return (
     <section
-      className={`p-4 sm:p-6 bg-surface rounded-lg border border-border relative overflow-hidden ${className}`}
+      className={`p-5 sm:p-6 glass-panel rounded-xl relative overflow-hidden ${className}`}
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <ShieldAlert className="w-3.5 h-3.5 text-critical" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
               Flight Medicine · Action Plans
             </span>
           </div>
@@ -123,23 +123,23 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex items-center bg-surface-elevated rounded-lg p-1 border border-border text-xs">
+        <div className="flex items-center glass-panel-subtle rounded-xl p-1 text-xs gap-1">
           <button
             onClick={() => setFilter("ACTIVE")}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer border ${
               filter === "ACTIVE"
-                ? "bg-surface-subtle text-foreground border border-border-strong"
-                : "text-muted hover:text-foreground border border-transparent"
+                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                : "text-muted hover:text-foreground border-transparent"
             }`}
           >
             Active ({activeAlerts.length})
           </button>
           <button
             onClick={() => setFilter("ALL")}
-            className={`px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer border ${
               filter === "ALL"
-                ? "bg-surface-subtle text-foreground border border-border-strong"
-                : "text-muted hover:text-foreground border border-transparent"
+                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                : "text-muted hover:text-foreground border-transparent"
             }`}
           >
             All Alerts ({alerts.length})
@@ -148,16 +148,16 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
       </div>
 
       {/* Explanatory Note */}
-      <div className="mt-5 border-l border-border pl-3 text-[11px] leading-relaxed text-muted">
+      <div className="mt-5 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary">
         Alerts cross-reference live environmental telemetry against NASA flight medicine rules
         to protect crew health and prevent hypercapnic space headaches.
       </div>
 
       {/* Alerts Feed */}
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 space-y-3.5">
         {displayedAlerts.length === 0 ? (
-          <div className="p-10 text-center rounded-lg bg-surface-elevated border border-border space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-secondary mx-auto" />
+          <div className="p-10 text-center rounded-xl glass-panel-subtle space-y-2">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
             <h3 className="text-sm font-semibold text-foreground">No active alerts</h3>
             <p className="text-xs text-muted max-w-md mx-auto">
               Atmospheric CO₂, ambient temperature, and dosimetric flux are within verified
@@ -173,33 +173,35 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
               whatToDo: ["Inspect localized compartment air diffuser.", "Check vitals if symptoms arise."],
             };
 
+            const levelAccent = isResolved
+              ? "opacity-75 border-border"
+              : alert.level === "critical"
+              ? "border-l-2 border-l-red-500 border-red-200"
+              : alert.level === "warning"
+              ? "border-l-2 border-l-amber-500 border-amber-200"
+              : "border-l-2 border-l-emerald-500 border-emerald-200";
+
             return (
               <div
                 key={alert.id}
-                className={`p-5 rounded-lg border transition-colors ${
-                  isResolved
-                    ? "bg-surface-elevated/50 border-border opacity-70"
-                    : alert.level === "critical"
-                    ? "bg-surface-elevated border-border border-l-2 border-l-critical"
-                    : "bg-surface-elevated border-border hover:border-border-strong"
-                }`}
+                className={`p-5 rounded-xl glass-panel-subtle glass-card-hover transition-all ${levelAccent}`}
               >
                 {/* Header Row */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        isResolved
-                          ? "bg-faint"
-                          : alert.level === "critical"
-                          ? "bg-critical animate-pulse"
-                          : "bg-foreground"
-                      }`}
-                    />
+                    {isResolved ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : alert.level === "critical" ? (
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 animate-pulse" />
+                    ) : alert.level === "warning" ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    )}
                     <div>
                       <h3 className="text-sm font-semibold text-foreground tracking-tight">{alert.title}</h3>
                       <div className="text-[11px] text-muted font-mono flex items-center gap-2 mt-0.5">
-                        <span className="text-secondary">{alert.module}</span>
+                        <span className="text-sky-700">{alert.module}</span>
                         <span>·</span>
                         <span>{alert.timestamp}</span>
                       </div>
@@ -209,13 +211,13 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
                   {!isResolved ? (
                     <button
                       onClick={() => acknowledgeAlert(alert.id)}
-                      className="px-3 py-1.5 rounded-md bg-transparent hover:bg-surface-subtle border border-border-strong text-[11px] font-medium text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[11px] font-medium text-sky-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Acknowledge</span>
                     </button>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-md border border-border text-[11px] text-muted font-mono flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-mono flex items-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Acknowledged</span>
                     </span>
@@ -223,29 +225,29 @@ export const AlertsDeck: React.FC<{ className?: string }> = ({ className = "" })
                 </div>
 
                 {/* 3 Humanized Plain-Language Sections */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border mt-4 border border-border rounded-lg overflow-hidden">
-                  <div className="p-4 bg-surface-subtle space-y-1.5">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border mt-4 border border-border rounded-xl overflow-hidden">
+                  <div className="p-4 bg-white space-y-1.5">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-sky-700">
                       01 · What happened
                     </span>
                     <p className="text-xs leading-relaxed text-secondary">{details.whatHappened}</p>
                   </div>
 
-                  <div className="p-4 bg-surface-subtle space-y-1.5">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                  <div className="p-4 bg-white space-y-1.5">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-amber-700">
                       02 · Why it matters
                     </span>
                     <p className="text-xs leading-relaxed text-secondary">{details.whyItMatters}</p>
                   </div>
 
-                  <div className="p-4 bg-surface-subtle space-y-1.5">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                  <div className="p-4 bg-white space-y-1.5">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-emerald-700">
                       03 · What to do
                     </span>
                     <ul className="space-y-1.5 mt-1">
                       {details.whatToDo.map((step, sIdx) => (
                         <li key={sIdx} className="flex items-start gap-1.5 text-xs leading-relaxed text-secondary">
-                          <span className="text-muted shrink-0">{String(sIdx + 1).padStart(2, "0")}</span>
+                          <span className="text-sky-600 font-mono shrink-0">{String(sIdx + 1).padStart(2, "0")}</span>
                           <span>{step}</span>
                         </li>
                       ))}

@@ -48,22 +48,22 @@ import { Badge, Button } from "./ui";
 const Plot = createPlotlyComponent(Plotly);
 
 const WINDOW_HOURS = 336;
-// Monochrome ramp: lanes are separated by position and step, not hue.
+// Channel-specific telemetry spectrum: distinct high-contrast hues on light canvas.
 const STREAM_COLORS: Record<string, string> = {
-  stream_eda_co2: "#ffffff",
-  stream_eda_temp: "#a3a3a3",
-  stream_eda_pressure: "#525252",
-  stream_sim_hr: "#d4d4d4",
-  stream_sim_hrv: "#a3a3a3",
-  stream_sim_spo2: "#737373",
-  stream_sim_temp: "#525252",
+  stream_eda_co2: "#0284c7",
+  stream_eda_temp: "#ea580c",
+  stream_eda_pressure: "#059669",
+  stream_sim_hr: "#0891b2",
+  stream_sim_hrv: "#059669",
+  stream_sim_spo2: "#0284c7",
+  stream_sim_temp: "#d97706",
 };
 
 const LANE_LABELS = [
-  { text: "LANE 1 · CABIN ATMOSPHERE", y: 1.015, color: "#a3a3a3" },
-  { text: "LANE 2 · CARDIOVASCULAR / AUTONOMIC", y: 0.755, color: "#737373" },
-  { text: "LANE 3 · THERMOREGULATION / OXYGENATION", y: 0.5, color: "#737373" },
-  { text: "LANE 4 · DEVIATION / CONCORDANCE", y: 0.245, color: "#737373" },
+  { text: "LANE 1 · CABIN ATMOSPHERE", y: 1.015, color: "#0284c7" },
+  { text: "LANE 2 · CARDIOVASCULAR / AUTONOMIC", y: 0.755, color: "#0891b2" },
+  { text: "LANE 3 · THERMOREGULATION / OXYGENATION", y: 0.5, color: "#059669" },
+  { text: "LANE 4 · DEVIATION / CONCORDANCE", y: 0.245, color: "#d97706" },
 ];
 
 interface TimelineViewProps {
@@ -181,7 +181,7 @@ function gapShapes(points: Measurement[]): Partial<Shape>[] {
         x1: points[index].timestamp,
         y0: 0,
         y1: 1,
-        fillcolor: "rgba(255, 255, 255, 0.02)",
+        fillcolor: "rgba(15, 23, 42, 0.04)",
         line: { width: 0 },
         layer: "below",
       });
@@ -506,7 +506,12 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         mode: "markers",
         name: "Crew symptom",
         yaxis: "y7",
-        marker: { color: "#d4d4d4", size: 7, symbol: "diamond" },
+        marker: {
+          color: "#d97706",
+          size: 8,
+          symbol: "diamond",
+          line: { width: 1.5, color: "#ffffff" },
+        },
         hoverinfo: "text",
       } as unknown as Data);
     }
@@ -519,7 +524,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
       yref: "y7",
       y0: 0,
       y1: 0,
-      line: { color: "rgba(255, 255, 255, 0.1)", width: 1, dash: "dot" },
+      line: { color: "rgba(2, 132, 199, 0.25)", width: 1, dash: "dot" },
     });
 
     for (const event of events) {
@@ -532,40 +537,42 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         x1: event.end_time,
         y0: 0,
         y1: 0.225,
-        fillcolor: hexToRgba(theme.hex, event.severity_level === "INFO" ? 0.08 : 0.16),
-        line: { width: 1, color: hexToRgba(theme.hex, 0.4) },
+        fillcolor: hexToRgba(theme.hex, event.severity_level === "INFO" ? 0.1 : 0.18),
+        line: { width: 1, color: hexToRgba(theme.hex, 0.45) },
         layer: "below",
       });
     }
 
     shapes.push(...gapShapes(co2));
 
+    const monoFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+
     const layout = {
-      paper_bgcolor: "#0a0a0a",
-      plot_bgcolor: "#000000",
+      paper_bgcolor: "#ffffff",
+      plot_bgcolor: "#f8fafc",
       font: {
-        color: "#8a8a8a",
-        family: "JetBrains Mono, monospace",
-        size: 10,
+        color: "#334155",
+        family: monoFont,
+        size: 11,
       },
-      margin: { l: 56, r: 56, t: 32, b: 32 },
+      margin: { l: 60, r: 60, t: 36, b: 36 },
       showlegend: true,
       legend: {
         orientation: "h",
         x: 0,
         y: 1.055,
         xanchor: "left",
-        font: { size: 9, color: "#a3a3a3", family: "JetBrains Mono, monospace" },
-        bgcolor: "rgba(18, 19, 22, 0.8)",
-        bordercolor: "#242424",
+        font: { size: 11, color: "#334155", family: monoFont },
+        bgcolor: "rgba(255, 255, 255, 0.94)",
+        bordercolor: "#e2e8f0",
         borderwidth: 1,
       },
       hovermode: "x unified",
       dragmode: "pan",
       hoverlabel: {
-        bgcolor: "#101010",
-        bordercolor: "#242424",
-        font: { size: 10, color: "#ffffff", family: "JetBrains Mono, monospace" },
+        bgcolor: "#ffffff",
+        bordercolor: "#cbd5e1",
+        font: { size: 11, color: "#0f172a", family: monoFont },
       },
       xaxis: {
         domain: [0, 1],
@@ -573,13 +580,13 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         type: "date",
         range: zoomRange ?? undefined,
         rangeslider: { visible: false },
-        gridcolor: "#101010",
+        gridcolor: "#e2e8f0",
         zeroline: false,
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
         showspikes: true,
         spikemode: "across",
         spikesnap: "cursor",
-        spikecolor: "#0026a3",
+        spikecolor: "#0284c7",
         spikethickness: 1,
         spikedash: "dot",
       },
@@ -588,12 +595,12 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         anchor: "x",
         title: {
           text: "CO₂ mmHg",
-          font: { size: 9, color: "#a3a3a3" },
+          font: { size: 11, color: "#0284c7" },
           standoff: 4,
         },
-        gridcolor: "#101010",
+        gridcolor: "#e2e8f0",
         zeroline: false,
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis2: {
         domain: [0.79, 1],
@@ -603,22 +610,22 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         showgrid: false,
         title: {
           text: "°C",
-          font: { size: 9, color: "#a3a3a3" },
+          font: { size: 11, color: "#ea580c" },
           standoff: 4,
         },
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis3: {
         domain: [0.535, 0.735],
         anchor: "x",
         title: {
           text: "HR bpm",
-          font: { size: 9, color: "#a3a3a3" },
+          font: { size: 11, color: "#0891b2" },
           standoff: 4,
         },
-        gridcolor: "#101010",
+        gridcolor: "#e2e8f0",
         zeroline: false,
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis4: {
         domain: [0.535, 0.735],
@@ -628,22 +635,22 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         showgrid: false,
         title: {
           text: "RMSSD ms",
-          font: { size: 9, color: "#a3a3a3" },
+          font: { size: 11, color: "#059669" },
           standoff: 4,
         },
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis5: {
         domain: [0.28, 0.48],
         anchor: "x",
         title: {
           text: "°C",
-          font: { size: 9, color: "#737373" },
+          font: { size: 11, color: "#d97706" },
           standoff: 4,
         },
-        gridcolor: "#101010",
+        gridcolor: "#e2e8f0",
         zeroline: false,
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis6: {
         domain: [0.28, 0.48],
@@ -653,23 +660,23 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         showgrid: false,
         title: {
           text: "SpO₂ %",
-          font: { size: 9, color: "#a3a3a3" },
+          font: { size: 11, color: "#0284c7" },
           standoff: 4,
         },
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       yaxis7: {
         domain: [0.0, 0.225],
         anchor: "x",
         title: {
           text: "Z-score",
-          font: { size: 9, color: "#d4d4d4" },
+          font: { size: 11, color: "#334155" },
           standoff: 4,
         },
-        gridcolor: "#101010",
+        gridcolor: "#e2e8f0",
         zeroline: false,
         range: [-4.5, 4.5],
-        tickfont: { size: 9, color: "#737373" },
+        tickfont: { size: 11, color: "#64748b" },
       },
       annotations: LANE_LABELS.map((label) => ({
         text: label.text,
@@ -680,7 +687,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         xanchor: "left",
         yanchor: "bottom",
         showarrow: false,
-        font: { size: 8, color: label.color, family: "JetBrains Mono, monospace" },
+        font: { size: 11, color: label.color, family: monoFont },
       })),
       shapes,
       uirevision: astronautId,
@@ -748,10 +755,10 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           <button
             type="button"
             onClick={toggleDecimation}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors select-none ${
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors select-none ${
               decimationEnabled
-                ? "border-border-strong bg-surface-subtle text-foreground"
-                : "border-border bg-surface text-muted hover:text-secondary"
+                ? "border-sky-200 bg-sky-50 text-sky-700"
+                : "border-border bg-white text-muted hover:text-secondary"
             }`}
             title="Largest-Triangle-Three-Buckets downsampling (1,000 points per lane)"
           >
@@ -762,12 +769,12 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
             variant="default"
             size="sm"
             onClick={() => setReloadToken((token) => token + 1)}
-            leftIcon={<Activity className={`h-3.5 w-3.5 ${isLoading ? "animate-pulse" : ""}`} />}
+            leftIcon={<Activity className={`h-3.5 w-3.5 text-sky-600 ${isLoading ? "animate-pulse" : ""}`} />}
           >
             {isLoading ? "Loading" : "Refresh"}
           </Button>
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs text-muted">
-            <Layers className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-border glass-panel px-2.5 py-1 text-xs text-muted">
+            <Layers className="h-3.5 w-3.5 text-sky-600" />
             {events.length} events · {symptoms.length} symptoms
           </span>
         </div>
@@ -781,16 +788,16 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
               key={streamId}
               type="button"
               onClick={() => toggleStream(streamId)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors select-none ${
+              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors select-none ${
                 active
-                  ? "border-border bg-surface-subtle text-foreground"
-                  : "border-border bg-surface text-muted hover:text-secondary hover:bg-surface-elevated"
+                  ? "border-border-strong bg-white text-foreground shadow-sm"
+                  : "border-border bg-surface-subtle text-muted hover:text-secondary hover:bg-white"
               }`}
             >
               <span
-                className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full"
+                className="mr-1.5 inline-block h-2 w-2 rounded-full"
                 style={{
-                  backgroundColor: active ? STREAM_COLORS[streamId] : "#525252",
+                  backgroundColor: active ? STREAM_COLORS[streamId] : "#94a3b8",
                 }}
               />
               {prettyStream(streamId)}
@@ -800,7 +807,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
       </div>
 
       {error ? (
-        <div className="flex items-center gap-2 rounded-lg border border-critical/25 bg-critical/10 px-4 py-3 text-xs text-critical">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
           <TriangleAlert className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -811,10 +818,10 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           isDrawerOpen ? "w-full lg:w-[calc(100%-500px)]" : "w-full"
         }`}
       >
-        <div className="rounded-lg border border-border bg-surface relative h-[calc(100vh-260px)] min-h-[640px] overflow-hidden p-2">
+        <div className="rounded-xl glass-panel relative h-[calc(100vh-260px)] min-h-[640px] overflow-hidden p-2">
           {!hasTelemetry && !isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <span className="grid h-12 w-12 place-items-center rounded-lg border border-border bg-surface-elevated text-muted">
+              <span className="grid h-12 w-12 place-items-center rounded-lg border border-border bg-surface-subtle text-sky-600">
                 <Activity className="h-5 w-5" />
               </span>
               <div>
@@ -846,7 +853,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-surface flex flex-wrap items-center justify-between gap-3 p-3">
+      <div className="rounded-xl glass-panel flex flex-wrap items-center justify-between gap-3 p-3">
         <div className="flex flex-wrap items-center gap-2">
           {(["INVESTIGATE", "OBSERVE", "INFO"] as const).map((severity) => {
             const theme = severityTheme(severity);
@@ -870,7 +877,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
       </div>
 
       {events.length ? (
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-xl glass-panel p-4">
           <p className="field-label">Concordance ribbons on lane 4</p>
           <p className="mt-0.5 text-xs text-muted">
             Select a ribbon to open the evidence drawer
@@ -883,7 +890,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
                   key={event.event_id}
                   type="button"
                   onClick={() => void openForEvent(event)}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-surface-subtle ${theme.border} ${theme.text}`}
+                  className={`rounded-md border px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors hover:bg-surface-subtle ${theme.border} ${theme.text} ${theme.background}`}
                   title={parseStreamIds(event.contributing_stream_ids)
                     .map(prettyStream)
                     .join(" · ")}

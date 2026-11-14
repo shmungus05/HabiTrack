@@ -8,12 +8,12 @@ export interface StatusDotProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  online: "bg-foreground",
-  offline: "bg-faint",
-  calibrated: "bg-secondary",
-  calibrating: "bg-muted",
-  warn: "bg-foreground",
-  error: "bg-critical",
+  online: "bg-emerald-500",
+  offline: "bg-slate-400",
+  calibrated: "bg-emerald-500",
+  calibrating: "bg-amber-500",
+  warn: "bg-amber-500",
+  error: "bg-red-600",
 };
 
 export function StatusDot({

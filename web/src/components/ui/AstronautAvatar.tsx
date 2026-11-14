@@ -64,12 +64,12 @@ interface CrewIdentity {
 }
 
 const CREW_IDENTITIES: Record<string, CrewIdentity> = {
-  "ASTRO-01": { accent: "#a3a3a3", photo: "/avatars/astro-01.jpg" },
-  "ASTRO-02": { accent: "#737373", photo: "/avatars/astro-02.jpg" },
-  "ASTRO-03": { accent: "#a3a3a3", photo: "/avatars/astro-03.jpg" },
+  "ASTRO-01": { accent: "#0284c7", photo: "/avatars/astro-01.jpg" },
+  "ASTRO-02": { accent: "#0891b2", photo: "/avatars/astro-02.jpg" },
+  "ASTRO-03": { accent: "#059669", photo: "/avatars/astro-03.jpg" },
 };
 
-const DEFAULT_ACCENT = "#a3a3a3";
+const DEFAULT_ACCENT = "#0284c7";
 
 /** Per-crew accent used by portraits and any identity chrome around them. */
 export function crewAccent(astronautId: string): string {
@@ -98,7 +98,7 @@ export function AstronautAvatar({
   const px = SIZE_PX[size];
 
   const selectedRing = selected
-    ? "ring-2 ring-foreground/60 ring-offset-2 ring-offset-canvas"
+    ? "ring-2 ring-sky-500/70 ring-offset-2 ring-offset-canvas"
     : "";
 
   return (
@@ -121,7 +121,7 @@ export function AstronautAvatar({
           aria-hidden="true"
           className={`grid h-full w-full place-items-center bg-surface-subtle font-mono font-semibold text-secondary ${RADIUS[size]}`}
           style={{
-            fontSize: Math.max(9, Math.round(px * 0.28)),
+            fontSize: Math.max(11, Math.round(px * 0.28)),
             boxShadow: `inset 0 -${Math.round(px * 0.4)}px ${Math.round(
               px * 0.5,
             )}px -${Math.round(px * 0.4)}px ${accent}`,
@@ -133,8 +133,8 @@ export function AstronautAvatar({
 
       {status ? (
         <span
-          className={`absolute ${DOT_OFFSET[size]} ${DOT_SIZE[size]} rounded-full border-2 border-canvas ${
-            status === "CALIBRATED" ? "bg-foreground" : "bg-muted"
+          className={`absolute ${DOT_OFFSET[size]} ${DOT_SIZE[size]} rounded-full border-2 border-white ${
+            status === "CALIBRATED" ? "bg-emerald-500" : "bg-amber-500"
           }`}
           title={status === "CALIBRATED" ? "Baseline calibrated" : "Baseline calibrating"}
         />

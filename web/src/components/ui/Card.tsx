@@ -23,18 +23,18 @@ export function Card({
 }: CardProps) {
   const bg =
     variant === "elevated"
-      ? "bg-surface-elevated border-border"
+      ? "bg-surface-elevated border-border-strong shadow-elevated"
       : variant === "inset"
-      ? "bg-canvas border-border-subtle"
-      : "bg-surface border-border";
+      ? "bg-surface-subtle border-border"
+      : "glass-panel";
 
   const hover = interactive
-    ? "transition-colors hover:border-border-strong cursor-pointer"
+    ? "glass-card-hover cursor-pointer"
     : "";
 
   return (
     <div
-      className={`rounded-lg border ${bg} ${PADDING_MAP[padding]} ${hover} ${className}`}
+      className={`rounded-xl border ${bg} ${PADDING_MAP[padding]} ${hover} ${className}`}
       {...props}
     >
       {children}

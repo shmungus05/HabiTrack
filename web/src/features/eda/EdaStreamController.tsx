@@ -30,34 +30,48 @@ interface MiniSparklineProps {
   height?: number;
 }
 
-const MiniSparkline: React.FC<MiniSparklineProps> = ({ data, color, height = 28 }) => {
+const MiniSparkline: React.FC<MiniSparklineProps> = ({ data, color, height = 30 }) => {
   if (!data || data.length < 2) {
-    return <div className="h-7 w-20 bg-surface/50 rounded-lg animate-pulse" />;
+    return <div className="h-7 w-20 bg-surface-subtle rounded-lg animate-pulse" />;
   }
 
   const values = data.map((d) => d.val);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const width = 80;
+  const width = 84;
+  const gradId = `eda-spark-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
 
-  const points = data
-    .map((d, i) => {
-      const x = (i / (data.length - 1)) * width;
-      const y = height - ((d.val - min) / range) * (height - 6) - 3;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const coords = data.map((d, i) => ({
+    x: (i / (data.length - 1)) * width,
+    y: height - ((d.val - min) / range) * (height - 8) - 4,
+  }));
+
+  let linePath = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cx = ((p0.x + p1.x) / 2).toFixed(1);
+    linePath += ` C ${cx},${p0.y.toFixed(1)} ${cx},${p1.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+  }
+  const areaPath = `${linePath} L ${coords[coords.length - 1].x.toFixed(1)},${height} L ${coords[0].x.toFixed(1)},${height} Z`;
 
   return (
     <svg width={width} height={height} className="overflow-visible inline-block">
-      <polyline
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.18} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path
+        d={linePath}
         fill="none"
         stroke={color}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        points={points}
       />
     </svg>
   );
@@ -83,14 +97,14 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
 
   return (
     <section
-      className={`p-4 sm:p-6 bg-surface rounded-lg border border-border relative overflow-hidden ${className}`}
+      className={`p-5 sm:p-6 glass-panel rounded-xl relative overflow-hidden ${className}`}
     >
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <Zap className="w-3.5 h-3.5 text-muted" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
+            <Zap className="w-3.5 h-3.5 text-sky-600" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
               NASA EDA · ISS Expedition 71/72 · RR-1
             </span>
           </div>
@@ -107,43 +121,56 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
           href="https://visualization.osdr.nasa.gov/eda/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium text-secondary hover:text-foreground bg-surface-elevated hover:bg-surface-subtle border border-border transition-colors cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-sky-700 hover:text-sky-800 glass-panel-subtle hover:border-sky-300 transition-colors cursor-pointer self-start sm:self-auto"
         >
           <span>NASA OSDR / EDA</span>
-          <ExternalLink className="w-3.5 h-3.5 text-muted" />
+          <ExternalLink className="w-3.5 h-3.5 text-sky-600" />
         </a>
       </div>
 
       {/* Main Metric Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 py-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 py-5">
         {/* CO2 Card */}
-        <div className="p-4 rounded-lg bg-surface-elevated border border-border transition-colors hover:border-border-strong">
-          <div className="flex items-center justify-between text-[11px] text-muted mb-2">
+        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#0284c7]">
+          <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
             <span className="font-medium flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-secondary" />
+              <Activity className="w-3.5 h-3.5 text-[#0284c7]" />
               Carbon Dioxide
             </span>
-            <MiniSparkline data={sparklines.co2} color="#a3a3a3" />
+            <MiniSparkline data={sparklines.co2} color="#0284c7" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className={`text-2xl font-semibold font-mono tabular-nums ${isCo2Elevated ? "text-critical" : "text-foreground"}`}>
+            <span
+              className={`text-2xl font-semibold font-mono tabular-nums ${
+                currentRecord.co2 >= 4000
+                  ? "text-red-700"
+                  : isCo2Elevated
+                  ? "text-amber-700"
+                  : "text-foreground"
+              }`}
+            >
               {currentRecord.co2.toLocaleString()}
             </span>
             <span className="text-[11px] text-muted font-mono">PPM</span>
           </div>
           <div className="text-[11px] font-mono text-muted mt-1">
-            {co2MmHg} mmHg {isCo2Elevated && <span className="text-critical ml-1">· elevated</span>}
+            {co2MmHg} mmHg{" "}
+            {isCo2Elevated && (
+              <span className={currentRecord.co2 >= 4000 ? "text-red-700 ml-1" : "text-amber-700 ml-1"}>
+                · elevated
+              </span>
+            )}
           </div>
         </div>
 
         {/* Temperature Card */}
-        <div className="p-4 rounded-lg bg-surface-elevated border border-border transition-colors hover:border-border-strong">
-          <div className="flex items-center justify-between text-[11px] text-muted mb-2">
+        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#ea580c]">
+          <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
             <span className="font-medium flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-secondary" />
+              <Flame className="w-3.5 h-3.5 text-[#ea580c]" />
               Cabin Temperature
             </span>
-            <MiniSparkline data={sparklines.temp} color="#a3a3a3" />
+            <MiniSparkline data={sparklines.temp} color="#ea580c" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
@@ -157,13 +184,13 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
 
         {/* Humidity Card */}
-        <div className="p-4 rounded-lg bg-surface-elevated border border-border transition-colors hover:border-border-strong">
-          <div className="flex items-center justify-between text-[11px] text-muted mb-2">
+        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#0891b2]">
+          <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
             <span className="font-medium flex items-center gap-1.5">
-              <Droplets className="w-3.5 h-3.5 text-secondary" />
+              <Droplets className="w-3.5 h-3.5 text-[#0891b2]" />
               Relative Humidity
             </span>
-            <MiniSparkline data={sparklines.humidity} color="#a3a3a3" />
+            <MiniSparkline data={sparklines.humidity} color="#0891b2" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
@@ -177,13 +204,13 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
 
         {/* Radiation Card */}
-        <div className="p-4 rounded-lg bg-surface-elevated border border-border transition-colors hover:border-border-strong">
-          <div className="flex items-center justify-between text-[11px] text-muted mb-2">
+        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#d97706]">
+          <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
             <span className="font-medium flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-secondary" />
+              <Radio className="w-3.5 h-3.5 text-[#d97706]" />
               Radiation Flux
             </span>
-            <MiniSparkline data={sparklines.radiation} color="#737373" />
+            <MiniSparkline data={sparklines.radiation} color="#d97706" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
@@ -197,15 +224,14 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
       </div>
 
-
       {/* Scrubber & Controls Bar */}
-      <div className="p-5 rounded-lg bg-surface-elevated border border-border space-y-4">
+      <div className="p-5 rounded-xl glass-panel-subtle space-y-4">
         {/* Scrubber slider */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-mono text-muted">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">{currentRecord.displayTime} UTC</span>
-              <span className="text-[11px] text-faint">({currentRecord.fullTimestamp})</span>
+              <span className="font-semibold text-sky-700">{currentRecord.displayTime} UTC</span>
+              <span className="text-[11px] text-muted">({currentRecord.fullTimestamp})</span>
             </div>
             <span>
               Frame <strong className="text-foreground">{currentIndex + 1}</strong> of {totalRecords}
@@ -217,7 +243,7 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
             max={totalRecords - 1}
             value={currentIndex}
             onChange={(e) => controls.seek(Number(e.target.value))}
-            className="w-full accent-[#8b9dff] cursor-pointer h-1.5 bg-surface-subtle rounded-lg appearance-none"
+            className="w-full accent-[#0284c7] cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none"
           />
         </div>
 
@@ -226,14 +252,14 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
           <div className="flex items-center gap-2">
             <button
               onClick={controls.stepBackward}
-              className="p-2 rounded-lg bg-surface-subtle hover:bg-surface text-secondary hover:text-foreground transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-white hover:bg-slate-50 border border-border text-secondary hover:text-sky-700 transition-colors cursor-pointer"
               title="Step Backward"
             >
               <SkipBack className="w-4 h-4" />
             </button>
             <button
               onClick={controls.togglePlay}
-              className="px-4 py-2 rounded-lg bg-foreground hover:bg-foreground/90 text-canvas font-semibold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
             >
               {isPlaying ? (
                 <>
@@ -249,31 +275,32 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
             </button>
             <button
               onClick={controls.stepForward}
-              className="p-2 rounded-lg bg-surface-subtle hover:bg-surface text-secondary hover:text-foreground transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-white hover:bg-slate-50 border border-border text-secondary hover:text-sky-700 transition-colors cursor-pointer"
               title="Step Forward"
             >
               <SkipForward className="w-4 h-4" />
             </button>
             <button
               onClick={() => controls.seek(0)}
-              className="p-2 rounded-lg bg-surface-subtle hover:bg-surface text-muted hover:text-foreground transition-colors cursor-pointer"
-              title="Reset to Beginning"
+              className="px-2.5 py-2 rounded-lg bg-white hover:bg-slate-50 border border-border text-muted hover:text-sky-700 transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-medium"
+              title="Return to Normal / Reset"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reset</span>
             </button>
           </div>
 
           {/* Speed selector */}
-          <div className="flex items-center gap-1.5 bg-surface-subtle p-1 rounded-lg border border-border">
-            <span className="text-[10px] font-mono text-muted uppercase tracking-wider px-2">Speed</span>
+          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-border">
+            <span className="text-[11px] font-mono text-muted uppercase tracking-wider px-2">Speed</span>
             {([1, 2, 5] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => controls.setSpeed(s)}
                 className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer ${
                   speed === s
-                    ? "bg-foreground text-canvas"
-                    : "text-muted hover:text-foreground hover:bg-surface"
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-muted hover:text-foreground hover:bg-surface-subtle"
                 }`}
               >
                 {s}x

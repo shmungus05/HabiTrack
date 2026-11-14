@@ -230,11 +230,13 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   return (
     <div className="space-y-6">
       {/* Top Banner & Mode Switcher */}
-      <div className="p-4 sm:p-6 bg-surface rounded-lg border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-5 sm:p-6 glass-panel rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Stethoscope className="w-3.5 h-3.5 text-muted" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted">Crew Symptom &amp; Health Log</span>
+            <Stethoscope className="w-3.5 h-3.5 text-sky-600" />
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
+              Crew Symptom &amp; Health Log
+            </span>
             <span className="text-[11px] font-mono text-muted">{astronautId}</span>
           </div>
           <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
@@ -246,13 +248,13 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         </div>
 
         {/* 3-Mode View Switcher */}
-        <div className="flex items-center bg-surface-elevated rounded-lg p-1.5 border border-border text-xs self-start md:self-auto">
+        <div className="flex flex-wrap items-center glass-panel-subtle rounded-xl p-1.5 text-xs self-start md:self-auto gap-1">
           <button
             onClick={() => setViewMode("chatbot")}
-            className={`px-3.5 py-2 rounded-md font-medium flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent ${
+            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
               viewMode === "chatbot"
-                ? "bg-surface-subtle text-foreground border-border-strong"
-                : "text-muted hover:text-foreground"
+                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -260,10 +262,10 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </button>
           <button
             onClick={() => setViewMode("history")}
-            className={`px-3.5 py-2 rounded-md font-medium flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent ${
+            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
               viewMode === "history"
-                ? "bg-surface-subtle text-foreground border-border-strong"
-                : "text-muted hover:text-foreground"
+                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             <ClipboardList className="w-3.5 h-3.5" />
@@ -271,10 +273,10 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </button>
           <button
             onClick={() => setViewMode("manual")}
-            className={`px-3.5 py-2 rounded-md font-medium flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent ${
+            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
               viewMode === "manual"
-                ? "bg-surface-subtle text-foreground border-border-strong"
-                : "text-muted hover:text-foreground"
+                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                : "border-transparent text-muted hover:text-foreground"
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -284,15 +286,15 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       </div>
 
       {notice && (
-        <div className="p-3 rounded-md bg-surface-elevated border border-border text-xs text-secondary flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
           <span>{notice}</span>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-lg bg-critical/10 border border-critical/30 text-xs text-critical flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{error}</span>
         </div>
       )}
@@ -319,7 +321,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       {/* MODE 2: HISTORY DIARY */}
       {viewMode === "history" && (
         <div className="space-y-6">
-          <div className="p-4 sm:p-6 bg-surface rounded-lg border border-border space-y-5">
+          <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               {/* Search & Filter */}
               <div className="flex flex-wrap items-center gap-3">
@@ -330,18 +332,18 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                     placeholder="Search symptoms or module..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-4 py-2 rounded-lg bg-surface-elevated border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-accent-light"
+                    className="pl-9 pr-4 py-2 rounded-lg bg-white border border-border text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-accent"
                   />
                 </div>
 
-                <div className="flex items-center gap-1 bg-surface-elevated p-1 rounded-lg border border-border text-xs font-mono">
+                <div className="flex items-center gap-1 glass-panel-subtle p-1 rounded-lg text-xs font-mono">
                   {["ALL", "MILD", "MODERATE", "SEVERE"].map((sev) => (
                     <button
                       key={sev}
                       onClick={() => setFilterSeverity(sev)}
                       className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors ${
                         filterSeverity === sev
-                          ? "bg-surface-subtle text-foreground border-border-strong"
+                          ? "bg-white text-sky-700 border-sky-200 shadow-sm"
                           : "border-transparent text-muted hover:text-foreground"
                       }`}
                     >
@@ -355,21 +357,21 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleLoadSample}
-                  className="px-3.5 py-2 rounded-lg bg-surface-elevated hover:bg-surface-subtle border border-border text-xs font-semibold text-secondary hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg bg-white border border-border hover:border-sky-300 text-xs font-semibold text-secondary hover:text-sky-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-secondary" />
+                  <Sparkles className="w-3.5 h-3.5 text-sky-600" />
                   <span>Load Sample Case</span>
                 </button>
                 <button
                   onClick={handleExportJSON}
-                  className="px-3.5 py-2 rounded-lg bg-accent-secondary hover:bg-accent-hover text-foreground text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export JSON</span>
                 </button>
                 <button
                   onClick={handleClearDiary}
-                  className="p-2 rounded-lg bg-surface-elevated hover:bg-critical/20 text-muted hover:text-critical border border-border transition-colors cursor-pointer"
+                  className="p-2 rounded-lg bg-white border border-border hover:bg-red-50 hover:border-red-200 text-muted hover:text-red-700 transition-colors cursor-pointer"
                   title="Clear Diary"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -380,35 +382,35 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             {/* Symptom Cards Grid */}
             <div className="space-y-3 pt-2">
               {filteredDiary.length === 0 ? (
-                <div className="p-8 text-center text-muted text-xs border border-dashed border-border rounded-lg">
+                <div className="p-8 text-center text-muted text-xs border border-dashed border-border rounded-xl">
                   No symptom reports match your query.
                 </div>
               ) : (
                 filteredDiary.map((item) => (
                   <div
                     key={item.id}
-                    className="p-5 rounded-lg bg-surface-elevated border border-border hover:border-border-strong transition-colors space-y-2"
+                    className="p-5 rounded-xl glass-panel-subtle glass-card-hover space-y-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-sm text-foreground">{item.symptom}</span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider ${
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider ${
                             item.severity === "Severe"
-                              ? "bg-critical/20 text-critical border border-critical/40"
+                              ? "bg-red-50 text-red-700 border border-red-200"
                               : item.severity === "Moderate"
-                              ? "bg-surface-subtle text-foreground border border-border-strong"
-                              : "bg-transparent text-muted border border-border"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                           }`}
                         >
                           {item.severity}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-muted">
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5 text-sky-600" />
                         <span>{item.time}</span>
                         <span>·</span>
-                        <MapPin className="w-3.5 h-3.5 text-muted" />
+                        <MapPin className="w-3.5 h-3.5 text-sky-600" />
                         <span>{item.location}</span>
                       </div>
                     </div>
@@ -417,7 +419,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
                     {item.environmentalFactor && (
                       <div className="pt-2 border-t border-border text-[11px] font-mono text-muted flex items-center gap-2">
-                        <span className="text-secondary font-medium">Telemetry Concordance:</span>
+                        <span className="text-sky-700 font-medium">Telemetry Concordance:</span>
                         <span>{item.environmentalFactor}</span>
                       </div>
                     )}
@@ -431,7 +433,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
       {/* MODE 3: MANUAL FAST-LOG */}
       {viewMode === "manual" && (
-        <div className="p-4 sm:p-6 bg-surface rounded-lg border border-border max-w-2xl mx-auto space-y-5">
+        <div className="p-5 sm:p-6 glass-panel rounded-xl max-w-2xl mx-auto space-y-5">
           <div className="border-b border-border pb-4">
             <h3 className="text-base font-semibold text-foreground">Manual Crew Symptom Entry</h3>
             <p className="text-xs text-muted">Validated submission feeding clinical concordance models</p>
@@ -439,7 +441,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
           <form onSubmit={submitManual} className="space-y-4 text-xs">
             <div>
-              <label className="block text-muted font-semibold mb-1.5">Symptom Classification</label>
+              <label className="block text-secondary font-semibold mb-1.5">Symptom Classification</label>
               <select
                 value={symptomCode}
                 onChange={(e) => setSymptomCode(e.target.value as (typeof SYMPTOM_CODES)[number])}
@@ -455,8 +457,8 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
             <div>
               <div className="flex justify-between font-mono mb-1.5">
-                <span className="text-muted font-semibold">Severity Rating</span>
-                <span className="text-foreground font-semibold">{severity} / 5</span>
+                <span className="text-secondary font-semibold">Severity Rating</span>
+                <span className="text-sky-700 font-semibold">{severity} / 5</span>
               </div>
               <input
                 type="range"
@@ -465,9 +467,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                 step={1}
                 value={severity}
                 onChange={(e) => setSeverity(Number(e.target.value))}
-                className="w-full accent-[#8b9dff] cursor-pointer h-1.5 bg-surface-subtle rounded-lg appearance-none"
+                className="w-full accent-[#0284c7] cursor-pointer h-1.5 bg-surface-subtle rounded-lg appearance-none"
               />
-              <div className="flex justify-between text-[10px] text-faint font-mono mt-1">
+              <div className="flex justify-between text-[11px] text-muted font-mono mt-1">
                 <span>1 - Mild</span>
                 <span>3 - Moderate</span>
                 <span>5 - Incapacitating</span>
@@ -475,11 +477,11 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             </div>
 
             <div>
-              <label className="block text-muted font-semibold mb-1.5">Spacecraft Compartment</label>
+              <label className="block text-secondary font-semibold mb-1.5">Spacecraft Compartment</label>
               <select
                 value={cabinModule}
                 onChange={(e) => setCabinModule(e.target.value)}
-                className="w-full h-10 px-3.5 rounded-lg bg-surface-elevated border border-border text-foreground text-xs focus:outline-none focus:border-accent-light cursor-pointer"
+                className="w-full h-10 px-3.5 rounded-lg bg-white border border-border text-foreground text-xs focus:outline-none focus:border-accent cursor-pointer"
               >
                 {CABIN_MODULES.map((m) => (
                   <option key={m} value={m} className="bg-surface text-foreground">
@@ -490,20 +492,20 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             </div>
 
             <div>
-              <label className="block text-muted font-semibold mb-1.5">Observations &amp; Notes</label>
+              <label className="block text-secondary font-semibold mb-1.5">Observations &amp; Notes</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Frontal throbbing pressure, transient blurriness, onset following exercise…"
-                className="w-full p-3 rounded-lg bg-surface-elevated border border-border text-foreground text-xs focus:outline-none focus:border-accent-light"
+                className="w-full p-3 rounded-lg bg-white border border-border text-foreground text-xs focus:outline-none focus:border-accent"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 rounded-lg bg-accent-secondary hover:bg-accent-hover text-foreground text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isSubmitting ? "Transmitting..." : "Submit to Station Health Record"}</span>

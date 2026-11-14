@@ -37,16 +37,22 @@ export function Tabs({
               aria-selected={isActive}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-2 py-2 text-xs font-medium transition-colors border-b-2 -mb-[1px] ${
+              className={`flex items-center gap-2 py-2 text-xs font-medium cursor-pointer transition-colors border-b-2 -mb-[1px] ${
                 isActive
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted hover:text-secondary"
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               {tab.icon}
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
-                <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-[10px] text-secondary">
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[11px] ${
+                    isActive
+                      ? "bg-slate-100 text-slate-800 border border-slate-200"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
                   {tab.badge}
                 </span>
               )}
@@ -59,7 +65,7 @@ export function Tabs({
 
   return (
     <div
-      className={`inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-lg border border-slate-200/70 bg-slate-100/80 p-1 ${className}`}
       role="tablist"
     >
       {items.map((tab) => {
@@ -71,16 +77,22 @@ export function Tabs({
             aria-selected={isActive}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 select-none ${
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors duration-150 select-none ${
               isActive
-                ? "bg-surface-subtle text-foreground border border-border-strong"
-                : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+                ? "bg-white text-slate-900 border border-slate-200/90 shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent"
             }`}
           >
             {tab.icon}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
-              <span className="rounded bg-surface-hover px-1.5 py-0.5 text-[10px] text-secondary">
+              <span
+                className={`rounded px-1.5 py-0.5 text-[11px] ${
+                  isActive
+                    ? "bg-slate-100 text-slate-800 border border-slate-200"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
                 {tab.badge}
               </span>
             )}

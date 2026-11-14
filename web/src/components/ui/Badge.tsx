@@ -19,40 +19,40 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const BADGE_VARIANTS: Record<BadgeVariant, { container: string; dot: string }> = {
   default: {
-    container: "bg-surface-elevated border-border text-secondary",
-    dot: "bg-muted",
+    container: "bg-slate-100/80 border-slate-200/80 text-slate-700",
+    dot: "bg-slate-500",
   },
   accent: {
-    container: "bg-accent-soft border-accent-secondary/50 text-accent-light",
-    dot: "bg-accent-light",
+    container: "bg-sky-50/80 border-sky-200/80 text-sky-700",
+    dot: "bg-sky-600",
   },
   success: {
-    container: "bg-surface-elevated border-border text-foreground",
-    dot: "bg-foreground",
+    container: "bg-emerald-50/80 border-emerald-200/80 text-emerald-700",
+    dot: "bg-emerald-600",
   },
   warning: {
-    container: "bg-surface-elevated border-border-strong text-foreground",
-    dot: "bg-foreground",
+    container: "bg-amber-50/80 border-amber-200/80 text-amber-700",
+    dot: "bg-amber-500",
   },
   danger: {
-    container: "bg-critical/10 border-critical/25 text-critical",
-    dot: "bg-critical",
+    container: "bg-red-50/80 border-red-200/80 text-red-700",
+    dot: "bg-red-600",
   },
   investigate: {
-    container: "bg-critical/10 border-critical/25 text-critical",
-    dot: "bg-critical",
+    container: "bg-red-50/80 border-red-200/80 text-red-700",
+    dot: "bg-red-600",
   },
   observe: {
-    container: "bg-surface-elevated border-border-strong text-secondary",
-    dot: "bg-secondary",
+    container: "bg-amber-50/80 border-amber-200/80 text-amber-700",
+    dot: "bg-amber-500",
   },
   info: {
-    container: "bg-surface-elevated border-border text-secondary",
-    dot: "bg-secondary",
+    container: "bg-sky-50/80 border-sky-200/80 text-sky-700",
+    dot: "bg-sky-600",
   },
   neutral: {
-    container: "bg-surface-elevated border-border-subtle text-muted",
-    dot: "bg-faint",
+    container: "bg-slate-50 border-slate-200/80 text-slate-600",
+    dot: "bg-slate-400",
   },
 };
 

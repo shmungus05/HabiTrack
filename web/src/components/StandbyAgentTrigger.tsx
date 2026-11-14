@@ -127,70 +127,47 @@ export const StandbyAgentTrigger: React.FC = () => {
   return (
     <aside
       aria-label="Standby AI Assistant"
-      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 select-none"
+      className="fixed bottom-4 right-4 z-40 flex items-center gap-2 select-none"
     >
       {/* Standby Trigger Pill */}
       <div
-        className={`group flex items-center gap-3 px-4 py-2.5 rounded-lg bg-surface-elevated border transition-colors duration-200 cursor-pointer ${
+        className={`group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white border transition-colors duration-150 cursor-pointer shadow-elevated ${
           latchedRule
-            ? "border-border-strong hover:border-foreground/40"
-            : "border-border hover:border-border-strong"
+            ? "border-amber-300 hover:border-amber-400"
+            : "border-slate-200 hover:border-slate-300"
         }`}
         onClick={() => openDrawer(latchedRule ? "checklists" : "evidence")}
+        title={latchedRule ? `${latchedRule.rule_id}: ${latchedRule.title}` : "Open Wayfinder AI (Ctrl+K)"}
       >
-        {/* Pulsing Status Dot */}
-        <div className="relative flex items-center justify-center">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              latchedRule
-                ? "bg-foreground"
-                : "bg-secondary"
-            }`}
-          />
-          {latchedRule && (
-            <span className="absolute w-5 h-5 rounded-full bg-foreground/15 animate-ping" />
-          )}
-        </div>
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            latchedRule ? "bg-amber-500" : "bg-sky-600"
+          }`}
+        />
 
-        {/* Pill Content */}
-        <div className="flex flex-col text-left">
-          <div className="flex items-center gap-2">
-            <span className="text-[12px] font-semibold uppercase tracking-wider text-foreground group-hover:text-foreground transition-colors">
-              WAYFINDER AI
-            </span>
-            {latchedRule && (
-              <span className="px-1.5 py-0.5 rounded bg-surface-subtle border border-border text-secondary text-[10px] font-mono font-medium tracking-tight">
-                {latchedRule.rule_id}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] text-muted font-mono">
-            {latchedRule
-              ? latchedRule.title.slice(0, 30) + "..."
-              : "Standby | Press Ctrl+K"}
+        <span className="text-xs font-semibold tracking-tight text-slate-900 whitespace-nowrap">
+          Wayfinder AI
+        </span>
+
+        {latchedRule && (
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-mono font-medium">
+            {latchedRule.rule_id}
           </span>
-        </div>
+        )}
 
-        {/* Keyboard Hint Badge */}
-        <div className="hidden sm:flex items-center gap-1 pl-1 text-[10px] font-mono text-faint">
-          <kbd className="px-1.5 py-0.5 rounded-md bg-surface-elevated border border-border text-secondary">
-            Ctrl
-          </kbd>
-          <span>+</span>
-          <kbd className="px-1.5 py-0.5 rounded-md bg-surface-elevated border border-border text-secondary">
-            K
-          </kbd>
-        </div>
+        <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[11px] font-mono text-slate-600">
+          Ctrl K
+        </kbd>
       </div>
 
       {/* Push-to-Talk Mic Button */}
       <button
         type="button"
         title={isRecording ? "Release to Send (Alt+V)" : "Push-to-Talk Voice (Alt+V)"}
-        className={`relative flex items-center justify-center w-11 h-11 rounded-lg border transition-colors duration-200 ${
+        className={`relative flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-150 cursor-pointer shadow-elevated ${
           isRecording
-            ? "bg-critical-strong border-critical text-white scale-105"
-            : "bg-surface-elevated hover:bg-surface-subtle border-border text-secondary hover:text-foreground"
+            ? "bg-red-600 border-red-600 text-white scale-105"
+            : "bg-white border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900"
         }`}
         onMouseDown={startListening}
         onMouseUp={stopListening}
@@ -200,7 +177,7 @@ export const StandbyAgentTrigger: React.FC = () => {
         {/* Dynamic Waveform Energy Aura */}
         {isRecording && (
           <span
-            className="absolute inset-0 rounded-lg border border-critical/60 pointer-events-none animate-ping"
+            className="absolute inset-0 rounded-full border border-red-400/70 pointer-events-none animate-ping"
             style={{
               transform: `scale(${1.0 + energyLevel * 0.8})`,
               opacity: 0.3 + energyLevel * 0.7,
@@ -208,7 +185,7 @@ export const StandbyAgentTrigger: React.FC = () => {
           />
         )}
         <svg
-          className="w-5 h-5 relative z-10"
+          className="w-4 h-4 relative z-10"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
