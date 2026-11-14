@@ -766,12 +766,13 @@ export async function resolveNasaMediaDirectUrl(item: NasaMediaItem): Promise<st
 
     let resolved = "";
     if (item.mediaType === "video") {
-      const mobile = files.find((f) => f.includes("~mobile.mp4"));
-      const preview = files.find((f) => f.includes("~preview.mp4"));
-      const small = files.find((f) => f.includes("~small.mp4"));
+      // Upgraded crisp 720p HD resolution without the 200MB+ ~orig.mp4 lag
       const medium = files.find((f) => f.includes("~medium.mp4"));
-      const anyMp4 = files.find((f) => f.endsWith(".mp4"));
-      resolved = mobile || preview || small || medium || anyMp4 || files[0] || "";
+      const small = files.find((f) => f.includes("~small.mp4"));
+      const preview = files.find((f) => f.includes("~preview.mp4"));
+      const mobile = files.find((f) => f.includes("~mobile.mp4"));
+      const anyMp4 = files.find((f) => f.endsWith(".mp4") && !f.includes("~orig.mp4"));
+      resolved = medium || small || preview || mobile || anyMp4 || files[0] || "";
     } else {
       const medium = files.find((f) => f.includes("~medium.jpg"));
       const large = files.find((f) => f.includes("~large.jpg"));

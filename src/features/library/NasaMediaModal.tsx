@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Film, Image as ImageIcon, Loader2, X } from "lucide-react";
 import type { NasaMediaItem } from "../../types/library";
 import { resolveNasaMediaDirectUrl } from "../../services/api";
+import { NasaDescriptionFormatter } from "./NasaDescriptionFormatter";
 
 interface NasaMediaModalProps {
   item: NasaMediaItem | null;
@@ -160,13 +161,16 @@ export function NasaMediaModal({ item, onClose }: NasaMediaModalProps) {
               ) : null}
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-2">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500">
-                NASA Archive Description
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {item.description || "No archival description provided by NASA."}
-              </p>
+            <div className="p-6 rounded-[24px] bg-slate-50/80 border border-slate-200/90 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500">
+                  NASA Archive Description &amp; Credits
+                </h3>
+                <span className="text-[11px] font-mono text-slate-400">
+                  Formatted HTML
+                </span>
+              </div>
+              <NasaDescriptionFormatter rawDescription={item.description} />
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@
       { "time": "02:15", "seconds": 135, "title": "Cool Down & Lock-Off" }
     ],
     "mediaType": "video_stream",
-    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4~mobile.mp4",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4~medium.mp4",
     "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4/jsc2025m000002_How_Do_Astronauts_Exercise_in_Space_250106-MP4~small.jpg",
     "relatedSymptomCodes": ["FATIGUE"],
     "verifiedBy": "NASA JSC Lead Countermeasures Officer"
@@ -105,7 +105,7 @@
       { "time": "02:20", "seconds": 140, "title": "Local CO2 Pocket Airflow Check" }
     ],
     "mediaType": "video_stream",
-    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social~preview.mp4",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social~medium.mp4",
     "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social/jsc2020m000201-SpaceX_Crew_Dragon_Flies_Through_Habitability_Testing_social~medium_1.jpg",
     "relatedSymptomCodes": ["HEADACHE", "FATIGUE"],
     "verifiedBy": "ISS Environmental Health Officer"
@@ -141,7 +141,7 @@
       { "time": "02:15", "seconds": 135, "title": "Debris Flush & Evaluation" }
     ],
     "mediaType": "video_stream",
-    "mediaUrl": "https://images-assets.nasa.gov/video/GRC-2020-CM-0152/GRC-2020-CM-0152~mobile.mp4",
+    "mediaUrl": "https://images-assets.nasa.gov/video/GRC-2020-CM-0152/GRC-2020-CM-0152~medium.mp4",
     "thumbnailUrl": "https://images-assets.nasa.gov/video/GRC-2020-CM-0152/GRC-2020-CM-0152~thumb.jpg",
     "relatedSymptomCodes": ["HEADACHE"],
     "verifiedBy": "Chief Medical Officer · Expedition 71"
@@ -177,7 +177,7 @@
       { "time": "01:30", "seconds": 90, "title": "Kneading & Thermal Warmer Stacking" }
     ],
     "mediaType": "video_stream",
-    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4~mobile.mp4",
+    "mediaUrl": "https://images-assets.nasa.gov/video/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4~medium.mp4",
     "thumbnailUrl": "https://images-assets.nasa.gov/video/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4/jsc2023m000216_Frank_Rubio_SpaceKitchen_Cocina%20espacial_Spanish_HighQuality_1080_MP4~small.jpg",
     "relatedSymptomCodes": ["FATIGUE", "NAUSEA"],
     "verifiedBy": "NASA Lead Nutritionist"
@@ -213,7 +213,7 @@
       { "time": "02:00", "seconds": 120, "title": "Sortie Return & Ingress" }
     ],
     "mediaType": "video_stream",
-    "mediaUrl": "https://images-assets.nasa.gov/video/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023~preview.mp4",
+    "mediaUrl": "https://images-assets.nasa.gov/video/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023~medium.mp4",
     "thumbnailUrl": "https://images-assets.nasa.gov/video/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023/Stepping%20Out%20for%20a%20Spacewalk%20at%20the%20Space%20Station%20on%20This%20Week%20%40NASA%20%E2%80%93%20November%203%2C%202023~small_1.jpg",
     "relatedSymptomCodes": ["FATIGUE"],
     "verifiedBy": "ESA EAC Astronaut Trainer"
