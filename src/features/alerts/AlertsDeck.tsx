@@ -14,14 +14,7 @@ import {
   Check,
   AlertCircle,
   AlertTriangle,
-  Activity,
-  Wind,
-  Thermometer,
-  Heart,
-  Sparkles,
-  RotateCcw,
   RefreshCw,
-  Zap,
   X,
 } from "lucide-react";
 import {
@@ -35,6 +28,7 @@ import { useSimulationSandbox } from "../simulation";
 import { parseEventRationale } from "../../components/EventRationaleDisplay";
 import { useBiomedicalSettings } from "../settings";
 import { PhysiologicalCards, usePhysiologicalTelemetry } from "../biometrics";
+import { useActiveMissionTime } from "../../stores/missionStore";
 import type {
   Baselines,
   HealthEvent,
@@ -96,7 +90,8 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     state.astronauts.find((a) => a.astronaut_id === activeAstronautId)
   );
 
-  const [simulationState, simulationControls] = useSimulationSandbox();
+  const { isSimulation, currentMissionDay, utcString } = useActiveMissionTime();
+  const [simulationState] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
@@ -157,7 +152,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     void loadData();
     const interval = window.setInterval(loadData, 12000);
     return () => window.clearInterval(interval);
-  }, [activeAstronautId]);
+  }, [activeAstronautId, isSimulation, currentMissionDay]);
 
   // Extract latest measurements with synchronized simulation overrides & clean nominal defaults
   const activeScenarios = simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
@@ -165,10 +160,6 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
   const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
   const isNominal = !hasCo2 && !hasThermal && !hasSaa;
-  const isCo2Active = hasCo2;
-  const isThermalActive = hasThermal;
-  const isSaaActive = hasSaa;
-  const isNominalActive = isNominal;
 
   const vitals = usePhysiologicalTelemetry(activeAstronautId);
 
@@ -202,7 +193,9 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
   // Derive real-time alerts by evaluating live telemetry against baselines
   const generatedAlerts = useMemo<RealtimeAlertItem[]>(() => {
     const list: RealtimeAlertItem[] = [];
-    const nowUtc = new Date().toISOString().slice(11, 16) + " UTC";
+    const nowUtc = isSimulation
+      ? `D${currentMissionDay} ${utcString.slice(11, 16)} UTC`
+      : new Date().toISOString().slice(11, 16) + " UTC";
 
     // -------------------------------------------------------------------------
     // 1. Cabin CO2 Real-Time Alert
@@ -603,222 +596,8 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         <PhysiologicalCards astronautId={activeAstronautId} compact />
       </div>
 
-      {/* Interactive Real-Time Testing & Navigation Indicators Card */}
-      <div className="mt-4 p-3.5 sm:p-4 rounded-xl bg-white border border-border shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-2.5">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-sky-600 shrink-0" />
-            <h3 className="text-xs font-bold text-sky-800 uppercase tracking-wider">
-              Interactive Real-Time Testing &amp; Navigation Indicators
-            </h3>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!isNominalActive ? (
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[10px] animate-pulse flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                <span>
-                  {[
-                    isCo2Active && "CO₂ SPIKE",
-                    isThermalActive && "OVERHEAT",
-                    isSaaActive && "SAA RADIATION",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}{" "}
-                  ACTIVE
-                </span>
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                <span>Baselines Nominal · All Systems Normal</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Compact Clickable Metric Indicators Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {/* Cabin CO2 Pill */}
-          <button
-            type="button"
-            onClick={() => simulationControls.toggleScenario("co2_spike")}
-            className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-              hasCo2
-                ? "bg-amber-100/90 border-amber-400 ring-2 ring-amber-400 shadow-2xs"
-                : "bg-slate-50 hover:bg-amber-50/70 border-slate-200 hover:border-amber-300"
-            }`}
-            title="Click to toggle CO₂ Spike simulation anomaly (4,350 PPM)"
-          >
-            <Wind className={`w-4 h-4 shrink-0 ${hasCo2 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                Live Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className={`font-mono text-xs font-bold ${hasCo2 ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
-                  {isMetric ? `${Math.round(latestTelemetry.co2 * 750).toLocaleString()} PPM` : `${latestTelemetry.co2.toFixed(2)} mmHg`}
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  ({isMetric ? "Base 2,250" : "Base 3.00"})
-                </span>
-              </div>
-            </div>
-            {hasCo2 && <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping shrink-0" />}
-          </button>
-
-          {/* Heart Rate Pill */}
-          <button
-            type="button"
-            onClick={() => simulationControls.toggleScenario("co2_spike")}
-            className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-              vitals.hrAlert
-                ? "bg-rose-50 border-rose-300 ring-2 ring-rose-400 shadow-2xs"
-                : "bg-slate-50 hover:bg-rose-50/50 border-slate-200 hover:border-rose-300"
-            }`}
-            title="Cardiovascular reaction to elevated CO₂ and thermal stress"
-          >
-            <Heart className={`w-4 h-4 shrink-0 ${vitals.hrAlert ? "text-rose-600 animate-pulse" : "text-rose-500"}`} />
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Heart Rate</span>
-              <div className="flex items-baseline gap-1">
-                <span className={`font-mono text-xs font-bold ${vitals.hrAlert ? "text-rose-700 font-extrabold" : "text-slate-900"}`}>
-                  {vitals.hr} bpm
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  (Base {vitals.baselineHr})
-                </span>
-              </div>
-            </div>
-            {vitals.hrAlert && <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-ping shrink-0" />}
-          </button>
-
-          {/* HRV Pill */}
-          <button
-            type="button"
-            onClick={() => simulationControls.toggleScenario("co2_spike")}
-            className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-              vitals.rmssdAlert
-                ? "bg-amber-50 border-amber-300 ring-2 ring-amber-400 shadow-2xs"
-                : "bg-slate-50 hover:bg-amber-50/50 border-slate-200 hover:border-amber-300"
-            }`}
-            title="Heart Rate Variability (RMSSD) autonomic response"
-          >
-            <Activity className={`w-4 h-4 shrink-0 ${vitals.rmssdAlert ? "text-amber-600 animate-pulse" : "text-emerald-600"}`} />
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">HRV (RMSSD)</span>
-              <div className="flex items-baseline gap-1">
-                <span className={`font-mono text-xs font-bold ${vitals.rmssdAlert ? "text-amber-800 font-extrabold" : "text-slate-900"}`}>
-                  {vitals.rmssd.toFixed(1)} ms
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  (Base {vitals.baselineRmssd})
-                </span>
-              </div>
-            </div>
-            {vitals.rmssdAlert && <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping shrink-0" />}
-          </button>
-
-          {/* Cabin Temp Pill */}
-          <button
-            type="button"
-            onClick={() => simulationControls.toggleScenario("thermal_overheat")}
-            className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-              hasThermal
-                ? "bg-orange-100/90 border-orange-400 ring-2 ring-orange-400 shadow-2xs"
-                : "bg-slate-50 hover:bg-orange-50/70 border-slate-200 hover:border-orange-300"
-            }`}
-            title="Click to toggle Thermal Loop Overheat anomaly (27.4 °C)"
-          >
-            <Thermometer className={`w-4 h-4 shrink-0 ${hasThermal ? "text-orange-600 animate-pulse" : "text-amber-500"}`} />
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                Cabin Temp ({isMetric ? "°C" : "°F"})
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className={`font-mono text-xs font-bold ${hasThermal ? "text-orange-700 font-extrabold" : "text-slate-900"}`}>
-                  {isMetric ? `${latestTelemetry.temp.toFixed(1)} °C` : `${(latestTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  ({isMetric ? "Nom 22.8" : "Nom 73.0"})
-                </span>
-              </div>
-            </div>
-            {hasThermal && <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-ping shrink-0" />}
-          </button>
-        </div>
-
-        {/* Multi-Select Simulation Injector Buttons */}
-        <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("co2_spike")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isCo2Active
-                  ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-2 ring-amber-400 font-bold"
-                  : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
-              }`}
-              title="Toggle CO₂ Spike simulation anomaly"
-            >
-              <Wind className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>⚡ CO₂ Spike (+1,650 PPM)</span>
-              {isCo2Active && <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("thermal_overheat")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isThermalActive
-                  ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-2 ring-orange-400 font-bold"
-                  : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
-              }`}
-              title="Toggle Thermal Loop Overheat anomaly"
-            >
-              <Thermometer className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-              <span>🌡️ Overheat (+4.8 °C)</span>
-              {isThermalActive && <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulationControls.toggleScenario("saa_transit")}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isSaaActive
-                  ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-2 ring-purple-400 font-bold"
-                  : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
-              }`}
-              title="Toggle SAA Radiation anomaly"
-            >
-              <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-              <span>☢️ SAA Radiation (0.48 mGy/d)</span>
-              {isSaaActive && <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-ping" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => simulationControls.resetNominal()}
-              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
-                isNominalActive
-                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
-                  : "border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800"
-              }`}
-              title="Reset all active simulation anomalies to nominal baselines"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>🔄 Reset Nominal</span>
-            </button>
-          </div>
-
-          <span className="text-[11px] text-slate-500 font-medium hidden sm:inline-block">
-            Direct anomaly injectors · Connected to Alerts, Overview &amp; Timeline
-          </span>
-        </div>
-      </div>
-
       {/* Explanatory Note */}
-      <div className="mt-3 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
+      <div className="mt-4 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
         <span>
           Real-time alerts cross-reference live environmental telemetry (NASA EDA) against personalized circadian envelopes.
         </span>

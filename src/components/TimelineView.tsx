@@ -37,6 +37,7 @@ import {
 } from "../features/topology";
 import { usePhysiologicalTelemetry, PhysiologicalCards } from "../features/biometrics";
 import { useAssistantStore } from "../stores/assistantStore";
+import { useActiveMissionTime } from "../stores/missionStore";
 import {
   TELEMETRY_STREAMS,
   useTimelineStore,
@@ -226,6 +227,13 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
   const hasThermal =
     activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
+  const {
+    isSimulation,
+    currentTimeMs,
+    utcString: simUtcString,
+    currentMissionDay,
+  } = useActiveMissionTime();
+
   const isNominalActive = !hasCo2 && !hasThermal && !hasSaa;
 
   const { selectedModuleId, selectedLocation } = useStationLocationStore();
@@ -234,6 +242,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     selectedLocation,
     activeScenarios,
     activeScenario,
+    isSimulation ? currentTimeMs : undefined,
   );
 
   // Live real-time clock advancement
@@ -250,10 +259,15 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
   const activeMeasurements = useMemo(() => {
     if (!measurements.length) return [];
 
-    const nowMs = liveNow;
+    const nowMs = isSimulation ? currentTimeMs : liveNow;
     const anomalyWindowMs = 90 * 60 * 1000; // Recent 90-minute anomaly window
 
-    const mapped = measurements.map((m) => {
+    // When in simulation mode, reveal data points up to the synchronized mission clock
+    const pool = isSimulation
+      ? measurements.filter((m) => new Date(m.timestamp).getTime() <= nowMs)
+      : measurements;
+
+    const mapped = pool.map((m) => {
       const ptMs = new Date(m.timestamp).getTime();
       const timeToNow = nowMs - ptMs;
 
@@ -348,7 +362,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     ];
 
     return [...mapped, ...livePoints];
-  }, [measurements, hasCo2, hasThermal, hasSaa, liveNow, astronautId, envTelemetry]);
+  }, [measurements, hasCo2, hasThermal, hasSaa, liveNow, astronautId, envTelemetry, isSimulation, currentTimeMs]);
 
   // Handle Quick Hour window presets (1h, 6h, 24h, 7d, 30d, all)
   const effectiveRange = useMemo(() => {
@@ -551,12 +565,29 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
         showticklabels: false,
         fixedrange: true,
       },
-      shapes: [],
-      uirevision: astronautId,
+      shapes: isSimulation
+        ? [
+            {
+              type: "line",
+              xref: "x",
+              yref: "paper",
+              x0: new Date(currentTimeMs).toISOString(),
+              x1: new Date(currentTimeMs).toISOString(),
+              y0: 0,
+              y1: 1,
+              line: {
+                color: "#0284c7",
+                width: 2,
+                dash: "dot",
+              },
+            },
+          ]
+        : [],
+      uirevision: isSimulation ? "sim_active" : astronautId,
     };
 
     return { traces, layout: layout as unknown as Partial<Layout> };
-  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange]);
+  }, [activeMeasurements, visible, timeWindow, astronautId, effectiveRange, isSimulation, currentTimeMs]);
 
   const config = useMemo(
     () =>
@@ -664,10 +695,18 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
             Environmental Trends
           </h2>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live UTC: <span className="font-mono font-bold">{liveRealUtcString}</span>
-          </span>
+          {isSimulation ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-300">
+              <span className="h-2 w-2 rounded-full bg-sky-600 animate-ping" />
+              Simulated Mission UTC: <span className="font-mono font-bold">{simUtcString}</span>
+              <span className="text-[10px] text-sky-600 font-mono">(Day {currentMissionDay}/180)</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live UTC: <span className="font-mono font-bold">{liveRealUtcString}</span>
+            </span>
+          )}
           {!isNominalActive && (
             <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />

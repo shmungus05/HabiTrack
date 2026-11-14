@@ -8,6 +8,7 @@
 import researchChunksRaw from "../data/researchChunks.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
 import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator";
+import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore";
 import type {
   AssistantResponse,
   Astronaut,
@@ -222,8 +223,9 @@ export async function fetchEvents(
   astronautId?: string,
   severity?: SeverityLevel
 ): Promise<HealthEvent[]> {
+  const activeTimeMs = getActiveMissionTimeMs();
   const storedReviews = getStoredReviews();
-  const liveEvents = generate180DayEvents(astronautId || "ASTRO-01", Date.now());
+  const liveEvents = generate180DayEvents(astronautId || "ASTRO-01", activeTimeMs);
 
   let events = liveEvents.map((evt) => {
     const review = storedReviews[evt.event_id];
@@ -285,6 +287,13 @@ export async function fetchSymptoms(astronautId?: string): Promise<SymptomReport
     );
   }
 
+  // When in simulation mode, filter symptoms up to the current synchronized mission clock
+  const { mode } = useMissionStore.getState();
+  if (mode === "simulation") {
+    const activeTimeMs = getActiveMissionTimeMs();
+    list = list.filter((s) => new Date(s.occurred_at).getTime() <= activeTimeMs);
+  }
+
   // Sort newest first
   list.sort(
     (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
@@ -293,7 +302,8 @@ export async function fetchSymptoms(astronautId?: string): Promise<SymptomReport
 }
 
 export async function submitSymptom(payload: SymptomReportRequest): Promise<SymptomReport> {
-  const now = new Date().toISOString();
+  const activeTimeMs = getActiveMissionTimeMs();
+  const now = new Date(activeTimeMs).toISOString();
   const report: SymptomReport = {
     report_id: generateUuid(),
     astronaut_id: payload.astronaut_id,

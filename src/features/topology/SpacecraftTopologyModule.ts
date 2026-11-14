@@ -9,6 +9,7 @@
  */
 
 import { create } from "zustand";
+import { getActiveMissionTimeMs } from "../../stores/missionStore";
 
 export type OrbitalSegment = "ROS" | "USOS";
 
@@ -380,15 +381,40 @@ export function computeModuleTelemetry(
   location: string,
   activeScenarios: string[] = [],
   activeScenario = "nominal",
+  timestampMs?: number,
 ) {
   const mod = ISS_14_MODULES.find((m) => m.id === moduleId) ?? ISS_14_MODULES[7];
   const locOffset = mod.locationOffsets?.[location] || {};
 
-  let co2 = mod.nominalCO2 + (locOffset.co2Offset || 0);
-  let temp = mod.nominalTemp + (locOffset.tempOffset || 0);
+  const t = timestampMs ?? getActiveMissionTimeMs();
+  const ORBIT_MS = 92.68 * 60 * 1000;
+  const CIRCADIAN_MS = 24 * 3600 * 1000;
+  const orbitPhase = (t / ORBIT_MS) * 2 * Math.PI;
+  const diurnalPhase = (t / CIRCADIAN_MS) * 2 * Math.PI;
+
+  const pseudoNoise = (seed: number, scale: number) => {
+    const x = Math.sin(seed * 9999.13) * 10000;
+    return (x - Math.floor(x) - 0.5) * 2 * scale;
+  };
+
+  const dynamicCo2Fluctuation = Math.round(
+    140 * Math.sin(diurnalPhase) + 50 * Math.cos(orbitPhase) + pseudoNoise(t + 1, 25),
+  );
+  const dynamicTempFluctuation = Number(
+    (0.6 * Math.sin(diurnalPhase) + 0.2 * Math.cos(orbitPhase)).toFixed(1),
+  );
+  const dynamicHumidityFluctuation = Number(
+    (2.5 * Math.sin(diurnalPhase) + 0.8 * Math.cos(orbitPhase)).toFixed(1),
+  );
+  const dynamicRadFluctuation = Number(
+    (0.015 * Math.sin(diurnalPhase)).toFixed(3),
+  );
+
+  let co2 = mod.nominalCO2 + (locOffset.co2Offset || 0) + dynamicCo2Fluctuation;
+  let temp = Number((mod.nominalTemp + (locOffset.tempOffset || 0) + dynamicTempFluctuation).toFixed(1));
   let pressureKpa = mod.nominalPressure + (locOffset.pressureOffset || 0);
-  let rad = mod.nominalRad + (locOffset.radOffset || 0);
-  let humidity = mod.nominalHumidity + (locOffset.humidityOffset || 0);
+  let rad = Number((mod.nominalRad + (locOffset.radOffset || 0) + dynamicRadFluctuation).toFixed(3));
+  let humidity = Number((mod.nominalHumidity + (locOffset.humidityOffset || 0) + dynamicHumidityFluctuation).toFixed(1));
 
   const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
   const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
@@ -419,5 +445,6 @@ export function computeModuleTelemetry(
     hasCo2,
     hasThermal,
     hasSaa,
+    timestampMs: t,
   };
 }

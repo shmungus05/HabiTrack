@@ -16,6 +16,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useCohortStore } from "../../stores/cohortStore";
 import { useSimulationSandbox } from "../simulation";
+import { useMissionStore } from "../../stores/missionStore";
 
 export interface PhysiologicalVitals {
   astronautId: string;
@@ -68,12 +69,17 @@ export function usePhysiologicalTelemetry(astronautId?: string): PhysiologicalVi
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
   const isNominal = !hasCo2 && !hasThermal && !hasSaa;
 
+  const missionMode = useMissionStore((state) => state.mode);
+  const simTimeMs = useMissionStore((state) => state.simTimeMs);
+  const realNowMs = useMissionStore((state) => state.realNowMs);
+  const activeTimeMs = missionMode === "simulation" ? simTimeMs : realNowMs;
+
   // Live real-time micro-tick for breathing & sinus arrhythmia
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
       setTick((t) => t + 1);
-    }, 3000);
+    }, 2000);
     return () => clearInterval(timer);
   }, []);
 
@@ -88,6 +94,26 @@ export function usePhysiologicalTelemetry(astronautId?: string): PhysiologicalVi
     let spo2 = baselineSpo2;
     let coreTemp = baselineCoreTemp;
 
+    if (missionMode === "simulation") {
+      // Synchronized circadian cycle across 180-day mission replay
+      const CIRCADIAN_MS = 24 * 3600 * 1000;
+      const circadianPhase = (activeTimeMs / CIRCADIAN_MS) * 2 * Math.PI;
+      const circadianHr = Math.round(6 * Math.sin(circadianPhase - Math.PI / 3));
+      const circadianTemp = Number((0.25 * Math.sin(circadianPhase - Math.PI / 3)).toFixed(1));
+      const circadianRmssd = Math.round(-6 * Math.sin(circadianPhase - Math.PI / 3));
+
+      hr += circadianHr;
+      rmssd += circadianRmssd;
+      coreTemp = Number((coreTemp + circadianTemp).toFixed(1));
+    } else {
+      // Micro-fluctuations aligned with live real-time clock
+      const noise = Math.sin(tick * 0.7);
+      if (isNominal) {
+        hr = Math.round(hr + noise * 1);
+        rmssd = Math.round(rmssd + noise * 1.5);
+      }
+    }
+
     if (hasCo2) {
       // Compensatory tachycardia & parasympathetic withdrawal from hypercapnia
       hr = baselineHr + 27; // e.g. 92 bpm
@@ -100,13 +126,6 @@ export function usePhysiologicalTelemetry(astronautId?: string): PhysiologicalVi
       if (!hasCo2) {
         hr = baselineHr + 15; // 80 bpm compensatory cardiac response
       }
-    }
-
-    // Micro-fluctuations aligned with live clock
-    const noise = Math.sin(tick * 0.7);
-    if (isNominal) {
-      hr = Math.round(hr + noise * 1);
-      rmssd = Math.round(rmssd + noise * 1.5);
     }
 
     const hrDelta = hr - baselineHr;

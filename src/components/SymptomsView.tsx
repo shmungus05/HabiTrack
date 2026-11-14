@@ -30,6 +30,7 @@ import { titleCase } from "../lib/format";
 import { useAssistantStore } from "../stores/assistantStore";
 import { PhysiologicalCards } from "../features/biometrics";
 import { ISS_14_MODULES, useStationLocationStore } from "../features/topology";
+import { useActiveMissionTime } from "../stores/missionStore";
 
 const SYMPTOM_CODES = ["HEADACHE", "FATIGUE", "DIZZINESS", "NAUSEA"] as const;
 
@@ -82,6 +83,7 @@ interface SymptomsViewProps {
 }
 
 export function SymptomsView({ astronautId }: SymptomsViewProps) {
+  const { isSimulation, currentMissionDay, utcString } = useActiveMissionTime();
   const [viewMode, setViewMode] = useState<"history" | "manual">("history");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("ALL");
@@ -150,7 +152,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, isSimulation, currentMissionDay]);
 
   const submitManual = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +174,9 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         id: `sym-${Date.now()}`,
         symptom: titleCase(symptomCode),
         severity: severity >= 4 ? "Severe" : severity >= 2 ? "Moderate" : "Mild",
-        time: new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
+        time: isSimulation
+          ? `Day ${currentMissionDay} · ${utcString.slice(11, 19)} UTC`
+          : new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         location: cabinModule,
         duration: "30 mins",
         description: notes.trim() || `Reported during mission tasks in ${cabinModule}.`,

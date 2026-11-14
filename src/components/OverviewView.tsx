@@ -75,6 +75,7 @@ import { ContextualTriageBanner } from "../features/triage";
 import { useSimulationSandbox } from "../features/simulation";
 import { useBiomedicalSettings } from "../features/settings";
 import { PhysiologicalCards } from "../features/biometrics";
+import { useActiveMissionTime } from "../stores/missionStore";
 
 interface OverviewViewProps {
   astronautId: string;
@@ -791,6 +792,7 @@ function AstronautOverview({
 }
 
 export function OverviewView({ astronautId }: OverviewViewProps) {
+  const { isSimulation, currentMissionDay } = useActiveMissionTime();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loadedAstronautId, setLoadedAstronautId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -851,7 +853,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, isSimulation, currentMissionDay]);
 
   const activeEvent = useMemo<HealthEvent | null>(() => {
     // Inject real-time simulated concordance events when a simulation scenario is active

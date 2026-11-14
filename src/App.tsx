@@ -35,8 +35,10 @@ import { useSimulationSandbox } from "./features/simulation";
 import { getAstronautDetectedLocation } from "./features/topology";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
+import { NavbarMissionControl } from "./components/NavbarMissionControl";
 import { fetchHealth } from "./services/api";
 import { useCohortStore } from "./stores/cohortStore";
+import { useMissionStore, useActiveMissionTime } from "./stores/missionStore";
 import {
   ASTRONAUT_LOCKED_COHORT_ID,
   useRoleStore,
@@ -203,10 +205,37 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  const missionMode = useMissionStore((state) => state.mode);
+  const isSimulationPlaying = useMissionStore((state) => state.isPlaying);
+  const tickSimulation = useMissionStore((state) => state.tickSimulation);
+  const tickRealTime = useMissionStore((state) => state.tickRealTime);
+  const simTimeMs = useMissionStore((state) => state.simTimeMs);
+
+  // Global Real-Time Ticker for Normal Mode
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 10000);
+    const timer = window.setInterval(() => {
+      tickRealTime();
+      setNow(new Date());
+    }, 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [tickRealTime]);
+
+  // Global Mission Simulation Ticker (runs when in simulation mode & playing)
+  useEffect(() => {
+    if (missionMode !== "simulation" || !isSimulationPlaying) return;
+
+    let lastTime = Date.now();
+    const intervalMs = 100;
+
+    const timer = window.setInterval(() => {
+      const current = Date.now();
+      const deltaMs = current - lastTime;
+      lastTime = current;
+      tickSimulation(deltaMs);
+    }, intervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [missionMode, isSimulationPlaying, tickSimulation]);
 
   const navigate = (view: (typeof ALL_VIEWS)[number]) => {
     setActiveView(view.key);
@@ -300,13 +329,21 @@ export default function App() {
             </Badge>
             <div
               className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] 2xl:flex"
-              title="Station Flight Operations Time (Coordinated Universal Time / UTC)"
+              title={
+                missionMode === "simulation"
+                  ? "Simulated Mission Operations Time"
+                  : "Station Flight Operations Time (Coordinated Universal Time / UTC)"
+              }
             >
-              <Clock3 className="h-3.5 w-3.5 text-sky-600" />
+              <Clock3 className={`h-3.5 w-3.5 ${missionMode === "simulation" ? "text-sky-600" : "text-emerald-600"}`} />
               <span className="font-bold text-slate-900 tabular-nums">
-                {clock.utcSeconds}
+                {missionMode === "simulation"
+                  ? formatCockpitClock(new Date(simTimeMs)).utcSeconds
+                  : clock.utcSeconds}
               </span>
-              <span className="font-semibold text-sky-700">UTC</span>
+              <span className={`font-semibold ${missionMode === "simulation" ? "text-sky-700" : "text-emerald-700"}`}>
+                {missionMode === "simulation" ? "SIM UTC" : "UTC"}
+              </span>
             </div>
 
             <Button
@@ -387,6 +424,9 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Global ISS Simulation Mode & Real-Time Flight Ops Control Bar */}
+        <NavbarMissionControl />
 
         {/* Mobile / Tablet Navigation Strip */}
         <nav
