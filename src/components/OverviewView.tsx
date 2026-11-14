@@ -803,6 +803,8 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
 
+  const { selectedModuleId, selectedLocation } = useStationLocationStore();
+
   const [healthReportOpen, setHealthReportOpen] = useState(false);
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
@@ -1088,7 +1090,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const eventTheme = activeEvent ? severityTheme(activeEvent.severity_level) : null;
 
   // Environmental snapshot values for the 5-Factor Health Gauge with real-time simulation overrides
-  const { selectedModuleId, selectedLocation } = useStationLocationStore();
   const envTelemetry = computeModuleTelemetry(
     selectedModuleId,
     selectedLocation,
