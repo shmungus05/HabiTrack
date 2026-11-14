@@ -284,7 +284,7 @@ export async function downloadHealthReportPdf(report: HealthReport): Promise<voi
       },
       alternateRowStyles: { fillColor: [250, 250, 250] },
       columnStyles,
-      didParseCell: (data) => {
+      didParseCell: (data: any) => {
         if (data.section !== "body") {
           return;
         }

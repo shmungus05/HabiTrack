@@ -223,7 +223,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     });
   }, [localDiary, searchTerm, filterSeverity]);
 
-  const openStandby = useAssistantStore((s) => s.openStandby);
+  const openDrawer = useAssistantStore((s) => s.openDrawer);
 
   return (
     <div className="space-y-6">
@@ -249,7 +249,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         <div className="flex flex-wrap items-center gap-2">
           {/* Direct Trigger to Unified Standby Assistant */}
           <button
-            onClick={() => openStandby()}
+            onClick={() => openDrawer("chat")}
             className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-white" />
@@ -380,7 +380,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                     </button>{" "}
                     or launch{" "}
                     <button
-                      onClick={() => openStandby()}
+                      onClick={() => openDrawer("chat")}
                       className="text-sky-700 font-semibold underline underline-offset-2"
                     >
                       AI Symptom Triage
@@ -489,7 +489,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                 className="w-full h-10 px-3.5 rounded-lg bg-white border border-border text-foreground text-xs focus:outline-none focus:border-accent cursor-pointer"
               >
                 {ISS_14_MODULES.map((m) => (
-                  <option key={m.id} value={`${m.name} (${m.essentialSensors[0]})`} className="bg-surface text-foreground">
+                  <option key={m.id} value={`${m.name} (${m.sensorLocations[0]})`} className="bg-surface text-foreground">
                     {m.name} · {m.segment}
                   </option>
                 ))}
