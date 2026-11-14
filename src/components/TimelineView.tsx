@@ -11,7 +11,21 @@
  * Supports hourly and granular time views (1h, 6h, 12h, 24h) with 100% data authenticity.
  */
 
-import { Activity, Layers, TriangleAlert, Clock, Heart } from "lucide-react";
+import {
+  Activity,
+  Layers,
+  TriangleAlert,
+  Clock,
+  Heart,
+  Zap,
+  Play,
+  Pause,
+  RotateCcw,
+  CheckCircle2,
+  AlertTriangle,
+  Wind,
+  Thermometer,
+} from "lucide-react";
 import Plotly from "plotly.js-basic-dist-min";
 import type { Config, Data, Layout } from "plotly.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -161,7 +175,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     setError(null);
     try {
       const [measurements, baselines, events, symptoms] = await Promise.all([
-        fetchMeasurements(astronautId, 720, 10000),
+        fetchMeasurements(astronautId, 4320, 20000),
         fetchBaselines(astronautId),
         fetchEvents(astronautId),
         fetchSymptoms(astronautId),
@@ -211,12 +225,18 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     };
   }, [measurements]);
 
-  const [simulationState] = useSimulationSandbox();
-  const { activeScenario } = simulationState;
-  const activeScenarios = simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
+  const [simulationState, simulationControls] = useSimulationSandbox();
+  const { activeScenario, isAnomalyActive } = simulationState;
+  const activeScenarios =
+    simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
   const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
-  const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
+  const hasThermal =
+    activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
+  const isCo2Active = hasCo2;
+  const isThermalActive = hasThermal;
+  const isSaaActive = hasSaa;
+  const isNominalActive = !hasCo2 && !hasThermal && !hasSaa;
 
   const { selectedModuleId, selectedLocation } = useStationLocationStore();
   const envTelemetry = computeModuleTelemetry(
@@ -226,14 +246,20 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     activeScenario,
   );
 
-  // Live real-time clock advancement
+  // Live real-time clock advancement & simulation playback
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [simSpeed, setSimSpeed] = useState<1 | 5 | 20>(1);
   const [liveNow, setLiveNow] = useState(() => Date.now());
+
   useEffect(() => {
+    if (!isPlaying) return;
+    const intervalMs = simSpeed === 1 ? 1000 : simSpeed === 5 ? 400 : 200;
+    const stepMs = simSpeed === 1 ? 1000 : simSpeed === 5 ? 5000 : 20000;
     const timer = setInterval(() => {
-      setLiveNow(Date.now());
-    }, 4000);
+      setLiveNow((prev) => (simSpeed === 1 ? Date.now() : prev + stepMs));
+    }, intervalMs);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPlaying, simSpeed]);
 
   const activeMeasurements = useMemo(() => {
     if (!measurements.length) return [];
@@ -241,7 +267,7 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
     const nowMs = liveNow;
     const anomalyWindowMs = 90 * 60 * 1000; // Recent 90-minute anomaly window
 
-    return measurements.map((m) => {
+    const mapped = measurements.map((m) => {
       const ptMs = new Date(m.timestamp).getTime();
       const timeToNow = nowMs - ptMs;
 
@@ -275,7 +301,68 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
 
       return m;
     });
-  }, [measurements, hasCo2, hasThermal, hasSaa, liveNow]);
+
+    // Append continuous live telemetry point aligned to current live UTC
+    const isoNow = new Date(nowMs).toISOString();
+    const liveCo2Val = hasCo2 ? 4350 : (envTelemetry.co2 || 2250);
+    const liveTempVal = hasThermal ? 27.4 : (envTelemetry.temp || 22.8);
+    const liveRadVal = hasSaa ? 0.48 : (envTelemetry.rad || 0.19);
+
+    const livePoints: Measurement[] = [
+      {
+        id: null,
+        astronaut_id: astronautId,
+        stream_id: "stream_eda_co2",
+        timestamp: isoNow,
+        value: liveCo2Val,
+        quality_status: "VALID",
+        is_synthetic: true,
+        provenance_category: null,
+      },
+      {
+        id: null,
+        astronaut_id: astronautId,
+        stream_id: "stream_eda_temp",
+        timestamp: isoNow,
+        value: liveTempVal,
+        quality_status: "VALID",
+        is_synthetic: true,
+        provenance_category: null,
+      },
+      {
+        id: null,
+        astronaut_id: astronautId,
+        stream_id: "stream_eda_radiation",
+        timestamp: isoNow,
+        value: liveRadVal,
+        quality_status: "VALID",
+        is_synthetic: true,
+        provenance_category: null,
+      },
+      {
+        id: null,
+        astronaut_id: astronautId,
+        stream_id: "stream_eda_humidity",
+        timestamp: isoNow,
+        value: envTelemetry.humidity || 43.5,
+        quality_status: "VALID",
+        is_synthetic: true,
+        provenance_category: null,
+      },
+      {
+        id: null,
+        astronaut_id: astronautId,
+        stream_id: "stream_eda_pressure",
+        timestamp: isoNow,
+        value: 101.3,
+        quality_status: "VALID",
+        is_synthetic: true,
+        provenance_category: null,
+      },
+    ];
+
+    return [...mapped, ...livePoints];
+  }, [measurements, hasCo2, hasThermal, hasSaa, liveNow, astronautId, envTelemetry]);
 
   // Handle Quick Hour window presets (1h, 6h, 24h, 7d, 30d, all)
   const effectiveRange = useMemo(() => {
@@ -571,6 +658,8 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
 
   const hasTelemetry = measurements.length > 0;
 
+  const liveUtcString = new Date(liveNow).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+
   return (
     <div className="space-y-4">
       {/* Top Header Card in Clean White Theme */}
@@ -579,9 +668,9 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
             Environmental Trends
           </h2>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live UTC Flight Time
+            Live UTC: <span className="font-mono font-bold">{liveUtcString}</span>
           </span>
           <span className="text-xs text-muted font-mono hidden md:inline-block">
             {windowLabel}
@@ -620,6 +709,149 @@ export function TimelineView({ astronautId }: TimelineViewProps) {
           >
             {isLoading ? "Syncing" : "Refresh"}
           </Button>
+        </div>
+      </div>
+
+      {/* Interactive Simulation Controls Bar — Synchronized Multi-Anomaly & Live Real-Time Stream */}
+      <div className="p-3.5 sm:p-4 rounded-xl glass-panel bg-white border border-border shadow-xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-sky-600 shrink-0" />
+            <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">
+              Real-Time Simulation Controls · Live EDA Telemetry Stream
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isNominalActive ? (
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>
+                  {[
+                    isCo2Active && "CO₂ SPIKE",
+                    isThermalActive && "OVERHEAT",
+                    isSaaActive && "SAA RADIATION",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}{" "}
+                  ACTIVE
+                </span>
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span>Nominal Telemetry Flow · Synced to Real-Time UTC</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Buttons Row: Multi-select Anomaly Injectors + Play/Pause & Speed */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Multi-Select Anomaly Buttons */}
+            <button
+              type="button"
+              onClick={() => simulationControls.toggleScenario("co2_spike")}
+              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                isCo2Active
+                  ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-2 ring-amber-400 font-bold"
+                  : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
+              }`}
+              title="Toggle CO₂ Spike anomaly"
+            >
+              <Wind className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>⚡ CO₂ Spike (+1,650 PPM)</span>
+              {isCo2Active && <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-ping" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => simulationControls.toggleScenario("thermal_overheat")}
+              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                isThermalActive
+                  ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-2 ring-orange-400 font-bold"
+                  : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
+              }`}
+              title="Toggle Overheat anomaly"
+            >
+              <Thermometer className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+              <span>🌡️ Overheat (+4.8 °C)</span>
+              {isThermalActive && <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-ping" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => simulationControls.toggleScenario("saa_transit")}
+              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                isSaaActive
+                  ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-2 ring-purple-400 font-bold"
+                  : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
+              }`}
+              title="Toggle SAA Radiation anomaly"
+            >
+              <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+              <span>☢️ SAA Radiation (0.48 mGy/d)</span>
+              {isSaaActive && <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-ping" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => simulationControls.resetNominal()}
+              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                isNominalActive
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-medium"
+                  : "border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800"
+              }`}
+              title="Reset all active anomalies to nominal baselines"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>🔄 Reset Nominal</span>
+            </button>
+          </div>
+
+          {/* Simulation Stream Controls */}
+          <div className="flex items-center gap-2 border-l border-border/80 pl-3">
+            <button
+              type="button"
+              onClick={() => setIsPlaying(!isPlaying)}
+              className={`py-1.5 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                isPlaying
+                  ? "bg-sky-50 border-sky-300 text-sky-800"
+                  : "bg-amber-50 border-amber-300 text-amber-800"
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                  <span>Live Stream Active</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Resume Stream</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center rounded-lg bg-surface-subtle border border-border p-0.5 text-xs font-mono">
+              {([1, 5, 20] as const).map((spd) => (
+                <button
+                  key={spd}
+                  type="button"
+                  onClick={() => setSimSpeed(spd)}
+                  className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                    simSpeed === spd
+                      ? "bg-white text-sky-700 font-bold shadow-2xs"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                  title={`${spd}x playback speed`}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
