@@ -31,6 +31,7 @@ import {
 } from "../../services/api";
 import { useCohortStore } from "../../stores/cohortStore";
 import { useSimulationSandbox } from "../simulation";
+import { parseEventRationale } from "../../components/EventRationaleDisplay";
 import type {
   Baselines,
   HealthEvent,
@@ -339,13 +340,13 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         title: `Clinical Concordance: ${evt.event_type.replace(/_/g, " ")}`,
         level: evt.severity_level === "INVESTIGATE" ? "critical" : "warning",
         timestamp: evt.start_time.slice(11, 16) + " UTC",
-        message: evt.rationale.split("\n")[0] || "Telemetry concordance detected.",
+        message: parseEventRationale(evt.rationale, evt.event_type).summary,
         module: "Node 2 (Harmony)",
         acknowledged: isAck,
         category: "event",
         flightRuleRef: "FR-ECLSS-001",
         details: {
-          whatHappened: evt.rationale,
+          whatHappened: parseEventRationale(evt.rationale, evt.event_type).summary,
           whyItMatters: `Concordance analysis detected simultaneous environmental exposure and physiological response across [${evt.contributing_stream_ids}]. Non-causal decision support only.`,
           whatToDo: [
             "Consult the Concordance Timeline to inspect the synchronized 4-lane telemetry excursion.",
