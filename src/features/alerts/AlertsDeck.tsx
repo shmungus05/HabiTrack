@@ -32,6 +32,7 @@ import {
 import { useCohortStore } from "../../stores/cohortStore";
 import { useSimulationSandbox } from "../simulation";
 import { parseEventRationale } from "../../components/EventRationaleDisplay";
+import { useBiomedicalSettings } from "../settings";
 import type {
   Baselines,
   HealthEvent,
@@ -95,6 +96,8 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
 
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
+  const { settings } = useBiomedicalSettings();
+  const isMetric = settings.unitSystem === "metric";
 
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [baselines, setBaselines] = useState<Baselines>({});
@@ -105,6 +108,27 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
   const [acknowledgedMap, setAcknowledgedMap] = useState<Record<string, boolean>>(
     () => getStoredAcks()
   );
+
+  // When an anomaly scenario is activated, un-acknowledge simulated alert keys
+  // so simulated alerts immediately appear active and are never suppressed by previous tests
+  useEffect(() => {
+    if (isAnomalyActive) {
+      setAcknowledgedMap((prev) => {
+        const next = { ...prev };
+        delete next["alert-co2-crit"];
+        delete next["alert-co2-warn"];
+        delete next["alert-hr-tachycardia"];
+        delete next["alert-rmssd-depression"];
+        delete next["alert-temp-overheat"];
+        delete next["alert-saa-radiation"];
+        delete next["alert-concordance-co2-spike"];
+        delete next["alert-concordance-thermal-overheat"];
+        delete next["alert-concordance-saa-transit"];
+        saveStoredAcks(next);
+        return next;
+      });
+    }
+  }, [isAnomalyActive, activeScenario]);
 
   // Load telemetry, baselines, events and symptoms
   const loadData = async () => {
@@ -178,27 +202,39 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     if (currentCo2 >= 3.6 || deltaCo2 >= 0.5 || activeScenario === "co2_spike") {
       const isCritical = currentCo2 >= 4.5;
       const co2Ppm = Math.round(currentCo2 * 750);
+      const titleDisplay = isMetric
+        ? `Cabin CO₂ Hypercapnia Alert: ${co2Ppm.toLocaleString()} PPM`
+        : `Cabin CO₂ Hypercapnia Alert: ${currentCo2.toFixed(2)} mmHg`;
+      const metricDisplay = isMetric ? `${co2Ppm.toLocaleString()} PPM` : `${currentCo2.toFixed(2)} mmHg`;
+      const baseDisplay = isMetric
+        ? `${Math.round(baselineCo2 * 750).toLocaleString()} PPM`
+        : `${baselineCo2.toFixed(2)} mmHg`;
+      const deltaDisplay = isMetric
+        ? `+${Math.round(deltaCo2 * 750).toLocaleString()} PPM (+${deltaCo2Pct.toFixed(0)}%)`
+        : `+${deltaCo2.toFixed(2)} mmHg (+${deltaCo2Pct.toFixed(0)}%)`;
+      const msgDisplay = isMetric
+        ? `Cabin PCO₂ reached ${co2Ppm.toLocaleString()} PPM, exceeding nominal baseline of ${Math.round(baselineCo2 * 750).toLocaleString()} PPM (+${deltaCo2Pct.toFixed(0)}%).`
+        : `Cabin PCO₂ reached ${currentCo2.toFixed(2)} mmHg, exceeding circadian baseline of ${baselineCo2.toFixed(2)} mmHg (+${deltaCo2.toFixed(2)} mmHg / +${deltaCo2Pct.toFixed(0)}%).`;
+
       list.push({
         id: `alert-co2-${currentCo2 > 4.5 ? "crit" : "warn"}`,
-        title: `Cabin CO₂ Hypercapnia Alert: ${currentCo2.toFixed(2)} mmHg (${co2Ppm} PPM)`,
+        title: titleDisplay,
         level: isCritical ? "critical" : "warning",
         timestamp: nowUtc,
-        message: `Cabin PCO₂ reached ${currentCo2.toFixed(2)} mmHg, exceeding circadian baseline of ${baselineCo2.toFixed(2)} mmHg (+${deltaCo2.toFixed(2)} mmHg / +${deltaCo2Pct.toFixed(0)}%).`,
+        message: msgDisplay,
         module: "Node 2 (Harmony)",
         acknowledged: !!acknowledgedMap[`alert-co2-${currentCo2 > 4.5 ? "crit" : "warn"}`],
         category: "co2",
-        metricValue: `${currentCo2.toFixed(2)} mmHg`,
-        baselineValue: `${baselineCo2.toFixed(2)} mmHg`,
-        deltaValue: `+${deltaCo2.toFixed(2)} mmHg (+${deltaCo2Pct.toFixed(0)}%)`,
+        metricValue: metricDisplay,
+        baselineValue: baseDisplay,
+        deltaValue: deltaDisplay,
         flightRuleRef: "FR-ECLSS-001",
         details: {
-          whatHappened: `Cabin partial pressure of carbon dioxide reached ${currentCo2.toFixed(2)} mmHg (~${co2Ppm} PPM) in Node 2, exceeding nominal flight baseline of ${baselineCo2.toFixed(2)} mmHg by +${deltaCo2.toFixed(2)} mmHg.`,
-          whyItMatters: `In microgravity, cephalic fluid redistribution increases headward venous pressure. Elevated ambient CO₂ induces cerebral vasodilation, predisposing crew to spaceflight hypercapnic headaches, visual blurring, and cognitive fatigue.`,
+          whatHappened: `• PCO₂ spiked to ${metricDisplay} in Node 2 (${deltaDisplay} above nominal).`,
+          whyItMatters: `• Induced cerebral vasodilation increases risk of acute headache and fatigue.`,
           whatToDo: [
-            "Execute NASA Flight Rule FR-ECLSS-001: Transition CDRA bed selector to DUAL-BED HIGH-FLOW.",
-            "Verify personal ventilation diffuser fans in Node 2 are unobstructed and delivering flow >= 55 CFM.",
-            "Instruct crew to hydrate with 500 mL water/electrolyte solution to assist cephalic venous return.",
-            "If symptoms develop, transition work tasks to US Lab (Destiny) where circulation is higher.",
+            "• Switch CDRA selector to DUAL-BED HIGH-FLOW.",
+            "• Verify Node 2 diffuser fans (≥55 CFM) & hydrate with 500 mL.",
           ],
         },
       });
@@ -227,12 +263,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         deltaValue: `+${deltaHr.toFixed(0)} bpm`,
         flightRuleRef: "FR-EVA-003",
         details: {
-          whatHappened: `Crew member autonomic vital telemetry indicates sustained elevated heart rate of ${currentHr.toFixed(0)} bpm (+${deltaHr.toFixed(0)} bpm above baseline).`,
-          whyItMatters: `Cardiovascular deconditioning and autonomic compensation for environmental stressors (such as high workload or elevated CO₂) increase myocardial oxygen demand.`,
+          whatHappened: `• Heart rate spiked to ${currentHr.toFixed(0)} bpm (+${deltaHr.toFixed(0)} bpm above baseline).`,
+          whyItMatters: `• Autonomic compensatory response indicates acute physical strain or elevated CO₂.`,
           whatToDo: [
-            "Instruct crewmember to initiate paced 4-4 diaphragmatic breathing cycle.",
-            "Verify SpO₂ saturation remains above 96% and evaluate for co-occurring subjective symptoms.",
-            "Stand down from heavy metabolic tasks and confirm ground flight surgeon telemetry link.",
+            "• Initiate paced 4-4 diaphragmatic breathing & check SpO₂.",
+            "• Stand down from heavy metabolic tasks; monitor telemetry.",
           ],
         },
       });
@@ -260,12 +295,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         deltaValue: `${deltaRmssd.toFixed(1)} ms`,
         flightRuleRef: "FR-EVA-003",
         details: {
-          whatHappened: `Heart rate variability metric RMSSD has dropped to ${currentRmssd.toFixed(1)} ms, signaling acute sympathetic nervous system dominance.`,
-          whyItMatters: `Suppressed parasympathetic vagal tone is a primary biomedical indicator of physical exhaustion, sleep fragmentation, or acute physiological strain.`,
+          whatHappened: `• RMSSD dropped to ${currentRmssd.toFixed(1)} ms (${Math.abs(deltaRmssd).toFixed(1)} ms below resting baseline).`,
+          whyItMatters: `• Acute sympathetic dominance signals physical exhaustion or sleep deficit.`,
           whatToDo: [
-            "Direct crew to 20 minutes of restorative resting posture.",
-            "Review circadian sleep-wake schedule and avoid caffeine intake in the current mission block.",
-            "Log recovery trend before scheduled extravehicular or robotics duty.",
+            "• Direct crew to 20 min restorative resting posture.",
+            "• Defer strenuous robotics/EVA until parasympathetic recovery.",
           ],
         },
       });
@@ -276,26 +310,33 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
     // -------------------------------------------------------------------------
     const currentTemp = latestTelemetry.temp;
     if (currentTemp >= 25.5 || activeScenario === "thermal_overheat") {
+      const tempDisplay = isMetric ? `${currentTemp.toFixed(1)} °C` : `${(currentTemp * 1.8 + 32).toFixed(1)} °F`;
+      const baseTempDisplay = isMetric ? "22.5 °C" : "72.5 °F";
+      const deltaTempDisplay = isMetric
+        ? `+${(currentTemp - 22.5).toFixed(1)} °C`
+        : `+${((currentTemp - 22.5) * 1.8).toFixed(1)} °F`;
+
       list.push({
         id: `alert-temp-overheat`,
-        title: `Cabin Thermal Boundary Excursion: ${currentTemp.toFixed(1)} °C`,
+        title: `Cabin Thermal Boundary Excursion: ${tempDisplay}`,
         level: currentTemp >= 27.0 ? "critical" : "warning",
         timestamp: nowUtc,
-        message: `Cabin temperature in Node 2 reached ${currentTemp.toFixed(1)} °C, exceeding the flight comfort envelope (20.0–24.0 °C).`,
+        message: isMetric
+          ? `Cabin temperature in Node 2 reached ${tempDisplay}, exceeding the flight comfort envelope (20.0–24.0 °C).`
+          : `Cabin temperature in Node 2 reached ${tempDisplay}, exceeding the flight comfort envelope (68.0–75.2 °F).`,
         module: "Node 2 (Harmony)",
         acknowledged: !!acknowledgedMap["alert-temp-overheat"],
         category: "thermal",
-        metricValue: `${currentTemp.toFixed(1)} °C`,
-        baselineValue: "22.5 °C",
-        deltaValue: `+${(currentTemp - 22.5).toFixed(1)} °C`,
+        metricValue: tempDisplay,
+        baselineValue: baseTempDisplay,
+        deltaValue: deltaTempDisplay,
         flightRuleRef: "FR-CDRA-002",
         details: {
-          whatHappened: `Cabin environmental sensors recorded ambient temperature of ${currentTemp.toFixed(1)} °C during CDRA desorption cycle.`,
-          whyItMatters: `Elevated cabin thermal conditions impair metabolic heat rejection in microgravity, compounding dehydration and cardiovascular strain.`,
+          whatHappened: `• Cabin ambient temperature reached ${tempDisplay} (comfort range 20–24 °C).`,
+          whyItMatters: `• Microgravity impairs heat rejection, compounding dehydration & cardiac strain.`,
           whatToDo: [
-            "Verify internal thermal control system (ITCS) water loop flow rate.",
-            "Confirm CDRA desiccant regenerative heating loop is within bounds (FR-CDRA-002).",
-            "Adjust cabin air conditioning setpoint down by 1.5 °C.",
+            "• Verify ITCS water loop flow & check CDRA desiccant loop.",
+            isMetric ? "• Adjust air conditioning setpoint down by 1.5 °C." : "• Adjust air conditioning setpoint down by 2.7 °F.",
           ],
         },
       });
@@ -318,12 +359,43 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         baselineValue: "0.19 mGy/day",
         deltaValue: "+0.29 mGy/day",
         details: {
-          whatHappened: `The station has entered the high-energy proton corridor of the South Atlantic Anomaly (SAA).`,
-          whyItMatters: `Increased galactic and trapped solar proton exposure during SAA transit requires non-critical payload deferral and shielding positioning.`,
+          whatHappened: `• Station entered SAA inner radiation belt (flux elevated to 0.48 mGy/day).`,
+          whyItMatters: `• Trapped solar proton corridor increases cumulative crew radiation dose.`,
           whatToDo: [
-            "Verify dosimeter downlink packets to Houston Flight Control.",
-            "Ensure crew sleep quarters radiation shielding panels are deployed.",
-            "Avoid unshielded work in the European Columbus or Kibo forward vestibule.",
+            "• Verify sleep quarters radiation shielding panels are deployed.",
+            "• Avoid unshielded activities in forward vestibules.",
+          ],
+        },
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5b. Simulated Clinical Concordance Event for Injected Scenarios
+    // -------------------------------------------------------------------------
+    if (activeScenario === "co2_spike") {
+      list.push({
+        id: "alert-concordance-co2-spike",
+        title: "Clinical Concordance: Hypercapnic Autonomic Discordance",
+        level: "critical",
+        timestamp: nowUtc,
+        message: isMetric
+          ? "Concordant 4-lane excursion: Cabin CO₂ spiked to 4,350 PPM with concurrent heart rate acceleration (+27 bpm) and vagal withdrawal (RMSSD -31 ms)."
+          : "Concordant 4-lane excursion: Cabin CO₂ spiked to 5.80 mmHg with concurrent heart rate acceleration (+27 bpm) and vagal withdrawal (RMSSD -31 ms).",
+        module: "Node 2 (Harmony)",
+        acknowledged: !!acknowledgedMap["alert-concordance-co2-spike"],
+        category: "event",
+        flightRuleRef: "FR-ECLSS-001",
+        metricValue: isMetric ? "4,350 PPM" : "5.80 mmHg",
+        baselineValue: isMetric ? "2,250 PPM" : "3.00 mmHg",
+        deltaValue: isMetric ? "+2,100 PPM" : "+2.80 mmHg",
+        details: {
+          whatHappened: isMetric
+            ? "• Synchronized cabin CO₂ elevation (4,350 PPM) in Node 2 with autonomic tachycardic reaction (+27 bpm) and RMSSD depression (-31 ms)."
+            : "• Synchronized cabin CO₂ elevation (5.80 mmHg) in Node 2 with autonomic tachycardic reaction (+27 bpm) and RMSSD depression (-31 ms).",
+          whyItMatters: "• Multi-signal concordance indicates genuine physiological stress requiring immediate environmental countermeasures.",
+          whatToDo: [
+            "• Direct crew to switch CDRA to dual-bed high-flow cycle.",
+            "• Verify diffuser fan velocity (≥55 CFM) & initiate crew rehydration.",
           ],
         },
       });
@@ -346,12 +418,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         category: "event",
         flightRuleRef: "FR-ECLSS-001",
         details: {
-          whatHappened: parseEventRationale(evt.rationale, evt.event_type).summary,
-          whyItMatters: `Concordance analysis detected simultaneous environmental exposure and physiological response across [${evt.contributing_stream_ids}]. Non-causal decision support only.`,
+          whatHappened: `• ${parseEventRationale(evt.rationale, evt.event_type).summary || "Synchronized environmental exposure and physiological response detected."}`,
+          whyItMatters: `• Concordance across multiple data streams indicates physiological impact.`,
           whatToDo: [
-            "Consult the Concordance Timeline to inspect the synchronized 4-lane telemetry excursion.",
-            "Verify symptom resolution with the affected astronaut.",
-            "Complete Flight Surgeon triage review in the Overview panel.",
+            "• Consult Concordance Timeline for synchronized 4-lane excursion.",
+            "• Verify symptom resolution with affected astronaut.",
           ],
         },
       });
@@ -372,12 +443,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         acknowledged: !!acknowledgedMap[symId],
         category: "symptom",
         details: {
-          whatHappened: `Astronaut ${sym.astronaut_id} logged ${sym.symptom_code} at severity level ${sym.severity}/5.${sym.notes ? ` Details: ${sym.notes}` : ""}`,
-          whyItMatters: `Subjective crew symptom reports correlate with environmental and autonomic excursions. Early symptom logging enables proactive ECLSS intervention before clinical incapacitation.`,
+          whatHappened: `• ${sym.symptom_code.replace(/_/g, " ")} reported at severity ${sym.severity}/5 by ${sym.astronaut_id}.${sym.notes ? ` (${sym.notes})` : ""}`,
+          whyItMatters: `• Subjective symptoms provide early clinical markers before telemetry degradation.`,
           whatToDo: [
-            "Log follow-up symptom severity in Symptoms panel.",
-            "Check for temporal co-occurrence with localized Node 2 CO₂ concentration trends.",
-            "Ensure crew takes appropriate countermeasure break and rehydrates.",
+            "• Correlate with localized Node 2 environmental trends.",
+            "• Ensure crew takes countermeasure rest break and rehydrates.",
           ],
         },
       });
@@ -457,18 +527,20 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         </div>
       </div>
 
-      {/* Real-time Telemetry Status Ribbon */}
-      <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+      {/* Real-time Telemetry Status Ribbon - Unit Synchronized */}
+      <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <Wind className={`w-4 h-4 ${latestTelemetry.co2 > 3.5 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Live Cabin CO₂</span>
-              <span className={`font-mono font-bold ${latestTelemetry.co2 > 3.5 ? "text-amber-700" : "text-slate-900"}`}>
-                {latestTelemetry.co2.toFixed(2)} mmHg
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                Live Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+              </span>
+              <span className={`font-mono font-bold ${latestTelemetry.co2 > 3.5 ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
+                {isMetric ? `${Math.round(latestTelemetry.co2 * 750).toLocaleString()} PPM` : `${latestTelemetry.co2.toFixed(2)} mmHg`}
               </span>
               <span className="text-[10px] text-slate-500 ml-1">
-                (Baseline 3.00)
+                ({isMetric ? "Baseline 2,250" : "Baseline 3.00"})
               </span>
             </div>
           </div>
@@ -502,9 +574,11 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
           <div className="flex items-center gap-2">
             <Thermometer className="w-4 h-4 text-amber-500" />
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-500 block">Cabin Temp</span>
+              <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                Cabin Temp ({isMetric ? "°C" : "°F"})
+              </span>
               <span className="font-mono font-bold text-slate-900">
-                {latestTelemetry.temp.toFixed(1)} °C
+                {isMetric ? `${latestTelemetry.temp.toFixed(1)} °C` : `${(latestTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}
               </span>
             </div>
           </div>
@@ -513,7 +587,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         {/* Active Simulation Status Notice */}
         {isAnomalyActive && (
           <div className="flex items-center gap-2 ml-auto text-xs">
-            <span className="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[11px] animate-pulse">
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[10px] animate-pulse">
               ⚡ Live Anomaly Active: {activeScenario.replace(/_/g, " ").toUpperCase()}
             </span>
           </div>
@@ -521,10 +595,9 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
       </div>
 
       {/* Explanatory Note */}
-      <div className="mt-4 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
+      <div className="mt-3 border-l-2 border-sky-500 pl-3 text-[11px] leading-relaxed text-secondary flex items-center justify-between">
         <span>
-          Real-time alerts cross-reference live environmental telemetry (NASA EDA) against personalized
-          circadian envelopes and flight rule thresholds to prevent acute hypercapnia and space headaches.
+          Real-time alerts cross-reference live environmental telemetry (NASA EDA) against personalized circadian envelopes.
         </span>
         {Object.keys(acknowledgedMap).length > 0 && (
           <button
@@ -536,21 +609,25 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
         )}
       </div>
 
-      {/* Real-time Alerts Feed */}
-      <div className="mt-5 space-y-3.5">
+      {/* Compact Real-time Alerts Feed */}
+      <div className="mt-4 space-y-2.5">
         {displayedAlerts.length === 0 ? (
-          <div className="p-10 text-center rounded-xl glass-panel-subtle space-y-2 border border-slate-200 bg-white">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-            <h3 className="text-sm font-bold text-foreground">All Telemetry Within Normal Circadian Bounds</h3>
-            <p className="text-xs text-muted max-w-md mx-auto">
-              Cabin CO₂ ({latestTelemetry.co2.toFixed(2)} mmHg), temperature ({latestTelemetry.temp.toFixed(1)} °C), and heart rate ({latestTelemetry.hr.toFixed(0)} bpm) are tracking within baseline (μ ± 2σ).
+          <div className="p-8 text-center rounded-xl glass-panel-subtle space-y-2 border border-slate-200 bg-white">
+            <CheckCircle2 className="w-7 h-7 text-emerald-600 mx-auto" />
+            <h3 className="text-xs font-bold text-foreground">
+              {isAnomalyActive ? "All Active Anomaly Alerts Acknowledged" : "All Telemetry Within Normal Circadian Bounds"}
+            </h3>
+            <p className="text-[11px] text-muted max-w-md mx-auto">
+              {isAnomalyActive
+                ? "Active anomaly simulation telemetry is running, but all generated alerts have been acknowledged. Click 'Restore Acknowledged' above to review."
+                : `Cabin CO₂ (${isMetric ? `${Math.round(latestTelemetry.co2 * 750).toLocaleString()} PPM` : `${latestTelemetry.co2.toFixed(2)} mmHg`}), temperature (${isMetric ? `${latestTelemetry.temp.toFixed(1)} °C` : `${(latestTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}), and heart rate (${latestTelemetry.hr.toFixed(0)} bpm) are nominal.`}
             </p>
           </div>
         ) : (
           displayedAlerts.map((alert) => {
             const isResolved = alert.acknowledged;
             const levelAccent = isResolved
-              ? "opacity-75 border-slate-200 bg-slate-50/60"
+              ? "opacity-60 border-slate-200 bg-slate-50/50"
               : alert.level === "critical"
               ? "border-l-4 border-l-red-500 border-red-200 bg-red-50/20"
               : alert.level === "warning"
@@ -560,96 +637,83 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
             return (
               <div
                 key={alert.id}
-                className={`p-5 rounded-xl border glass-panel transition-all duration-200 shadow-xs ${levelAccent}`}
+                className={`p-3 sm:p-3.5 rounded-xl border glass-panel transition-all duration-150 shadow-2xs ${levelAccent}`}
               >
                 {/* Header Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-border/80">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/70">
+                  <div className="flex items-center gap-2 min-w-0">
                     {isResolved ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : alert.level === "critical" ? (
-                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 animate-pulse" />
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 animate-pulse" />
                     ) : alert.level === "warning" ? (
-                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                     ) : (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     )}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                          {alert.title}
-                        </h3>
-                        {alert.flightRuleRef && (
-                          <span className="rounded bg-sky-100 text-sky-800 border border-sky-200 px-1.5 py-0.2 text-[10px] font-mono font-bold">
-                            {alert.flightRuleRef}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-muted font-mono flex items-center gap-2 mt-0.5">
-                        <span className="font-semibold text-sky-700">{alert.module}</span>
-                        <span>·</span>
-                        <span>{alert.timestamp}</span>
-                        {alert.deltaValue && (
-                          <>
-                            <span>·</span>
-                            <span className="text-amber-700 font-semibold">{alert.deltaValue}</span>
-                          </>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                        {alert.title}
+                      </h4>
+                      {alert.flightRuleRef && (
+                        <span className="rounded bg-sky-100 text-sky-800 border border-sky-200 px-1.5 py-0.2 text-[10px] font-mono font-bold">
+                          {alert.flightRuleRef}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-muted font-mono">
+                        {alert.module} · {alert.timestamp}
+                      </span>
+                      {alert.deltaValue && (
+                        <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-mono">
+                          {alert.deltaValue}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   {!isResolved ? (
                     <button
                       onClick={() => handleAcknowledge(alert.id)}
-                      className="px-3.5 py-1.5 rounded-lg bg-white hover:bg-sky-50 border border-slate-300 text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs hover:border-sky-300 hover:text-sky-700"
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 border border-slate-300 text-[11px] font-semibold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer shadow-2xs hover:border-sky-300 hover:text-sky-700 shrink-0"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Acknowledge Alert</span>
+                      <span>Acknowledge</span>
                     </button>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-mono font-semibold flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700 font-mono font-semibold flex items-center gap-1 shrink-0">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Acknowledged</span>
                     </span>
                   )}
                 </div>
 
-                {/* 3 Humanized Guidance Panels */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-200 mt-3.5 border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="p-4 bg-white space-y-1.5">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                      01 · What Happened
+                {/* Visualized Clean Details in Bullet Points — Comfortable Readable Typography */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 pt-0.5 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1">
+                    <span className="text-[10.5px] uppercase font-bold tracking-wider text-slate-700 block">
+                      What Happened
                     </span>
-                    <p className="text-xs leading-relaxed text-slate-700">
+                    <p className="text-[11.5px] sm:text-xs text-slate-700 leading-relaxed">
                       {alert.details.whatHappened}
                     </p>
                   </div>
 
-                  <div className="p-4 bg-white space-y-1.5">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      02 · Why It Matters
+                  <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1">
+                    <span className="text-[10.5px] uppercase font-bold tracking-wider text-slate-700 block">
+                      Why It Matters
                     </span>
-                    <p className="text-xs leading-relaxed text-slate-700">
+                    <p className="text-[11.5px] sm:text-xs text-slate-700 leading-relaxed">
                       {alert.details.whyItMatters}
                     </p>
                   </div>
 
-                  <div className="p-4 bg-white space-y-1.5">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      03 · What To Do
+                  <div className="p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/80 space-y-1">
+                    <span className="text-[10.5px] uppercase font-bold tracking-wider text-slate-700 block">
+                      Protocol Action
                     </span>
-                    <ul className="space-y-1.5 mt-1">
+                    <ul className="text-[11.5px] sm:text-xs text-slate-700 space-y-0.5 leading-relaxed">
                       {alert.details.whatToDo.map((step, sIdx) => (
-                        <li key={sIdx} className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-700">
-                          <span className="text-sky-600 font-mono font-bold shrink-0">
-                            {String(sIdx + 1).padStart(2, "0")}
-                          </span>
-                          <span>{step}</span>
-                        </li>
+                        <li key={sIdx}>{step}</li>
                       ))}
                     </ul>
                   </div>

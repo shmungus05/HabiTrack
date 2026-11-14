@@ -52,6 +52,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive, thresholds } = simulationState;
 
+  const isMetric = settings.unitSystem === "metric";
+  const displayCo2 = isMetric
+    ? (activeScenario === "co2_spike" ? "4,350 PPM" : "2,250 PPM")
+    : (activeScenario === "co2_spike" ? "5.80 mmHg" : "3.00 mmHg");
+  const displayTemp = isMetric
+    ? (activeScenario === "thermal_overheat" ? "27.4 °C" : "22.8 °C")
+    : (activeScenario === "thermal_overheat" ? "81.3 °F" : "73.0 °F");
+
   const [formName, setFormName] = useState(profile.name);
   const [formRole, setFormRole] = useState(profile.role);
   const [scenarioNotice, setScenarioNotice] = useState<string | null>(null);
@@ -80,9 +88,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       simulationControls.injectScenario(scenario);
       const title =
         scenario === "co2_spike"
-          ? "CO₂ Pocket Spike (>3,800 PPM / 5.8 mmHg)"
+          ? (isMetric ? "CO₂ Pocket Spike (>4,200 PPM)" : "CO₂ Pocket Spike (>5.6 mmHg)")
           : scenario === "thermal_overheat"
-          ? "Thermal Loop Excursion (27.4 °C)"
+          ? (isMetric ? "Thermal Loop Excursion (27.4 °C)" : "Thermal Loop Excursion (81.3 °F)")
           : "SAA Orbital Radiation Transit";
       notifyScenario(`Injected ${title}. Overview & Alerts reacting in real time!`);
     }
@@ -120,168 +128,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>Scenario Triggered: {scenarioNotice}</span>
           </div>
         )}
-      </div>
-
-      {/* Interactive Real-Time Testing & Navigation Indicators — Full Width Aligned Card */}
-      <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5 border border-sky-200/80 bg-white shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3.5">
-          <div>
-            <h3 className="text-xs font-bold text-sky-700 uppercase tracking-[0.14em] flex items-center gap-2">
-              <Zap className="w-4 h-4 text-sky-600" />
-              <span>Interactive Real-Time Testing &amp; Navigation Indicators</span>
-            </h3>
-            <p className="text-xs text-muted mt-0.5">
-              Direct telemetry anomaly injectors. Injections propagate immediately across Overview, Alerts, and Timeline.
-            </p>
-          </div>
-
-          {isAnomalyActive && (
-            <span className="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[11px] font-bold animate-pulse flex items-center gap-1.5 self-start sm:self-auto">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>Live Override: {activeScenario.replace(/_/g, " ").toUpperCase()}</span>
-            </span>
-          )}
-        </div>
-
-        {/* Live Synchronized Telemetry Status Ribbon */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Live Cabin CO₂</span>
-            <span className={`font-mono font-bold text-sm ${activeScenario === "co2_spike" ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
-              {activeScenario === "co2_spike" ? "5.80 mmHg (4,350 PPM)" : "3.00 mmHg (2,250 PPM)"}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Heart Rate</span>
-            <span className={`font-mono font-bold text-sm ${activeScenario === "co2_spike" ? "text-rose-600 font-extrabold" : "text-slate-900"}`}>
-              {activeScenario === "co2_spike" ? "92 bpm (+27 bpm)" : `${profile.baselineHeartRate} bpm (Nominal)`}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Cabin Temp</span>
-            <span className={`font-mono font-bold text-sm ${activeScenario === "thermal_overheat" ? "text-orange-600 font-extrabold" : "text-slate-900"}`}>
-              {activeScenario === "thermal_overheat" ? "27.4 °C (Excursion)" : "22.8 °C (Nominal)"}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">Radiation Flux</span>
-            <span className={`font-mono font-bold text-sm ${activeScenario === "saa_transit" ? "text-purple-600 font-extrabold" : "text-slate-900"}`}>
-              {activeScenario === "saa_transit" ? "0.48 mGy/d (SAA)" : "0.19 mGy/d (Quiet)"}
-            </span>
-          </div>
-        </div>
-
-        {/* Test Trigger Injector Buttons */}
-        <div>
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">
-            Click to Inject Test Anomalies (Real-Time Propagation)
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <button
-              type="button"
-              onClick={() => handleInjectScenario("co2_spike")}
-              className={`p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2 ${
-                activeScenario === "co2_spike"
-                  ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-2 ring-amber-300"
-                  : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Wind className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>⚡ CO₂ Spike</span>
-                </div>
-                {activeScenario === "co2_spike" && (
-                  <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.2 rounded font-mono font-bold">ACTIVE</span>
-                )}
-              </div>
-              <p className="text-[11px] font-normal text-slate-500 text-left">
-                Spikes CO₂ to 4,350 PPM and triggers tachycardia (+27 bpm).
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleInjectScenario("thermal_overheat")}
-              className={`p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2 ${
-                activeScenario === "thermal_overheat"
-                  ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-2 ring-orange-300"
-                  : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Thermometer className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span>🌡️ Overheat (27.4 °C)</span>
-                </div>
-                {activeScenario === "thermal_overheat" && (
-                  <span className="text-[10px] bg-orange-200 text-orange-800 px-1.5 py-0.2 rounded font-mono font-bold">ACTIVE</span>
-                )}
-              </div>
-              <p className="text-[11px] font-normal text-slate-500 text-left">
-                Triggers cabin environmental loop thermal departure.
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleInjectScenario("saa_transit")}
-              className={`p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2 ${
-                activeScenario === "saa_transit"
-                  ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-2 ring-purple-300"
-                  : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
-              }`}
-            >
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Activity className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span>☢️ SAA Radiation</span>
-                </div>
-                {activeScenario === "saa_transit" && (
-                  <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.2 rounded font-mono font-bold">ACTIVE</span>
-                )}
-              </div>
-              <p className="text-[11px] font-normal text-slate-500 text-left">
-                Simulates South Atlantic Anomaly dosimetric flux (0.48 mGy/d).
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleInjectScenario("nominal")}
-              className="p-3 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2"
-            >
-              <div className="flex items-center gap-1.5 font-bold text-emerald-700">
-                <RotateCcw className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>🔄 Reset Nominal</span>
-              </div>
-              <p className="text-[11px] font-normal text-slate-500 text-left">
-                Restores all physiological &amp; environmental baselines.
-              </p>
-            </button>
-          </div>
-        </div>
-
-        {/* Data Management Actions */}
-        <div className="pt-3 border-t border-border flex flex-wrap items-center gap-3 text-xs">
-          <button
-            type="button"
-            onClick={() => notifyScenario("Cleared Symptoms")}
-            className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-medium transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear Stored Symptoms</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => notifyScenario("Loaded NASA Sample Case Study")}
-            className="px-3 py-1.5 rounded-lg glass-panel-subtle hover:border-sky-300 hover:bg-sky-50 text-secondary hover:text-sky-700 font-medium transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-            <span>Load NASA Case Study</span>
-          </button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -584,6 +430,141 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     }`}
                   >
                     NASA EDA Feed
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Real-Time Testing & Navigation Indicators Card — Under Metrics Card */}
+          <div className="p-4 sm:p-5 glass-panel rounded-xl space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2.5">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-sky-600 shrink-0" />
+                <h3 className="text-xs font-bold text-sky-700 uppercase tracking-wider">
+                  Interactive Real-Time Testing &amp; Navigation Indicators
+                </h3>
+              </div>
+
+              {isAnomalyActive ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-bold animate-pulse flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-amber-600" />
+                  <span>{activeScenario.replace(/_/g, " ").toUpperCase()} ACTIVE</span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-medium">
+                  Baselines Nominal
+                </span>
+              )}
+            </div>
+
+            {/* Compact Live Telemetry Status Ribbon - Strictly Showing Chosen Unit */}
+            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                  Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+                </span>
+                <span className={`font-mono font-bold text-xs ${activeScenario === "co2_spike" ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
+                  {displayCo2}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Heart Rate</span>
+                <span className={`font-mono font-bold text-xs ${activeScenario === "co2_spike" ? "text-rose-600 font-extrabold" : "text-slate-900"}`}>
+                  {activeScenario === "co2_spike" ? "92 bpm (+27)" : `${profile.baselineHeartRate} bpm`}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                  Cabin Temp ({isMetric ? "°C" : "°F"})
+                </span>
+                <span className={`font-mono font-bold text-xs ${activeScenario === "thermal_overheat" ? "text-orange-600 font-extrabold" : "text-slate-900"}`}>
+                  {displayTemp}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Radiation</span>
+                <span className={`font-mono font-bold text-xs ${activeScenario === "saa_transit" ? "text-purple-600 font-extrabold" : "text-slate-900"}`}>
+                  {activeScenario === "saa_transit" ? "0.48 mGy/d" : "0.19 mGy/d"}
+                </span>
+              </div>
+            </div>
+
+            {/* Compact Injector Buttons & Quick Actions */}
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleInjectScenario("co2_spike")}
+                  className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                    activeScenario === "co2_spike"
+                      ? "bg-amber-100 border-amber-400 text-amber-900 shadow-xs ring-1 ring-amber-300"
+                      : "bg-white hover:bg-amber-50 border-slate-200 text-slate-700 hover:border-amber-300"
+                  }`}
+                >
+                  <Wind className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>⚡ CO₂ Spike</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleInjectScenario("thermal_overheat")}
+                  className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                    activeScenario === "thermal_overheat"
+                      ? "bg-orange-100 border-orange-400 text-orange-900 shadow-xs ring-1 ring-orange-300"
+                      : "bg-white hover:bg-orange-50 border-slate-200 text-slate-700 hover:border-orange-300"
+                  }`}
+                >
+                  <Thermometer className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                  <span>🌡️ Overheat</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleInjectScenario("saa_transit")}
+                  className={`py-1.5 px-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+                    activeScenario === "saa_transit"
+                      ? "bg-purple-100 border-purple-400 text-purple-900 shadow-xs ring-1 ring-purple-300"
+                      : "bg-white hover:bg-purple-50 border-slate-200 text-slate-700 hover:border-purple-300"
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                  <span>☢️ SAA Radiation</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleInjectScenario("nominal")}
+                  className="py-1.5 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 text-xs font-semibold cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>🔄 Reset Nominal</span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] text-muted">
+                  Direct telemetry anomaly injectors. Live propagation to Overview, Alerts &amp; Timeline.
+                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => notifyScenario("Cleared Symptoms")}
+                    className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
+                    title="Clear logged symptoms"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Clear Symptoms</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => notifyScenario("Loaded NASA Case Study")}
+                    className="px-2.5 py-1.5 rounded-lg glass-panel-subtle hover:border-sky-300 hover:bg-sky-50 text-secondary hover:text-sky-700 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
+                    title="Load NASA case study"
+                  >
+                    <Sparkles className="w-3 h-3 text-sky-600" />
+                    <span>Case Study</span>
                   </button>
                 </div>
               </div>

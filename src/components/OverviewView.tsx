@@ -69,6 +69,7 @@ import { ClinicalRiskMatrix } from "../features/risk";
 import { SpacecraftModuleSelector } from "../features/topology";
 import { ContextualTriageBanner } from "../features/triage";
 import { useSimulationSandbox } from "../features/simulation";
+import { useBiomedicalSettings } from "../features/settings";
 
 interface OverviewViewProps {
   astronautId: string;
@@ -211,6 +212,7 @@ interface HealthGaugeProps {
   pressureMmHg: number;
   autonomicFlagged: boolean;
   hrLabel: string;
+  isMetric?: boolean;
 }
 
 function MultiFactorHealthGauge({
@@ -221,6 +223,7 @@ function MultiFactorHealthGauge({
   pressureMmHg,
   autonomicFlagged,
   hrLabel,
+  isMetric = true,
 }: HealthGaugeProps) {
   // 5-Factor Composite Algorithm (Section 5.3):
   // Score = 0.25*S_CO2 + 0.25*S_Rad + 0.15*S_Temp + 0.15*S_Hum + 0.20*S_Press
@@ -269,7 +272,9 @@ function MultiFactorHealthGauge({
   const checklist = [
     {
       label: "Carbon Dioxide (25%)",
-      reading: `${Math.round(co2Ppm).toLocaleString()} PPM`,
+      reading: isMetric
+        ? `${Math.round(co2Ppm).toLocaleString()} PPM`
+        : `${(co2Ppm / 750).toFixed(2)} mmHg`,
       ok: co2Ppm < 2500,
       caution: co2Ppm >= 2500 && co2Ppm <= 3800,
       color: "#0284c7",
@@ -283,7 +288,9 @@ function MultiFactorHealthGauge({
     },
     {
       label: "Cabin Temp (15%)",
-      reading: `${cabinTempC.toFixed(1)} °C`,
+      reading: isMetric
+        ? `${cabinTempC.toFixed(1)} °C`
+        : `${(cabinTempC * 1.8 + 32).toFixed(1)} °F`,
       ok: cabinTempC >= 21.0 && cabinTempC <= 24.0,
       caution: cabinTempC > 24.0 && cabinTempC <= 26.5,
       color: "#ea580c",
@@ -297,7 +304,9 @@ function MultiFactorHealthGauge({
     },
     {
       label: "Pressure & O₂ (20%)",
-      reading: `${pressureMmHg.toFixed(1)} mmHg`,
+      reading: isMetric
+        ? `${(pressureMmHg * 0.133322).toFixed(1)} kPa`
+        : `${pressureMmHg.toFixed(1)} mmHg`,
       ok: pressureMmHg >= 750 && pressureMmHg <= 765,
       caution: false,
       color: "#059669",
@@ -445,7 +454,6 @@ function latestValue(data: OverviewData, streamId: string): number | null {
 interface AstronautOverviewProps {
   astronautId: string;
   data: OverviewData;
-  activeEvent: HealthEvent | null;
   quickLogging: string | null;
   quickNotice: string | null;
   onQuickLog: (code: string) => void;
@@ -453,50 +461,55 @@ interface AstronautOverviewProps {
 }
 
 /**
- * Astronaut perspective: three glanceable cards plus a one-tap symptom grid.
- * Responds to real-time telemetry and injected anomaly scenarios instantly.
+ * Astronaut perspective: focused strictly on personal physiological telemetry
+ * (HR, HRV/RMSSD, SpO2, Core Temp with live sparklines) and personal health status
+ * (5-factor composite health gauge, personal baseline, and 1-tap quick symptom log).
+ * Concordance investigation cards, concordance history, and fleet reports are omitted.
  */
 function AstronautOverview({
   astronautId,
   data,
-  activeEvent,
   quickLogging,
   quickNotice,
   onQuickLog,
   activeScenario = "nominal",
 }: AstronautOverviewProps) {
-  const { astronaut } = data;
+  const { settings } = useBiomedicalSettings();
+  const isMetric = settings.unitSystem === "metric";
+  const { astronaut, measurements } = data;
+  const profileCalibrated = astronaut?.calibration_status === "CALIBRATED";
+
   let hr = latestValue(data, "stream_sim_hr");
   let rmssd = latestValue(data, "stream_sim_hrv");
-  let spo2 = latestValue(data, "stream_sim_spo2");
-  let temp = latestValue(data, "stream_sim_temp");
-  let co2 = latestValue(data, "stream_eda_co2");
-
-  let co2Value = co2 ? (co2 < 100 ? Math.round(co2 * 750) : Math.round(co2)) : 3197;
-  let cabinTemp = 22.8;
-  let radValue = "0.200 mGy/d";
+  let rawCo2 = latestValue(data, "stream_eda_co2") ?? 3.0;
+  let latestCo2 = rawCo2 < 100 ? Math.round(rawCo2 * 750) : Math.round(rawCo2);
+  let latestCabinTemp = latestValue(data, "stream_eda_temp") ?? 22.8;
+  const latestPressure = latestValue(data, "stream_eda_pressure") ?? 758.2;
+  let latestHr = hr ?? (astronaut?.resting_hr ?? 65);
+  let latestRmssd = rmssd ?? (astronaut?.resting_rmssd ?? 55);
 
   // Apply live real-time simulation scenario overrides
   if (activeScenario === "co2_spike") {
-    co2Value = 4350;
-    hr = (hr ?? 65) + 27.2;
-    rmssd = Math.max(18, (rmssd ?? 55) - 30.5);
+    latestCo2 = 4350;
+    latestHr = 92; // 65 bpm baseline + 27 bpm tachycardia
+    latestRmssd = 24; // 55 ms baseline - 31 ms depression
   } else if (activeScenario === "thermal_overheat") {
-    cabinTemp = 27.4;
-    temp = (temp ?? 37.0) + 0.6;
-    hr = (hr ?? 65) + 15.0;
+    latestCabinTemp = 27.4;
+    latestHr = 80;
   } else if (activeScenario === "saa_transit") {
-    radValue = "0.480 mGy/d";
+    // SAA radiation belt crossing
   }
 
-  const co2Elevated = co2Value >= 3500 || activeScenario === "co2_spike";
-  const hrDelta = hr !== null && astronaut ? hr - astronaut.resting_hr : 0;
-  const rmssdDelta = rmssd !== null && astronaut ? rmssd - astronaut.resting_rmssd : 0;
+  const hrDelta = astronaut ? latestHr - astronaut.resting_hr : 0;
+  const rmssdDelta = astronaut ? latestRmssd - astronaut.resting_rmssd : 0;
   const autonomicFlagged = Math.abs(hrDelta) > 8 || rmssdDelta < -10 || activeScenario === "co2_spike";
-  const eventActive = activeEvent !== null || activeScenario === "co2_spike" || activeScenario === "thermal_overheat";
+  const eventActive = autonomicFlagged || activeScenario === "co2_spike" || activeScenario === "thermal_overheat";
+  const gaugeHrLabel = `${latestHr.toFixed(0)} bpm`;
+  const radValue = activeScenario === "saa_transit" ? 0.48 : 0.19;
 
   return (
     <div className="space-y-6">
+      {/* Astronaut Header */}
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl glass-panel p-4 sm:p-5">
         <div className="flex min-w-0 items-center gap-4">
           <AstronautAvatar
@@ -509,161 +522,335 @@ function AstronautOverview({
           <div className="min-w-0">
             <p className="font-mono text-[11px] text-slate-500">
               Astronaut perspective · {astronautId}
+              {astronaut?.mission_id ? (
+                <span className="text-slate-400"> · {astronaut.mission_id}</span>
+              ) : null}
             </p>
             <h2 className="mt-0.5 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
               {astronaut?.callsign ?? astronautId}
             </h2>
             <p className="mt-0.5 text-xs text-slate-600">
-              {astronaut?.crew_role ?? "Crew member"} ·{" "}
-              {astronaut?.mission_id ?? "Expedition"}
+              {astronaut?.crew_role ?? "Crew member"}
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <Badge
+                variant={profileCalibrated ? "success" : "warning"}
+                dot
+                pulse={!profileCalibrated}
+              >
+                {astronaut?.calibration_status ?? "CALIBRATING"}
+              </Badge>
+              <Badge variant="default">
+                <Gauge className="h-3 w-3" />
+                {astronaut?.baseline_window_days ?? 7}-day baseline
+              </Badge>
+            </div>
           </div>
         </div>
-        <Badge
-          variant={eventActive ? "danger" : "success"}
-          dot
-          pulse={eventActive}
-        >
-          {eventActive ? "Action required" : "All clear"}
-        </Badge>
+        <div className="flex flex-col items-start gap-1 sm:items-end">
+          <Badge
+            variant={eventActive ? "danger" : "success"}
+            dot
+            pulse={eventActive}
+          >
+            {eventActive ? "Action required" : "All clear"}
+          </Badge>
+          <span className="field-label mt-1">Calibrated Baseline</span>
+          <span className="font-mono text-xs text-slate-600">
+            {formatDateTime(astronaut?.baseline_calibrated_at ?? null)}
+          </span>
+          <span className="text-[11px] text-slate-500">Timestamps in UTC</span>
+        </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <article className="rounded-xl glass-panel glass-card-hover p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <p className="field-label">Cabin environmental state</p>
-            <Wind className="h-4 w-4 text-slate-400" />
+      {/* Real-time Environmental & Biometric Telemetry Ribbon Card */}
+      <section className="rounded-xl glass-panel p-4 sm:p-5">
+        <div className="flex items-center justify-between pb-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Wind className={`w-4 h-4 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+              Cabin Environment &amp; Biometric Ribbon
+            </span>
           </div>
-          <p className="mt-3 font-mono text-2xl font-semibold tabular-nums text-slate-900">
-            {co2Value.toLocaleString()}{" "}
-            <span className="text-xs font-normal text-slate-500">PPM CO₂</span>
-          </p>
-          <p className="mt-1 text-xs text-slate-600">
-            {co2Elevated
-              ? "Elevated cabin carbon dioxide in the current module."
-              : "Carbon dioxide inside the nominal operational envelope."}
-          </p>
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
-              <dt className="text-slate-500">Cabin temp</dt>
-              <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                {cabinTemp.toFixed(1)} °C
-              </dd>
+          {activeScenario === "co2_spike" && (
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+              CO₂ SPIKE ACTIVE
+            </span>
+          )}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* Cabin CO2 */}
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${latestCo2 > 3500 ? "text-amber-700" : "text-slate-900"}`}>
+                {isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`}
+              </span>
             </div>
-            <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
-              <dt className="text-slate-500">Radiation</dt>
-              <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                {radValue}
-              </dd>
-            </div>
-          </dl>
-        </article>
+            <span className="text-[10px] text-slate-500 font-mono block">
+              {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
+            </span>
+          </div>
 
-        <article className="rounded-xl glass-panel glass-card-hover p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <p className="field-label">Personal autonomic status</p>
-            <HeartPulse className="h-4 w-4 text-slate-400" />
+          {/* Heart Rate */}
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Heart Rate
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${latestHr > 85 ? "text-amber-700" : "text-slate-900"}`}>
+                {Math.round(latestHr)} bpm
+              </span>
+              <span className={`text-xs font-semibold ${latestHr - 65 >= 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                ({latestHr - 65 >= 0 ? `+${Math.round(latestHr - 65)}` : Math.round(latestHr - 65)})
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono block">
+              Baseline {astronaut?.resting_hr ?? 65} bpm
+            </span>
           </div>
-          <p className="mt-3 font-mono text-2xl font-semibold tabular-nums text-slate-900">
-            {hr !== null ? hr.toFixed(0) : "—"}{" "}
-            <span className="text-xs font-normal text-slate-500">bpm</span>
-          </p>
-          <p className="mt-1 text-xs text-slate-600">
-            {autonomicFlagged
-              ? "Heart rate and HRV sit outside your calibrated envelope."
-              : "Heart rate and HRV are tracking your baseline."}
-          </p>
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
-              <dt className="text-slate-500">RMSSD</dt>
-              <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                {rmssd !== null ? `${rmssd.toFixed(0)} ms` : "—"}
-              </dd>
-            </div>
-            <div className="rounded-lg border border-slate-200/80 bg-slate-50 px-2.5 py-2">
-              <dt className="text-slate-500">SpO₂</dt>
-              <dd className="mt-0.5 font-mono font-semibold text-slate-900">
-                {spo2 !== null ? `${spo2.toFixed(1)} %` : "—"}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-2 font-mono text-[11px] text-slate-500">
-            Core temp {temp !== null ? `${temp.toFixed(2)} °C` : "—"} · baseline{" "}
-            {astronaut?.resting_hr ?? 0} bpm
-          </p>
-        </article>
 
-        <article
-          className={`rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-card glass-card-hover ${
-            eventActive ? "border-l-4 border-l-red-500" : ""
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <p className="field-label">Immediate action plan</p>
-            <ShieldAlert
-              className={`h-4 w-4 ${eventActive ? "text-red-600" : "text-emerald-600"}`}
-            />
+          {/* Cabin Temp */}
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Cabin Temp ({isMetric ? "°C" : "°F"})
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
+                {isMetric ? `${latestCabinTemp.toFixed(1)} °C` : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono block">
+              Envelope 20.0–24.0 °C
+            </span>
           </div>
-          <p className="mt-3 text-sm font-semibold text-slate-900">
-            {eventActive
-              ? "Relocate to a ventilated module and report symptoms"
-              : "No action required — continue monitoring"}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">
-            {eventActive
-              ? (activeScenario === "co2_spike"
-                  ? "Elevated cabin CO₂ (4,350 PPM). Verify Node 2 ventilation diffuser fans are operational and rehydrate."
-                  : parseEventRationale(activeEvent?.rationale ?? "", activeEvent?.event_type ?? "").summary)
-              : "No multi-signal concordance event is active for your profile."}
-          </p>
-          <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-slate-500">
-            {eventActive
-              ? `Flight rule review · ${activeScenario === "co2_spike" ? "FR-ECLSS-001 (CRITICAL)" : activeEvent?.severity_level ?? "OBSERVE"}`
-              : "Certified flight rule B13-101.B within limits"}
-          </p>
-        </article>
+
+          {/* Radiation */}
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Radiation
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
+                {radValue.toFixed(2)} mGy/d
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono block">
+              Baseline 0.19 mGy/d
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* 4 Physiological KPI Cards with live sparklines */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {KPI_DEFINITIONS.map((definition) => {
+          const points = streamPoints(measurements, definition.streamId);
+          const latest = points.at(-1);
+          const baseline = astronaut ? astronaut[definition.baselineKey] : 0;
+          let value = latest?.value ?? baseline;
+
+          // Apply real-time simulation overrides to KPI values
+          if (definition.key === "hr" && activeScenario === "co2_spike") {
+            value = 92; // 65 baseline + 27 tachycardia
+          } else if (definition.key === "rmssd" && activeScenario === "co2_spike") {
+            value = 24; // 55 baseline - 31 depression
+          } else if (definition.key === "temp" && activeScenario === "thermal_overheat") {
+            value = (latest?.value ?? baseline) + 0.6;
+          } else if (definition.key === "hr" && activeScenario === "thermal_overheat") {
+            value = 80;
+          }
+
+          let delta = value - baseline;
+          const alert = definition.warn(delta);
+          const Icon = definition.icon;
+          const sparkValues = [...points.slice(-60).map((point) => point.value), value];
+
+          let displayVal = value;
+          let displayBase = baseline;
+          let displayDelta = delta;
+          let displayUnit = definition.unit;
+          let displayDigits = definition.digits;
+
+          if (definition.key === "temp" && !isMetric) {
+            displayVal = value * 1.8 + 32;
+            displayBase = baseline * 1.8 + 32;
+            displayDelta = delta * 1.8;
+            displayUnit = "°F";
+            displayDigits = 1;
+          }
+
+          return (
+            <article
+              key={definition.key}
+              className={`rounded-xl glass-panel glass-card-hover p-4 sm:p-5 ${
+                alert ? "border-amber-300" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">
+                    {definition.label}
+                  </p>
+                  <div className="mt-1.5 flex items-baseline gap-1.5">
+                    <span className="font-mono text-[26px] leading-[34px] font-semibold tracking-tight text-slate-900 tabular-nums">
+                      {displayVal.toFixed(displayDigits)}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {displayUnit}
+                    </span>
+                  </div>
+                </div>
+                <span className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+                <span
+                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium border ${
+                    alert
+                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                      : "bg-slate-100 text-slate-700 border-slate-200"
+                  }`}
+                >
+                  {displayDelta >= 0 ? (
+                    <ArrowUpRight className="h-3 w-3" />
+                  ) : (
+                    <ArrowDownRight className="h-3 w-3" />
+                  )}
+                  {formatSigned(displayDelta, displayDigits + 1)}
+                </span>
+                <span className="text-slate-500 font-mono">
+                  μ {displayBase.toFixed(displayDigits)}
+                </span>
+              </div>
+
+              <div className="mt-3">
+                <Sparkline values={sparkValues} color={alert ? "#d97706" : "#0284c7"} />
+              </div>
+            </article>
+          );
+        })}
       </div>
 
-      <section className="rounded-xl glass-panel p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">
-              Quick symptom log
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              One tap records locally at severity 3/5. Add detail in Symptoms.
+      {/* Focused 2-Column Personal Health Status Layout */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column: 5-Factor Health Gauge */}
+        <section className="space-y-6">
+          <MultiFactorHealthGauge
+            co2Ppm={latestCo2}
+            radiationMGy={0.200}
+            cabinTempC={latestCabinTemp}
+            humidityPct={43.9}
+            pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
+            autonomicFlagged={autonomicFlagged}
+            hrLabel={gaugeHrLabel}
+            isMetric={isMetric}
+          />
+        </section>
+
+        {/* Right Column: Personal Baseline, Quick Symptom Log, Monitoring Note */}
+        <section className="space-y-6">
+          {/* Quick Symptom Log: 1-tap logging for astronaut */}
+          <section className="rounded-xl glass-panel p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Quick symptom log
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  One tap records locally at severity 3/5. Add detail in Symptoms.
+                </p>
+              </div>
+              {quickNotice ? (
+                <span className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
+                  {quickNotice}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {QUICK_SYMPTOMS.map((symptom) => (
+                <button
+                  key={symptom.code}
+                  type="button"
+                  onClick={() => onQuickLog(symptom.code)}
+                  disabled={quickLogging !== null}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left cursor-pointer transition-colors hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="block text-xs font-semibold text-slate-900">
+                    {symptom.label}
+                  </span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
+                    {quickLogging === symptom.code ? "Recording…" : "Tap to log"}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500">
+              <Satellite className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+              Local station log writes are instant. Ground downlink follows the
+              communications link state independently.
             </p>
-          </div>
-          {quickNotice ? (
-            <span className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
-              {quickNotice}
+          </section>
+
+          <article className="rounded-xl glass-panel p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-slate-900">Personal baseline</h3>
+            <dl className="mt-3 divide-y divide-slate-100 text-xs">
+              {[
+                { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
+                { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
+                { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
+                {
+                  label: "Core temp",
+                  value: isMetric
+                    ? `${astronaut?.resting_temp ?? 0} °C`
+                    : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
+                  icon: Thermometer,
+                },
+                {
+                  label: "Circadian shift",
+                  value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
+                  icon: Clock3,
+                },
+              ].map((row) => {
+                const Icon = row.icon;
+                return (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
+                  >
+                    <dt className="flex items-center gap-2 text-slate-600">
+                      <Icon className="h-3.5 w-3.5 text-slate-400" />
+                      {row.label}
+                    </dt>
+                    <dd className="font-semibold font-mono text-slate-900 tabular-nums">{row.value}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+            <p className="mt-3 flex items-start gap-2 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
+              <Wind className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+              Rolling {astronaut?.baseline_window_days ?? 7}-day personal circadian baseline (μ ± 2σ).
+            </p>
+          </article>
+
+          <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
+              <Radio className="h-4 w-4" />
             </span>
-          ) : null}
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {QUICK_SYMPTOMS.map((symptom) => (
-            <button
-              key={symptom.code}
-              type="button"
-              onClick={() => onQuickLog(symptom.code)}
-              disabled={quickLogging !== null}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left cursor-pointer transition-colors hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="block text-xs font-semibold text-slate-900">
-                {symptom.label}
-              </span>
-              <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
-                {quickLogging === symptom.code ? "Recording…" : "Tap to log"}
-              </span>
-            </button>
-          ))}
-        </div>
-        <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500">
-          <Satellite className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-          Local station log writes are instant. Ground downlink follows the
-          communications link state independently.
-        </p>
-      </section>
+            <div>
+              <h3 className="text-xs font-semibold text-slate-900">Personal Health Monitoring</h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                Personal vital signals are evaluated continuously against your baseline. Ground telemetry
+                synchronization is active.
+              </p>
+            </div>
+          </article>
+        </section>
+      </div>
     </div>
   );
 }
@@ -682,6 +869,8 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const isAstronaut = role === "astronaut";
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
+  const { settings } = useBiomedicalSettings();
+  const isMetric = settings.unitSystem === "metric";
 
   const [dossierOpen, setDossierOpen] = useState(false);
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
@@ -722,7 +911,64 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
     void load();
   }, [load]);
 
-  const activeEvent = useMemo(() => {
+  const activeEvent = useMemo<HealthEvent | null>(() => {
+    // Inject real-time simulated concordance events when a simulation scenario is active
+    if (activeScenario === "co2_spike") {
+      return {
+        event_id: "sim_co2_spike",
+        astronaut_id: astronautId,
+        start_time: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
+        end_time: new Date().toISOString(),
+        event_type: "HYPERCAPNIC_AUTONOMIC_DISCORDANCE",
+        severity_level: "INVESTIGATE",
+        uncertainty_level: "LOW",
+        rationale: isMetric
+          ? "Critical cabin CO₂ spike (4,350 PPM) in Node 2 with concordant autonomic strain (+27 bpm compensatory tachycardia, RMSSD depressed to 24 ms). Breaches Flight Rule FR-ECLSS-001."
+          : "Critical cabin CO₂ spike (5.80 mmHg) in Node 2 with concordant autonomic strain (+27 bpm compensatory tachycardia, RMSSD depressed to 24 ms). Breaches Flight Rule FR-ECLSS-001.",
+        review_status: "PENDING",
+        review_notes: null,
+        symptom_report_id: null,
+        contributing_stream_ids: JSON.stringify(["stream_eda_co2", "stream_sim_hr", "stream_sim_hrv"]),
+        peak_deviation_sigma: 3.42,
+      };
+    }
+    if (activeScenario === "thermal_overheat") {
+      return {
+        event_id: "sim_thermal_overheat",
+        astronaut_id: astronautId,
+        start_time: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        end_time: new Date().toISOString(),
+        event_type: "THERMAL_BOUNDARY_EXCURSION",
+        severity_level: "INVESTIGATE",
+        uncertainty_level: "LOW",
+        rationale: isMetric
+          ? "Cabin ambient temperature reached 27.4 °C in Node 2 with concordant core temp rise (+0.6 °C) and tachycardia (+15 bpm). Breaches Flight Rule FR-CDRA-002."
+          : "Cabin ambient temperature reached 81.3 °F in Node 2 with concordant core temp rise (+1.1 °F) and tachycardia (+15 bpm). Breaches Flight Rule FR-CDRA-002.",
+        review_status: "PENDING",
+        review_notes: null,
+        symptom_report_id: null,
+        contributing_stream_ids: JSON.stringify(["stream_eda_temp", "stream_sim_temp", "stream_sim_hr"]),
+        peak_deviation_sigma: 2.85,
+      };
+    }
+    if (activeScenario === "saa_transit") {
+      return {
+        event_id: "sim_saa_transit",
+        astronaut_id: astronautId,
+        start_time: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        end_time: new Date().toISOString(),
+        event_type: "SAA_RADIATION_FLUX_CROSSING",
+        severity_level: "OBSERVE",
+        uncertainty_level: "LOW",
+        rationale: "Spacecraft transit through South Atlantic Anomaly with dosimetric ionizing radiation rate elevated to 0.48 mGy/d.",
+        review_status: "PENDING",
+        review_notes: null,
+        symptom_report_id: null,
+        contributing_stream_ids: JSON.stringify(["stream_eda_radiation"]),
+        peak_deviation_sigma: 2.10,
+      };
+    }
+
     if (!data?.events.length) {
       return null;
     }
@@ -734,18 +980,19 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             severityRank(left.severity_level) - severityRank(right.severity_level),
         )[0] ?? null
     );
-  }, [data]);
+  }, [data, activeScenario, astronautId, isMetric]);
 
   const orderedEvents = useMemo(() => {
-    if (!data) {
-      return [];
+    const list = data ? [...data.events] : [];
+    if (activeEvent && activeEvent.event_id.startsWith("sim_")) {
+      list.unshift(activeEvent);
     }
-    return [...data.events].sort(
+    return list.sort(
       (left, right) =>
         severityRank(left.severity_level) - severityRank(right.severity_level) ||
         right.start_time.localeCompare(left.start_time),
     );
-  }, [data]);
+  }, [data, activeEvent]);
 
   const recentSymptoms = useMemo(() => {
     if (!data) {
@@ -759,6 +1006,12 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const acknowledge = async (event: HealthEvent) => {
     setReviewing(event.event_id);
     try {
+      if (event.event_id.startsWith("sim_")) {
+        // Simulated anomaly acknowledged; reset simulation to nominal
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        simulationControls.resetNominal();
+        return;
+      }
       const nextStatus = event.review_status === "PENDING" ? "ACKNOWLEDGED" : "RESOLVED";
       const updated = await reviewEvent(event.event_id, nextStatus, event.review_notes);
       setData((current) =>
@@ -904,41 +1157,11 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Live Real-Time Anomaly Active Banner */}
-      {isAnomalyActive && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs animate-fadeIn">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 animate-pulse" />
-            <div>
-              <span className="font-bold text-amber-900 uppercase tracking-wider text-[11px]">
-                Live Real-Time Simulation Override: {activeScenario.replace(/_/g, " ").toUpperCase()}
-              </span>
-              <p className="text-amber-800 text-[11px] mt-0.5">
-                {activeScenario === "co2_spike"
-                  ? "Simulating elevated cabin CO₂ (+2.8 mmHg / 4,350 PPM) in Node 2 with autonomic tachycardia (+27 bpm) and RMSSD depression (-31 ms). Telemetry reacting across all views."
-                  : activeScenario === "thermal_overheat"
-                  ? "Thermal loop anomaly active: cabin ambient temperature elevated to 27.4 °C with compensatory autonomic acceleration."
-                  : "South Atlantic Anomaly orbital transit active: radiation flux elevated to 0.480 mGy/d."}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => simulationControls.resetNominal()}
-            className="rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3 py-1.5 text-xs cursor-pointer flex items-center gap-1.5 shadow-2xs transition-colors"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset to Nominal</span>
-          </button>
-        </div>
-      )}
-
       <AstronautOnly>
         {data ? (
           <AstronautOverview
             astronautId={astronautId}
             data={data}
-            activeEvent={activeEvent}
             quickLogging={quickLogging}
             quickNotice={quickNotice}
             onQuickLog={(code) => void quickLogSymptom(code)}
@@ -1012,19 +1235,33 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
 
           // Apply real-time simulation overrides to KPI values
           if (definition.key === "hr" && activeScenario === "co2_spike") {
-            value = value + 27.2;
+            value = 92; // 65 baseline + 27 tachycardia
           } else if (definition.key === "rmssd" && activeScenario === "co2_spike") {
-            value = Math.max(18, value - 30.5);
+            value = 24; // 55 baseline - 31 depression
           } else if (definition.key === "temp" && activeScenario === "thermal_overheat") {
-            value = 27.4;
+            value = (latest?.value ?? baseline) + 0.6;
           } else if (definition.key === "hr" && activeScenario === "thermal_overheat") {
-            value = value + 15.0;
+            value = 80;
           }
 
-          const delta = value - baseline;
+          let delta = value - baseline;
           const alert = definition.warn(delta);
           const Icon = definition.icon;
           const sparkValues = [...points.slice(-60).map((point) => point.value), value];
+
+          let displayVal = value;
+          let displayBase = baseline;
+          let displayDelta = delta;
+          let displayUnit = definition.unit;
+          let displayDigits = definition.digits;
+
+          if (definition.key === "temp" && !isMetric) {
+            displayVal = value * 1.8 + 32;
+            displayBase = baseline * 1.8 + 32;
+            displayDelta = delta * 1.8;
+            displayUnit = "°F";
+            displayDigits = 1;
+          }
 
           return (
             <article
@@ -1040,10 +1277,10 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
                   </p>
                   <div className="mt-1.5 flex items-baseline gap-1.5">
                     <span className="font-mono text-[26px] leading-[34px] font-semibold tracking-tight text-slate-900 tabular-nums">
-                      {value.toFixed(definition.digits)}
+                      {displayVal.toFixed(displayDigits)}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {definition.unit}
+                      {displayUnit}
                     </span>
                   </div>
                 </div>
@@ -1060,15 +1297,15 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
                       : "bg-slate-100 text-slate-700 border-slate-200"
                   }`}
                 >
-                  {delta >= 0 ? (
+                  {displayDelta >= 0 ? (
                     <ArrowUpRight className="h-3 w-3" />
                   ) : (
                     <ArrowDownRight className="h-3 w-3" />
                   )}
-                  {formatSigned(delta, definition.digits + 1)}
+                  {formatSigned(displayDelta, displayDigits + 1)}
                 </span>
                 <span className="text-slate-500 font-mono">
-                  μ {baseline.toFixed(definition.digits)}
+                  μ {displayBase.toFixed(displayDigits)}
                 </span>
               </div>
 
@@ -1298,6 +1535,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
             autonomicFlagged={gaugeAutonomicFlag}
             hrLabel={gaugeHrLabel}
+            isMetric={isMetric}
           />
 
           <article className="rounded-xl glass-panel p-4 sm:p-5">
@@ -1355,7 +1593,13 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
                 { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
                 { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
                 { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
-                { label: "Core temp", value: `${astronaut?.resting_temp ?? 0} °C`, icon: Thermometer },
+                {
+                  label: "Core temp",
+                  value: isMetric
+                    ? `${astronaut?.resting_temp ?? 0} °C`
+                    : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
+                  icon: Thermometer,
+                },
                 {
                   label: "Circadian shift",
                   value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,

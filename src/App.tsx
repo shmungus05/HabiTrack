@@ -17,6 +17,7 @@ import {
   Stethoscope,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
@@ -545,23 +546,24 @@ export default function App() {
         <div className="flex min-w-0 flex-1 flex-col">
           {isAnomalyActive ? (
             <div className="mt-4 w-full px-4 sm:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
-                <span className="flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
-                  <span className="font-semibold uppercase tracking-wider">
-                    Simulation override active
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-2 text-xs text-amber-900 shadow-xs animate-fadeIn">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 animate-pulse" />
+                  <span className="font-bold uppercase tracking-wider text-[11px] text-amber-950">
+                    Simulation Override Active: {activeScenario.replace(/_/g, " ").toUpperCase()}
                   </span>
-                  <span className="text-amber-700">
-                    · {activeScenario.replace(/_/g, " ")} injected telemetry is on screen
+                  <span className="text-amber-800 text-[11px] truncate hidden sm:inline">
+                    · Live injected telemetry reacting across deck
                   </span>
-                </span>
+                </div>
                 <button
                   type="button"
                   onClick={simulationControls.resetNominal}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800 cursor-pointer transition-colors hover:bg-amber-100"
+                  className="p-1 rounded-lg text-amber-700 hover:text-amber-950 hover:bg-amber-200/60 transition-colors cursor-pointer shrink-0"
+                  title="Close and reset to nominal"
+                  aria-label="Close and reset to nominal"
                 >
-                  <RefreshCw className="h-3 w-3" />
-                  Reset to nominal
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
