@@ -62,7 +62,7 @@ const ALL_VIEWS: readonly ViewDefinition[] = [
   { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms", surgeonOnly: false },
   { key: "research", label: "Research", icon: BookOpen, path: "/research", surgeonOnly: true },
   { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts", surgeonOnly: false },
-  { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: true },
+  { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: false },
 ];
 
 const TimelineView = lazy(() =>
@@ -177,7 +177,7 @@ export default function App() {
 
   // When in astronaut perspective, redirect if on surgeon-restricted views
   useEffect(() => {
-    if (isAstronaut && (activeView === "research" || activeView === "settings")) {
+    if (isAstronaut && activeView === "research") {
       setActiveView("overview");
       if (window.location.pathname !== "/") {
         window.history.replaceState({}, "", "/");
@@ -411,7 +411,10 @@ export default function App() {
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {view.label}
+                <span>{view.label}</span>
+                {view.key === "alerts" && isAnomalyActive && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                )}
               </button>
             );
           })}
@@ -451,6 +454,11 @@ export default function App() {
                         }`}
                       />
                       <span>{view.label}</span>
+                      {view.key === "alerts" && isAnomalyActive && (
+                        <span className="ml-auto rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.2 text-[10px] font-bold text-amber-800 animate-pulse">
+                          LIVE
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -595,7 +603,9 @@ export default function App() {
             {activeView === "research" ? (
               <ResearchView astronautId={activeAstronautId} />
             ) : null}
-            {activeView === "alerts" ? <AlertsDeck /> : null}
+            {activeView === "alerts" ? (
+              <AlertsDeck astronautId={activeAstronautId} />
+            ) : null}
             {activeView === "settings" ? <SettingsView /> : null}
           </main>
         </div>
