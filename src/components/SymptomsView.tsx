@@ -13,21 +13,24 @@ import {
   ClipboardList,
   Clock,
   Download,
+  FileText,
   MapPin,
-  MessageSquare,
   Plus,
   Search,
   Send,
+  ShieldCheck,
   Sparkles,
   Stethoscope,
   Trash2,
+  Users,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchSymptoms, submitSymptom } from "../services/api";
+import { acknowledgeSymptom, fetchSymptoms, submitSymptom } from "../services/api";
 import type { SymptomReport } from "../types/api";
 import { titleCase } from "../lib/format";
-import { useAssistantStore } from "../stores/assistantStore";
+import { useRoleStore } from "../stores/roleStore";
+import { HealthReportModal } from "../features/health-report";
 
 const SYMPTOM_CODES = ["HEADACHE", "FATIGUE", "DIZZINESS", "NAUSEA"] as const;
 const CABIN_MODULES = [
@@ -41,6 +44,8 @@ const CABIN_MODULES = [
 
 interface LocalSymptomEntry {
   id: string;
+  astronautId?: string;
+  callsign?: string;
   symptom: string;
   severity: string;
   time: string;
@@ -48,11 +53,17 @@ interface LocalSymptomEntry {
   duration: string;
   description: string;
   environmentalFactor?: string;
+  reviewStatus?: "PENDING" | "ACKNOWLEDGED";
+  acknowledgedAt?: string | null;
+  acknowledgedBy?: string | null;
+  acknowledgmentNotes?: string | null;
 }
 
 const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
   {
     id: "sym-001",
+    astronautId: "ASTRO-01",
+    callsign: "CDR M. Vance",
     symptom: "Headache",
     severity: "Moderate",
     time: "10:12 UTC",
@@ -60,9 +71,12 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     duration: "45 mins",
     description: "Bifrontal throbbing pressure developing after 2 hours working on payload rack in Node 2 forward bay.",
     environmentalFactor: "CO₂ elevated in Node 2 pocket (peak 3,620 PPM).",
+    reviewStatus: "PENDING",
   },
   {
     id: "sym-002",
+    astronautId: "ASTRO-02",
+    callsign: "FE-1 Dr. S. Patel",
     symptom: "Fatigue",
     severity: "Mild",
     time: "08:47 UTC",
@@ -70,9 +84,14 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     duration: "2 hours",
     description: "General lethargy and mild heaviness in limbs following morning treadmill workout session.",
     environmentalFactor: "Moderate CO₂ rise during exercise period + cumulative sleep deficit.",
+    reviewStatus: "ACKNOWLEDGED",
+    acknowledgedAt: "09:05 UTC",
+    acknowledgedBy: "Flight Surgeon (Surgeon Console)",
   },
   {
     id: "sym-003",
+    astronautId: "ASTRO-03",
+    callsign: "MS-1 K. Lindgren",
     symptom: "Dizziness",
     severity: "Mild",
     time: "06:20 UTC",
@@ -80,6 +99,9 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     duration: "15 mins",
     description: "Transient postural disorientation upon waking and translating from sleep quarters to galley.",
     environmentalFactor: "Microgravity neuro-vestibular re-adaptation.",
+    reviewStatus: "ACKNOWLEDGED",
+    acknowledgedAt: "06:45 UTC",
+    acknowledgedBy: "Flight Surgeon (Surgeon Console)",
   },
 ];
 
@@ -88,9 +110,15 @@ interface SymptomsViewProps {
 }
 
 export function SymptomsView({ astronautId }: SymptomsViewProps) {
+  const role = useRoleStore((state) => state.role);
+  const isFlightSurgeon = role === "flight_surgeon";
+  const [crewFilter, setCrewFilter] = useState<string>("ALL");
+  const [manualAstronautId, setManualAstronautId] = useState<string>(astronautId || "ASTRO-01");
+
   const [viewMode, setViewMode] = useState<"history" | "manual">("history");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "ACKNOWLEDGED">("ALL");
 
   // Manual Form States
   const [symptomCode, setSymptomCode] = useState<(typeof SYMPTOM_CODES)[number]>("HEADACHE");
@@ -102,7 +130,22 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [localDiary, setLocalDiary] = useState<LocalSymptomEntry[]>(() => {
     try {
       const saved = localStorage.getItem("habitrack_symptom_diary_v3");
-      return saved ? JSON.parse(saved) : SAMPLE_NASA_DIARY;
+      if (saved) {
+        const parsed: LocalSymptomEntry[] = JSON.parse(saved);
+        return parsed.map((item) => ({
+          ...item,
+          astronautId: item.astronautId || "ASTRO-01",
+          callsign:
+            item.callsign ||
+            (item.astronautId === "ASTRO-02"
+              ? "FE-1 Dr. S. Patel"
+              : item.astronautId === "ASTRO-03"
+              ? "MS-1 K. Lindgren"
+              : "CDR M. Vance"),
+          reviewStatus: item.reviewStatus ?? ("PENDING" as const),
+        }));
+      }
+      return SAMPLE_NASA_DIARY;
     } catch {
       return SAMPLE_NASA_DIARY;
     }
@@ -111,41 +154,84 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [healthReportOpen, setHealthReportOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem("habitrack_symptom_diary_v3", JSON.stringify(localDiary));
   }, [localDiary]);
 
-  // Reactive listener when the unified Assistant records a symptom triage
+  // Reactive listener when the unified Assistant records or acknowledges a symptom
   useEffect(() => {
-    const handleSymptomLogged = (event: Event) => {
+    const handleSymptomLogged = (_event: Event) => {
       try {
         const saved = localStorage.getItem("habitrack_symptom_diary_v3");
         if (saved) {
-          setLocalDiary(JSON.parse(saved));
+          const parsed: LocalSymptomEntry[] = JSON.parse(saved);
+          setLocalDiary(
+            parsed.map((item) => ({
+              ...item,
+              astronautId: item.astronautId || "ASTRO-01",
+              callsign:
+                item.callsign ||
+                (item.astronautId === "ASTRO-02"
+                  ? "FE-1 Dr. S. Patel"
+                  : item.astronautId === "ASTRO-03"
+                  ? "MS-1 K. Lindgren"
+                  : "CDR M. Vance"),
+              reviewStatus: item.reviewStatus ?? ("PENDING" as const),
+            }))
+          );
         }
       } catch {
         // Ignore
       }
     };
 
+    const handleSymptomAcknowledged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ reportId: string; reviewedBy: string; reviewedAt: string }>;
+      if (!customEvent.detail) return;
+      const { reportId, reviewedBy, reviewedAt } = customEvent.detail;
+      setLocalDiary((prev) =>
+        prev.map((item) =>
+          item.id === reportId
+            ? {
+                ...item,
+                reviewStatus: "ACKNOWLEDGED",
+                acknowledgedAt: reviewedAt,
+                acknowledgedBy: reviewedBy,
+              }
+            : item
+        )
+      );
+    };
+
     window.addEventListener("habitrack_symptom_logged", handleSymptomLogged);
-    return () => window.removeEventListener("habitrack_symptom_logged", handleSymptomLogged);
+    window.addEventListener("habitrack_symptom_acknowledged", handleSymptomAcknowledged);
+    return () => {
+      window.removeEventListener("habitrack_symptom_logged", handleSymptomLogged);
+      window.removeEventListener("habitrack_symptom_acknowledged", handleSymptomAcknowledged);
+    };
   }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const symptomReports = await fetchSymptoms(astronautId);
+      const targetId =
+        isFlightSurgeon && crewFilter === "ALL"
+          ? undefined
+          : isFlightSurgeon && crewFilter !== "ALL"
+          ? crewFilter
+          : astronautId;
+      const symptomReports = await fetchSymptoms(targetId);
       setReports(symptomReports);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load symptom reports.");
     } finally {
       setIsLoading(false);
     }
-  }, [astronautId]);
+  }, [astronautId, isFlightSurgeon, crewFilter]);
 
   useEffect(() => {
     void load();
@@ -158,19 +244,27 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     setNotice(null);
 
     try {
+      const targetId = isFlightSurgeon ? manualAstronautId : astronautId;
+      const targetCallsign =
+        targetId === "ASTRO-01"
+          ? "CDR M. Vance"
+          : targetId === "ASTRO-02"
+          ? "FE-1 Dr. S. Patel"
+          : "MS-1 K. Lindgren";
+
       const createdReport = await submitSymptom({
-        astronaut_id: astronautId,
+        astronaut_id: targetId,
         symptom_code: symptomCode,
         severity,
         cabin_module: cabinModule,
         notes: notes.trim() || null,
       });
 
-      // Station log write already succeeded locally.
-
       // Also append to local diary
       const newDiaryEntry: LocalSymptomEntry = {
-        id: `sym-${Date.now()}`,
+        id: createdReport.report_id || `sym-${Date.now()}`,
+        astronautId: targetId,
+        callsign: targetCallsign,
         symptom: titleCase(symptomCode),
         severity: severity >= 4 ? "Severe" : severity >= 2 ? "Moderate" : "Mild",
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
@@ -178,12 +272,16 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         duration: "30 mins",
         description: notes.trim() || `Reported during mission tasks in ${cabinModule}.`,
         environmentalFactor: "CO₂: 3,197 PPM · Rad: 0.20 mGy/d · Temp: 22.8 °C",
+        reviewStatus: "PENDING",
+        acknowledgedAt: null,
+        acknowledgedBy: null,
+        acknowledgmentNotes: null,
       };
 
       setLocalDiary((prev) => [newDiaryEntry, ...prev]);
       setNotes("");
       setNotice(
-        `✓ Recorded Locally to Station Log (${titleCase(symptomCode)} for ${astronautId})`,
+        `✓ Recorded to Station Log (${titleCase(symptomCode)} for ${targetCallsign})`,
       );
       await load();
       setViewMode("history");
@@ -192,6 +290,30 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAcknowledge = async (entryId: string) => {
+    const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC";
+    const surgeonSig = "Flight Surgeon (Surgeon Console)";
+    setLocalDiary((prev) =>
+      prev.map((item) =>
+        item.id === entryId
+          ? {
+              ...item,
+              reviewStatus: "ACKNOWLEDGED",
+              acknowledgedAt: now,
+              acknowledgedBy: surgeonSig,
+            }
+          : item
+      )
+    );
+    try {
+      await acknowledgeSymptom(entryId, surgeonSig);
+    } catch (err) {
+      console.warn("Error acknowledging symptom via API service", err);
+    }
+    setNotice(`✓ Acknowledged by Flight Surgeon · ${now} (Operational consults occur via S/G Voice Loops / PMC)`);
+    setTimeout(() => setNotice(null), 5000);
   };
 
   const handleExportJSON = () => {
@@ -217,52 +339,35 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   };
 
   const filteredDiary = localDiary.filter((item) => {
+    // If astronaut, lock to astronautId
+    if (!isFlightSurgeon && item.astronautId && item.astronautId !== astronautId) {
+      return false;
+    }
+    // If flight surgeon and filtered to a specific crewmember
+    if (isFlightSurgeon && crewFilter !== "ALL" && item.astronautId && item.astronautId !== crewFilter) {
+      return false;
+    }
+
     const matchesSearch =
       item.symptom.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.astronautId && item.astronautId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.callsign && item.callsign.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesSeverity =
       filterSeverity === "ALL" || item.severity.toUpperCase() === filterSeverity;
 
-    return matchesSearch && matchesSeverity;
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "ACKNOWLEDGED" && item.reviewStatus === "ACKNOWLEDGED") ||
+      (statusFilter === "PENDING" && item.reviewStatus !== "ACKNOWLEDGED");
+
+    return matchesSearch && matchesSeverity && matchesStatus;
   });
 
   return (
     <div className="space-y-6">
-      {/* 5-Factor AI Triage Callout Banner */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-sky-50/80 via-white to-sky-50/40 border border-sky-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-foreground">
-                Real-Time 5-Factor Clinical Triage &amp; Flight Copilot
-              </h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Mastra Online
-              </span>
-            </div>
-            <p className="text-xs text-secondary mt-0.5 max-w-2xl leading-relaxed">
-              Experiencing acute symptoms in orbit? Correlate physiological discomfort against live compartment telemetry (CO₂, Temp, Humidity, Radiation, Pressure) and certified NASA Flight Rules with interactive interim stabilization checklists.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => useAssistantStore.getState().openDrawer("chat")}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>Launch Clinical Triage (Ctrl+K)</span>
-          </button>
-        </div>
-      </div>
-
       {/* Top Banner & Mode Switcher */}
       <div className="p-5 sm:p-6 glass-panel rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -326,6 +431,43 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       {viewMode === "history" && (
         <div className="space-y-6">
           <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5">
+            {/* Flight Surgeon Expedition Fleet Filter Bar */}
+            {isFlightSurgeon && (
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-foreground">Expedition Fleet Oversight</span>
+                    <p className="text-[11px] text-muted">Flight Surgeon multi-crew cross-correlation</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+                  {[
+                    { id: "ALL", label: `All Crew (${localDiary.length})` },
+                    { id: "ASTRO-01", label: `ASTRO-01 · Vance (${localDiary.filter((d) => (d.astronautId || "ASTRO-01") === "ASTRO-01").length})` },
+                    { id: "ASTRO-02", label: `ASTRO-02 · Patel (${localDiary.filter((d) => d.astronautId === "ASTRO-02").length})` },
+                    { id: "ASTRO-03", label: `ASTRO-03 · Lindgren (${localDiary.filter((d) => d.astronautId === "ASTRO-03").length})` },
+                  ].map((crew) => (
+                    <button
+                      key={crew.id}
+                      type="button"
+                      onClick={() => setCrewFilter(crew.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                        crewFilter === crew.id
+                          ? "bg-sky-600 text-white border-sky-600 shadow-xs"
+                          : "bg-white text-slate-600 border-border hover:bg-slate-100"
+                      }`}
+                    >
+                      {crew.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               {/* Search & Filter */}
               <div className="flex flex-wrap items-center gap-3">
@@ -355,11 +497,49 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                     </button>
                   ))}
                 </div>
+
+                {isFlightSurgeon && (
+                  <div className="flex items-center gap-1 glass-panel-subtle p-1 rounded-lg text-xs font-mono">
+                    {[
+                      { id: "ALL", label: "All Status" },
+                      {
+                        id: "PENDING",
+                        label: `Pending (${localDiary.filter((d) => d.reviewStatus !== "ACKNOWLEDGED").length})`,
+                      },
+                      {
+                        id: "ACKNOWLEDGED",
+                        label: `Acknowledged (${localDiary.filter((d) => d.reviewStatus === "ACKNOWLEDGED").length})`,
+                      },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setStatusFilter(st.id as typeof statusFilter)}
+                        className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors ${
+                          statusFilter === st.id
+                            ? "bg-white text-sky-700 border-sky-200 shadow-sm"
+                            : "border-transparent text-muted hover:text-foreground"
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
+                  type="button"
+                  onClick={() => setHealthReportOpen(true)}
+                  className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Clinical Health Report</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleLoadSample}
                   className="px-3.5 py-2 rounded-lg bg-white border border-border hover:border-sky-300 text-xs font-semibold text-secondary hover:text-sky-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
@@ -367,13 +547,15 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                   <span>Load Sample Case</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleExportJSON}
-                  className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg bg-white border border-border hover:bg-slate-50 text-secondary text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export JSON</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleClearDiary}
                   className="p-2 rounded-lg bg-white border border-border hover:bg-red-50 hover:border-red-200 text-muted hover:text-red-700 transition-colors cursor-pointer"
                   title="Clear Diary"
@@ -396,7 +578,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                     className="p-5 rounded-xl glass-panel-subtle glass-card-hover space-y-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <span className="font-semibold text-sm text-foreground">{item.symptom}</span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider ${
@@ -409,6 +591,23 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                         >
                           {item.severity}
                         </span>
+                        {item.astronautId && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+                            <Users className="w-3 h-3 text-sky-600" />
+                            <span>{item.astronautId}{item.callsign ? ` · ${item.callsign}` : ""}</span>
+                          </span>
+                        )}
+                        {item.reviewStatus === "ACKNOWLEDGED" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Acknowledged</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            <span>Pending Review</span>
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-muted">
                         <Clock className="w-3.5 h-3.5 text-sky-600" />
@@ -425,6 +624,47 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                       <div className="pt-2 border-t border-border text-[11px] font-mono text-muted flex items-center gap-2">
                         <span className="text-sky-700 font-medium">Telemetry Concordance:</span>
                         <span>{item.environmentalFactor}</span>
+                      </div>
+                    )}
+
+                    {/* Operational Acknowledgment Banner & Action */}
+                    {item.reviewStatus === "ACKNOWLEDGED" ? (
+                      <div className="pt-2.5 border-t border-border flex items-start gap-2.5 text-[11px] bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="leading-relaxed">
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <span className="text-emerald-900 font-semibold font-mono text-[11px]">
+                              ✓ ACKNOWLEDGED BY FLIGHT SURGEON
+                            </span>
+                            <span className="text-emerald-700 font-mono text-[10px]">
+                              {item.acknowledgedAt ?? item.time} · {item.acknowledgedBy ?? "Surgeon Console"}
+                            </span>
+                          </div>
+                          <p className="text-slate-600 text-[11px]">
+                            Telemetry correlation logged in mission health record. Operational clinical guidance, prescription workflows, and countermeasures occur via primary Space-to-Ground Voice Loops (S/G-1 / S/G-2) or Private Medical Conference (PMC).
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-700">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>
+                            {isFlightSurgeon
+                              ? "Awaiting Flight Surgeon acknowledgment"
+                              : "Transmitted to Ground · Awaiting Flight Surgeon review"}
+                          </span>
+                        </div>
+                        {isFlightSurgeon && (
+                          <button
+                            type="button"
+                            onClick={() => void handleAcknowledge(item.id)}
+                            className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Acknowledge</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -444,6 +684,20 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </div>
 
           <form onSubmit={submitManual} className="space-y-4 text-xs">
+            {isFlightSurgeon && (
+              <div>
+                <label className="block text-secondary font-semibold mb-1.5">Astronaut Profile</label>
+                <select
+                  value={manualAstronautId}
+                  onChange={(e) => setManualAstronautId(e.target.value)}
+                  className="w-full h-10 px-3.5 rounded-lg bg-surface-elevated border border-border text-foreground text-xs focus:outline-none focus:border-accent-light cursor-pointer"
+                >
+                  <option value="ASTRO-01">ASTRO-01 · CDR M. Vance (Commander)</option>
+                  <option value="ASTRO-02">ASTRO-02 · FE-1 Dr. S. Patel (Flight Engineer)</option>
+                  <option value="ASTRO-03">ASTRO-03 · MS-1 K. Lindgren (Mission Specialist)</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-secondary font-semibold mb-1.5">Symptom Classification</label>
               <select
@@ -517,6 +771,12 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </form>
         </div>
       )}
+
+      <HealthReportModal
+        open={healthReportOpen}
+        onClose={() => setHealthReportOpen(false)}
+        astronautId={astronautId}
+      />
     </div>
   );
 }

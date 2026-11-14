@@ -6,7 +6,9 @@
  */
 
 import researchChunksRaw from "../data/researchChunks.json";
+import officialNasaGuidesRaw from "../data/officialNasaGuides.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
+import type { LibraryGuide, GuideCategory, NasaMediaItem } from "../types/library";
 import { getImportedHuaweiMeasurements } from "./healthImportStorage";
 import type {
   AssistantResponse,
@@ -98,11 +100,19 @@ async function loadSeedData(): Promise<SeedDataStructure> {
 const STORAGE_KEYS = {
   EVENT_REVIEWS: "habitrack_event_reviews_v1",
   SYMPTOMS: "habitrack_symptoms_v1",
+  SYMPTOM_REVIEWS: "habitrack_symptom_reviews_v1",
 };
 
 interface StoredReview {
   review_status: ReviewStatus;
   review_notes: string | null;
+}
+
+interface StoredSymptomReview {
+  review_status: ReviewStatus;
+  reviewed_at: string;
+  reviewed_by: string;
+  review_notes?: string | null;
 }
 
 function getStoredReviews(): Record<string, StoredReview> {
@@ -119,6 +129,23 @@ function saveStoredReviews(reviews: Record<string, StoredReview>): void {
     localStorage.setItem(STORAGE_KEYS.EVENT_REVIEWS, JSON.stringify(reviews));
   } catch (e) {
     console.warn("Failed to persist event review to localStorage", e);
+  }
+}
+
+function getStoredSymptomReviews(): Record<string, StoredSymptomReview> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SYMPTOM_REVIEWS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredSymptomReviews(reviews: Record<string, StoredSymptomReview>): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SYMPTOM_REVIEWS, JSON.stringify(reviews));
+  } catch (e) {
+    console.warn("Failed to persist symptom reviews to localStorage", e);
   }
 }
 
@@ -280,7 +307,24 @@ export async function reviewEvent(
 export async function fetchSymptoms(astronautId?: string): Promise<SymptomReport[]> {
   const seed = await loadSeedData();
   const custom = getStoredSymptoms();
-  let list = [...seed.symptoms, ...custom];
+  const reviews = getStoredSymptomReviews();
+
+  let list = [...seed.symptoms, ...custom].map((s) => {
+    const rev = reviews[s.report_id];
+    if (rev) {
+      return {
+        ...s,
+        review_status: rev.review_status,
+        reviewed_at: rev.reviewed_at,
+        reviewed_by: rev.reviewed_by,
+        review_notes: rev.review_notes,
+      };
+    }
+    return {
+      ...s,
+      review_status: s.review_status ?? ("PENDING" as ReviewStatus),
+    };
+  });
 
   if (astronautId) {
     list = list.filter(
@@ -307,6 +351,7 @@ export async function submitSymptom(payload: SymptomReportRequest): Promise<Symp
     cabin_module: payload.cabin_module ?? null,
     notes: payload.notes ?? null,
     is_synthetic: false,
+    review_status: "PENDING",
   };
 
   const stored = getStoredSymptoms();
@@ -314,6 +359,75 @@ export async function submitSymptom(payload: SymptomReportRequest): Promise<Symp
   saveStoredSymptoms(stored);
 
   return report;
+}
+
+export async function acknowledgeSymptom(
+  reportId: string,
+  reviewedBy: string = "Flight Surgeon (Surgeon Console)",
+  reviewNotes?: string | null
+): Promise<SymptomReport | null> {
+  const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC";
+  const reviews = getStoredSymptomReviews();
+  reviews[reportId] = {
+    review_status: "ACKNOWLEDGED",
+    reviewed_at: now,
+    reviewed_by: reviewedBy,
+    review_notes: reviewNotes ?? null,
+  };
+  saveStoredSymptomReviews(reviews);
+
+  // Also update habitrack_symptoms_v1 if present
+  const storedSymptoms = getStoredSymptoms();
+  const idx = storedSymptoms.findIndex((s) => s.report_id === reportId);
+  if (idx !== -1) {
+    storedSymptoms[idx] = {
+      ...storedSymptoms[idx],
+      review_status: "ACKNOWLEDGED",
+      reviewed_at: now,
+      reviewed_by: reviewedBy,
+      review_notes: reviewNotes ?? null,
+    };
+    saveStoredSymptoms(storedSymptoms);
+  }
+
+  // Also synchronize to local diary habitrack_symptom_diary_v3
+  try {
+    const rawDiary = localStorage.getItem("habitrack_symptom_diary_v3");
+    if (rawDiary) {
+      interface DiarySyncItem {
+        id: string;
+        reviewStatus?: ReviewStatus;
+        acknowledgedAt?: string;
+        acknowledgedBy?: string;
+        acknowledgmentNotes?: string | null;
+      }
+      const diary: DiarySyncItem[] = JSON.parse(rawDiary);
+      const diaryIdx = diary.findIndex((d) => d.id === reportId);
+      if (diaryIdx !== -1) {
+        diary[diaryIdx] = {
+          ...diary[diaryIdx],
+          reviewStatus: "ACKNOWLEDGED",
+          acknowledgedAt: now,
+          acknowledgedBy: reviewedBy,
+          acknowledgmentNotes: reviewNotes ?? null,
+        };
+        localStorage.setItem("habitrack_symptom_diary_v3", JSON.stringify(diary));
+      }
+    }
+  } catch (err) {
+    console.warn("Could not sync acknowledgment to local diary", err);
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("habitrack_symptom_acknowledged", {
+        detail: { reportId, reviewedBy, reviewedAt: now },
+      })
+    );
+  }
+
+  const all = await fetchSymptoms();
+  return all.find((s) => s.report_id === reportId) ?? null;
 }
 
 function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
@@ -562,3 +676,120 @@ export async function fetchProviderStatus(): Promise<ProviderStatusResponse> {
     active_model_name: "HabiTrack Standby Co-Pilot",
   };
 }
+
+const officialGuides = officialNasaGuidesRaw as LibraryGuide[];
+
+export async function fetchLibraryGuides(
+  category?: GuideCategory | "all",
+  query?: string
+): Promise<LibraryGuide[]> {
+  let guides = [...officialGuides];
+  if (category && category !== "all") {
+    guides = guides.filter((g) => g.category === category);
+  }
+  if (query && query.trim()) {
+    const q = query.toLowerCase().trim();
+    guides = guides.filter(
+      (g) =>
+        g.title.toLowerCase().includes(q) ||
+        g.summary.toLowerCase().includes(q) ||
+        g.nasaDocumentId.toLowerCase().includes(q) ||
+        g.instructions.some((ins) => ins.toLowerCase().includes(q)) ||
+        g.relatedSymptomCodes?.some((code) => code.toLowerCase().includes(q))
+    );
+  }
+  return guides;
+}
+
+export async function fetchLibraryGuideById(id: string): Promise<LibraryGuide | null> {
+  const guide = officialGuides.find((g) => g.id === id);
+  return guide ?? null;
+}
+
+const nasaSearchCache = new Map<string, NasaMediaItem[]>();
+const nasaMediaUrlCache = new Map<string, string>();
+
+export async function searchNasaMediaLibrary(
+  query: string,
+  mediaType: "video" | "image" | "all" = "all"
+): Promise<NasaMediaItem[]> {
+  const cleanQ = query.trim() || "iss astronaut";
+  const typeParam = mediaType === "all" ? "video,image" : mediaType;
+  const cacheKey = `${cleanQ}:${typeParam}`;
+  if (nasaSearchCache.has(cacheKey)) {
+    return nasaSearchCache.get(cacheKey)!;
+  }
+
+  const endpoint = `https://images-api.nasa.gov/search?q=${encodeURIComponent(cleanQ)}&media_type=${typeParam}`;
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`NASA Image and Video Library query failed (${response.status})`);
+  }
+  const data = await response.json();
+  const rawItems = data.collection?.items ?? [];
+
+  const results: NasaMediaItem[] = [];
+  for (const item of rawItems.slice(0, 24)) {
+    const datum = item.data?.[0];
+    if (!datum) continue;
+    const previewLink = item.links?.find((l: any) => l.rel === "preview")?.href;
+    const thumb = previewLink ? previewLink.replace(/^http:/, "https:") : "";
+
+    results.push({
+      nasaId: datum.nasa_id,
+      title: datum.title || "NASA Media Asset",
+      description: datum.description || datum.secondary_creator || "",
+      mediaType: datum.media_type === "video" ? "video" : "image",
+      dateCreated: datum.date_created ? datum.date_created.slice(0, 10) : "",
+      center: datum.center,
+      thumbnailUrl: thumb,
+      collectionUrl: item.href ? item.href.replace(/^http:/, "https:") : "",
+    });
+  }
+
+  nasaSearchCache.set(cacheKey, results);
+  return results;
+}
+
+export async function resolveNasaMediaDirectUrl(item: NasaMediaItem): Promise<string> {
+  if (nasaMediaUrlCache.has(item.collectionUrl)) {
+    return nasaMediaUrlCache.get(item.collectionUrl)!;
+  }
+  if (!item.collectionUrl) {
+    return item.thumbnailUrl;
+  }
+
+  try {
+    const res = await fetch(item.collectionUrl);
+    if (!res.ok) throw new Error("Collection fetch failed");
+    const files: string[] = await res.json();
+
+    let resolved = "";
+    if (item.mediaType === "video") {
+      const mobile = files.find((f) => f.includes("~mobile.mp4"));
+      const preview = files.find((f) => f.includes("~preview.mp4"));
+      const small = files.find((f) => f.includes("~small.mp4"));
+      const medium = files.find((f) => f.includes("~medium.mp4"));
+      const anyMp4 = files.find((f) => f.endsWith(".mp4"));
+      resolved = mobile || preview || small || medium || anyMp4 || files[0] || "";
+    } else {
+      const medium = files.find((f) => f.includes("~medium.jpg"));
+      const large = files.find((f) => f.includes("~large.jpg"));
+      const orig = files.find((f) => f.includes("~orig.jpg"));
+      const anyJpg = files.find((f) => f.endsWith(".jpg") || f.endsWith(".png"));
+      resolved = medium || large || orig || anyJpg || files[0] || "";
+    }
+
+    if (resolved) {
+      resolved = resolved.replace(/^http:/, "https:");
+      nasaMediaUrlCache.set(item.collectionUrl, resolved);
+      return resolved;
+    }
+    return item.thumbnailUrl;
+  } catch (err) {
+    console.warn("Failed to resolve NASA direct URL, falling back to thumbnail", err);
+    return item.thumbnailUrl;
+  }
+}
+
+

@@ -11,6 +11,7 @@ import {
   fetchFlightRule,
   fetchProviderStatus,
   queryAssistant,
+  submitSymptom,
 } from "../services/api";
 import { mastra } from "../mastra";
 import type {
@@ -58,6 +59,17 @@ export interface TelemetrySnapshot {
   pressureMmHg: number;
 }
 
+export interface SymptomConsentState {
+  status: "PENDING" | "CONFIRMED" | "DISMISSED";
+  symptomText: string;
+  location: string;
+  snapshot: TelemetrySnapshot;
+  astronautId: string;
+  callsign?: string;
+  latchedRuleId?: string;
+  confirmedAt?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: "user" | "assistant";
@@ -73,6 +85,7 @@ export interface ChatMessage {
   confidenceMatch?: string;
   disclaimer?: string;
   surgeonHandoffPacket?: SurgeonHandoffPacket;
+  symptomConsent?: SymptomConsentState;
 }
 
 interface AssistantState {
@@ -100,6 +113,8 @@ interface AssistantState {
   openForEvent: (event: HealthEvent) => Promise<void>;
   submitQuery: (text: string, eventId?: string | null) => Promise<void>;
   toggleInterimAction: (messageId: string, actionId: string) => void;
+  confirmSymptomConsent: (messageId: string) => Promise<void>;
+  dismissSymptomConsent: (messageId: string) => void;
   loadFlightRule: (ruleId: string) => Promise<void>;
   refreshProviderStatus: () => Promise<void>;
   clearChat: () => void;
@@ -178,13 +193,26 @@ function isSymptomTriageQuery(query: string, compartment: string): boolean {
 function recordSymptomToLocalDiary(
   symptomText: string,
   location: string,
-  snapshot: TelemetrySnapshot
+  snapshot: TelemetrySnapshot,
+  astronautId?: string,
+  callsign?: string
 ) {
   try {
     const raw = localStorage.getItem("habitrack_symptom_diary_v3");
     const current = raw ? JSON.parse(raw) : [];
+    const targetAstronautId = astronautId || "ASTRO-01";
+    const targetCallsign =
+      callsign ||
+      (targetAstronautId === "ASTRO-01"
+        ? "CDR M. Vance"
+        : targetAstronautId === "ASTRO-02"
+        ? "FE-1 Dr. S. Patel"
+        : "MS-1 K. Lindgren");
+
     const newEntry = {
       id: `sym-${Date.now()}`,
+      astronautId: targetAstronautId,
+      callsign: targetCallsign,
       symptom: symptomText.slice(0, 32),
       severity: "Moderate",
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
@@ -192,6 +220,10 @@ function recordSymptomToLocalDiary(
       duration: "30 mins",
       description: symptomText,
       environmentalFactor: `CO₂: ${snapshot.co2Ppm} PPM · Rad: ${snapshot.radiationRateMGy} mGy/d · Temp: ${snapshot.tempC} °C`,
+      reviewStatus: "PENDING",
+      acknowledgedAt: null,
+      acknowledgedBy: null,
+      acknowledgmentNotes: null,
     };
     localStorage.setItem("habitrack_symptom_diary_v3", JSON.stringify([newEntry, ...current]));
     if (typeof window !== "undefined") {
@@ -230,6 +262,76 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
           ),
         };
       }),
+    }));
+  },
+
+  confirmSymptomConsent: async (messageId: string) => {
+    const msg = get().messages.find((m) => m.id === messageId);
+    if (!msg || !msg.symptomConsent || msg.symptomConsent.status !== "PENDING") return;
+
+    const consent = msg.symptomConsent;
+    const confirmedAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC";
+
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === messageId && m.symptomConsent
+          ? {
+              ...m,
+              symptomConsent: {
+                ...m.symptomConsent,
+                status: "CONFIRMED",
+                confirmedAt,
+              },
+            }
+          : m
+      ),
+    }));
+
+    // 1. Record to persistent local diary
+    recordSymptomToLocalDiary(
+      consent.symptomText,
+      consent.location,
+      consent.snapshot,
+      consent.astronautId,
+      consent.callsign
+    );
+
+    // 2. Submit to station records in api.ts
+    try {
+      const lower = consent.symptomText.toLowerCase();
+      const code = lower.includes("fatigue")
+        ? "FATIGUE"
+        : lower.includes("dizzy") || lower.includes("spinning")
+        ? "DIZZINESS"
+        : lower.includes("nausea")
+        ? "NAUSEA"
+        : "HEADACHE";
+
+      await submitSymptom({
+        astronaut_id: consent.astronautId,
+        symptom_code: code,
+        severity: 2,
+        cabin_module: consent.location,
+        notes: consent.symptomText,
+      });
+    } catch {
+      // Best-effort station health record sync
+    }
+  },
+
+  dismissSymptomConsent: (messageId: string) => {
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === messageId && m.symptomConsent
+          ? {
+              ...m,
+              symptomConsent: {
+                ...m.symptomConsent,
+                status: "DISMISSED",
+              },
+            }
+          : m
+      ),
     }));
   },
 
@@ -377,10 +479,21 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
           confidenceMatch: triageResult.confidenceMatch,
           disclaimer: triageResult.disclaimer,
           surgeonHandoffPacket: triageResult.surgeonHandoffPacket,
+          symptomConsent: {
+            status: "PENDING",
+            symptomText: trimmed,
+            location: triageResult.compartmentName,
+            snapshot: effectiveSnapshot,
+            astronautId: astronautId ?? "ASTRO-01",
+            callsign:
+              (astronautId ?? "ASTRO-01") === "ASTRO-01"
+                ? "CDR M. Vance"
+                : (astronautId ?? "ASTRO-01") === "ASTRO-02"
+                ? "FE-1 Dr. S. Patel"
+                : "MS-1 K. Lindgren",
+            latchedRuleId: triageResult.latchedRuleId,
+          },
         };
-
-        // Record to local symptom diary
-        recordSymptomToLocalDiary(trimmed, triageResult.compartmentName, effectiveSnapshot);
 
         set((state) => ({
           activeExplanation: assistantResp || state.activeExplanation,
