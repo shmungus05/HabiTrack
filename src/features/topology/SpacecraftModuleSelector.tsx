@@ -15,12 +15,16 @@ import {
   Wind,
   CheckCircle2,
   ChevronRight,
+  Database,
 } from "lucide-react";
 import {
   ISS_14_MODULES,
   useStationLocationStore,
+  computeModuleTelemetry,
   type SpacecraftModule,
 } from "./SpacecraftTopologyModule";
+import { useSimulationSandbox } from "../simulation";
+import { useBiomedicalSettings } from "../settings";
 
 interface SpacecraftModuleSelectorProps {
   astronautId?: string;
@@ -41,6 +45,22 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
     setSelectedLocation,
     autoDetectForAstronaut,
   } = useStationLocationStore();
+
+  const [simulationState] = useSimulationSandbox();
+  const { settings } = useBiomedicalSettings();
+  const isMetric = settings.unitSystem === "metric";
+
+  const activeScenarios =
+    simulationState.activeScenarios ||
+    (simulationState.activeScenario !== "nominal" ? [simulationState.activeScenario] : []);
+
+  // Compute live localized telemetry combining module baselines, sensor location offsets, and multi-anomaly injectors
+  const currentTelemetry = computeModuleTelemetry(
+    selectedModuleId,
+    selectedLocation,
+    activeScenarios,
+    simulationState.activeScenario,
+  );
 
   // In astronaut perspective (or initially), auto-detect position based on active astronaut
   useEffect(() => {
@@ -139,18 +159,34 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
               className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs font-semibold text-slate-900 shadow-2xs hover:bg-white hover:border-slate-300 focus:border-sky-500 focus:bg-white focus:outline-none transition-colors cursor-pointer truncate pr-7"
             >
               <optgroup label="USOS – U.S. Orbital Segment (8 Modules)">
-                {usosModules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.shortName})
-                  </option>
-                ))}
+                {usosModules.map((m) => {
+                  const co2Label = isMetric
+                    ? `${m.nominalCO2.toLocaleString()} PPM`
+                    : `${(m.nominalCO2 / 750).toFixed(2)} mmHg`;
+                  const tempLabel = isMetric
+                    ? `${m.nominalTemp.toFixed(1)}°C`
+                    : `${(m.nominalTemp * 1.8 + 32).toFixed(1)}°F`;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.shortName}) — {co2Label} · {tempLabel}
+                    </option>
+                  );
+                })}
               </optgroup>
               <optgroup label="ROS – Russian Orbital Segment (6 Modules)">
-                {rosModules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.shortName})
-                  </option>
-                ))}
+                {rosModules.map((m) => {
+                  const co2Label = isMetric
+                    ? `${m.nominalCO2.toLocaleString()} PPM`
+                    : `${(m.nominalCO2 / 750).toFixed(2)} mmHg`;
+                  const tempLabel = isMetric
+                    ? `${m.nominalTemp.toFixed(1)}°C`
+                    : `${(m.nominalTemp * 1.8 + 32).toFixed(1)}°F`;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.shortName}) — {co2Label} · {tempLabel}
+                    </option>
+                  );
+                })}
               </optgroup>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
@@ -186,6 +222,89 @@ export const SpacecraftModuleSelector: React.FC<SpacecraftModuleSelectorProps> =
                 </button>
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      {/* NASA EDA Archival Telemetry Ground Truth Strip */}
+      <div className="rounded-lg border border-slate-200/90 bg-slate-50/70 p-2.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <Database className="h-3 w-3 text-sky-600 shrink-0" />
+            <span>NASA EDA Archival Ground Truth · Compartment Telemetry</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-slate-500">
+              Module: <strong className="text-slate-800">{activeModule.shortName}</strong> ({selectedLocation})
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-100/70 text-sky-800 border border-sky-200">
+              {activeModule.segment === "USOS" ? "Destiny / Harmony ECLSS Loop" : "Zvezda / Elektron ECLSS Loop"}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+          <div className="rounded bg-white border border-slate-200/80 px-2.5 py-1.5">
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-500">
+              Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+            </span>
+            <span
+              className={`font-mono text-xs font-bold ${
+                currentTelemetry.hasCo2 ? "text-amber-700 font-extrabold" : "text-slate-900"
+              }`}
+            >
+              {isMetric
+                ? `${currentTelemetry.co2.toLocaleString()} PPM`
+                : `${(currentTelemetry.co2 / 750).toFixed(2)} mmHg`}
+            </span>
+          </div>
+
+          <div className="rounded bg-white border border-slate-200/80 px-2.5 py-1.5">
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-500">
+              Cabin Temp ({isMetric ? "°C" : "°F"})
+            </span>
+            <span
+              className={`font-mono text-xs font-bold ${
+                currentTelemetry.hasThermal ? "text-orange-600 font-extrabold" : "text-slate-900"
+              }`}
+            >
+              {isMetric
+                ? `${currentTelemetry.temp.toFixed(1)} °C`
+                : `${(currentTelemetry.temp * 1.8 + 32).toFixed(1)} °F`}
+            </span>
+          </div>
+
+          <div className="rounded bg-white border border-slate-200/80 px-2.5 py-1.5">
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-500">
+              Cabin Pressure
+            </span>
+            <span className="font-mono text-xs font-bold text-slate-900">
+              {isMetric
+                ? `${currentTelemetry.pressureKpa.toFixed(1)} kPa`
+                : `${currentTelemetry.pressureMmHg.toFixed(1)} mmHg`}
+            </span>
+          </div>
+
+          <div className="rounded bg-white border border-slate-200/80 px-2.5 py-1.5">
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-500">
+              Relative Humidity
+            </span>
+            <span className="font-mono text-xs font-bold text-slate-900">
+              {currentTelemetry.humidity.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="rounded bg-white border border-slate-200/80 px-2.5 py-1.5">
+            <span className="block text-[9.5px] font-bold uppercase tracking-wider text-slate-500">
+              Radiation Flux
+            </span>
+            <span
+              className={`font-mono text-xs font-bold ${
+                currentTelemetry.hasSaa ? "text-purple-600 font-extrabold" : "text-slate-900"
+              }`}
+            >
+              {currentTelemetry.rad.toFixed(3)} mGy/d
+            </span>
           </div>
         </div>
       </div>
