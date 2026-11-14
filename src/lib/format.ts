@@ -77,6 +77,18 @@ export function prettyStream(streamId: string): string {
       return "Radiation (mGy/day)";
     case "stream_eda_pressure":
       return "Pressure (kPa)";
+    case "stream_huawei_hr":
+      return "Huawei Heart Rate (bpm)";
+    case "stream_huawei_resting_hr":
+      return "Huawei Resting HR (bpm)";
+    case "stream_huawei_steps":
+      return "Huawei Steps (count)";
+    case "stream_huawei_distance":
+      return "Huawei Distance (km)";
+    case "stream_huawei_active_energy":
+      return "Huawei Active Energy (kcal)";
+    case "stream_huawei_flights":
+      return "Huawei Flights Climbed (count)";
     default:
       return streamId
         .replace(/^stream_/, "")

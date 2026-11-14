@@ -15,6 +15,7 @@ import {
   Settings as SettingsIcon,
   ShieldAlert,
   Stethoscope,
+  Upload,
   Wifi,
   WifiOff,
   X,
@@ -22,6 +23,7 @@ import {
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { AssistantDrawer } from "./components/AssistantDrawer";
+import { HealthImportModal } from "./components/HealthImportModal";
 import { OverviewView } from "./components/OverviewView";
 import { ResearchView } from "./components/ResearchView";
 import { StandbyAgentTrigger } from "./components/StandbyAgentTrigger";
@@ -127,6 +129,8 @@ export default function App() {
   );
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isHealthReportOpen, setIsHealthReportOpen] = useState(false);
+  const [isHealthImportOpen, setIsHealthImportOpen] = useState(false);
+  const [healthImportRevision, setHealthImportRevision] = useState(0);
   const [now, setNow] = useState<Date>(() => new Date());
 
   const astronauts = useCohortStore((state) => state.astronauts);
@@ -295,6 +299,16 @@ export default function App() {
               <span className="text-slate-300">|</span>
               <span className="text-slate-500 tabular-nums">{clock.utc} UTC</span>
             </div>
+
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setIsHealthImportOpen(true)}
+              leftIcon={<Upload className="h-3.5 w-3.5 text-sky-600" />}
+              title="Import historical Huawei Health data from Apple Health ZIP export"
+            >
+              <span className="hidden sm:inline">Import Health Data</span>
+            </Button>
 
             <Button
               size="sm"
@@ -567,7 +581,11 @@ export default function App() {
 
           <main className="w-full flex-1 px-4 py-6 pb-20 sm:px-6 sm:py-7 sm:pb-20">
             {activeView === "overview" ? (
-              <OverviewView astronautId={activeAstronautId} />
+              <OverviewView
+                astronautId={activeAstronautId}
+                onOpenHealthImport={() => setIsHealthImportOpen(true)}
+                healthImportRevision={healthImportRevision}
+              />
             ) : null}
             {activeView === "timeline" ? (
               <Suspense
@@ -575,7 +593,11 @@ export default function App() {
                   <div className="card h-[calc(100vh-260px)] min-h-[640px] animate-pulse" />
                 }
               >
-                <TimelineView astronautId={activeAstronautId} />
+                <TimelineView
+                  astronautId={activeAstronautId}
+                  onOpenHealthImport={() => setIsHealthImportOpen(true)}
+                  healthImportRevision={healthImportRevision}
+                />
               </Suspense>
             ) : null}
             {activeView === "symptoms" ? (
@@ -598,6 +620,12 @@ export default function App() {
         open={isHealthReportOpen}
         onClose={() => setIsHealthReportOpen(false)}
         astronautId={activeAstronautId}
+      />
+      <HealthImportModal
+        isOpen={isHealthImportOpen}
+        onClose={() => setIsHealthImportOpen(false)}
+        astronautId={activeAstronautId}
+        onImportComplete={() => setHealthImportRevision((v) => v + 1)}
       />
     </div>
   );

@@ -7,6 +7,7 @@
 
 import researchChunksRaw from "../data/researchChunks.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
+import { getImportedHuaweiMeasurements } from "./healthImportStorage";
 import type {
   AssistantResponse,
   Astronaut,
@@ -184,33 +185,34 @@ export async function fetchMeasurements(
   windowHours = 336,
   maxPoints = 1000
 ): Promise<Measurement[]> {
-  const seed = await loadSeedData();
+  const [seed, importedHuawei] = await Promise.all([
+    loadSeedData(),
+    getImportedHuaweiMeasurements(astronautId),
+  ]);
   const records = seed.measurements[astronautId] ?? seed.measurements["ASTRO-01"] ?? [];
 
-  if (records.length <= maxPoints && windowHours >= 336) {
-    return records;
+  let seedResult = records;
+  if (records.length > 0 && (records.length > maxPoints || windowHours < 336)) {
+    const newestTime = new Date(records[records.length - 1].timestamp).getTime();
+    const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
+
+    const filtered = records.filter(
+      (m) => new Date(m.timestamp).getTime() >= cutoffTime
+    );
+
+    if (filtered.length <= maxPoints) {
+      seedResult = filtered;
+    } else {
+      const step = Math.ceil(filtered.length / maxPoints);
+      const downsampled: Measurement[] = [];
+      for (let i = 0; i < filtered.length; i += step) {
+        downsampled.push(filtered[i]);
+      }
+      seedResult = downsampled;
+    }
   }
 
-  // If time filtering is needed, filter relative to newest point
-  if (records.length === 0) return [];
-  const newestTime = new Date(records[records.length - 1].timestamp).getTime();
-  const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
-
-  const filtered = records.filter(
-    (m) => new Date(m.timestamp).getTime() >= cutoffTime
-  );
-
-  if (filtered.length <= maxPoints) {
-    return filtered;
-  }
-
-  // Downsample evenly to maxPoints
-  const step = Math.ceil(filtered.length / maxPoints);
-  const downsampled: Measurement[] = [];
-  for (let i = 0; i < filtered.length; i += step) {
-    downsampled.push(filtered[i]);
-  }
-  return downsampled;
+  return importedHuawei.length > 0 ? [...seedResult, ...importedHuawei] : seedResult;
 }
 
 export async function fetchBaselines(astronautId: string): Promise<Baselines> {
