@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Minimalist light telemetry UI config — ensures Vite reloads Tailwind tokens cleanly.
+// Minimalist light telemetry UI config — pure TypeScript SPA.
 export default defineConfig({
   plugins: [react()],
   css: {
@@ -11,12 +11,6 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 5173,
     strictPort: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-    },
   },
   build: {
     outDir: "dist",
