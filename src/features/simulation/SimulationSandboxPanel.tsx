@@ -32,9 +32,10 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
 }) => {
   const [state, controls] = useSimulationSandbox();
   const { activeScenario, thresholds, profileOverrides, isAnomalyActive } = state;
+  const activeScenarios = state.activeScenarios || (state.activeScenario !== "nominal" ? [state.activeScenario] : []);
 
-  const handleInject = (sc: AnomalyScenarioType) => {
-    controls.injectScenario(sc);
+  const handleToggle = (sc: AnomalyScenarioType) => {
+    controls.toggleScenario(sc);
     onScenarioChange?.(sc);
   };
 
@@ -42,6 +43,10 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
     controls.resetNominal();
     onScenarioChange?.("nominal");
   };
+
+  const isCo2Active = activeScenarios.includes("co2_spike");
+  const isSaaActive = activeScenarios.includes("saa_transit");
+  const isThermalActive = activeScenarios.includes("thermal_overheat");
 
   return (
     <section
@@ -56,42 +61,56 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
               Flight Surgeon Training Deck
             </span>
             <span className="text-[11px] font-mono text-muted">
-              · Non-Destructive Simulation Overlay
+              · Multi-Scenario Anomaly Overlay
             </span>
           </div>
           <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
             Simulation Sandbox &amp; Anomaly Injector
           </h2>
           <p className="text-xs text-muted mt-0.5">
-            Test detection pipelines, flight rule alert latches, and clinical assistant decision logic
+            Test detection pipelines, flight rule alert latches, and clinical decision logic across 1, 2, or 3 simultaneous anomalies
           </p>
         </div>
 
         {isAnomalyActive && (
           <div className="px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-mono text-amber-800 flex items-center gap-2 self-start sm:self-auto">
-            <ShieldAlert className="w-4 h-4 text-amber-600" />
-            <span>Active Injection: {activeScenario.toUpperCase()}</span>
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+            <span>
+              Active ({activeScenarios.length}): {activeScenarios.map((s) => s.replace(/_/g, " ").toUpperCase()).join(" + ")}
+            </span>
           </div>
         )}
       </div>
 
       {/* 1-Click Anomaly Injection Buttons */}
       <div className="pt-6 space-y-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
-          1-Click Live Test Scenarios:
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700">
+            Multi-Select Live Test Scenarios (Persists until Reset Nominal):
+          </span>
+          <span className="text-[11px] text-muted font-mono">
+            Click to toggle active anomalies
+          </span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button
-            onClick={() => handleInject("co2_spike")}
+            onClick={() => handleToggle("co2_spike")}
             className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
-              activeScenario === "co2_spike"
-                ? "bg-sky-50 border-sky-300 border-l-2 border-l-sky-600 text-foreground"
+              isCo2Active
+                ? "bg-sky-50 border-sky-400 border-l-4 border-l-sky-600 text-foreground shadow-sm"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-[#0284c7]">CO₂ Pocket Anomaly</span>
-              <Zap className="w-4 h-4 text-[#0284c7]" />
+              <div className="flex items-center gap-1.5">
+                {isCo2Active && (
+                  <span className="px-1.5 py-0.2 rounded bg-sky-600 text-white text-[9px] font-bold font-mono">
+                    ACTIVE
+                  </span>
+                )}
+                <Zap className="w-4 h-4 text-[#0284c7]" />
+              </div>
             </div>
             <p className="text-[11px] text-muted">
               Spike carbon dioxide &gt; 3,850 PPM in Node 2 to trigger Flight Rule B13-101.B.
@@ -99,16 +118,23 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
           </button>
 
           <button
-            onClick={() => handleInject("saa_transit")}
+            onClick={() => handleToggle("saa_transit")}
             className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
-              activeScenario === "saa_transit"
-                ? "bg-amber-50 border-amber-300 border-l-2 border-l-amber-600 text-foreground"
+              isSaaActive
+                ? "bg-amber-50 border-amber-400 border-l-4 border-l-amber-600 text-foreground shadow-sm"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-[#d97706]">SAA Radiation Crossing</span>
-              <Radio className="w-4 h-4 text-[#d97706]" />
+              <div className="flex items-center gap-1.5">
+                {isSaaActive && (
+                  <span className="px-1.5 py-0.2 rounded bg-amber-600 text-white text-[9px] font-bold font-mono">
+                    ACTIVE
+                  </span>
+                )}
+                <Radio className="w-4 h-4 text-[#d97706]" />
+              </div>
             </div>
             <p className="text-[11px] text-muted">
               Elevate TEPC dosimeter flux to 0.38 mGy/day during South Atlantic pass.
@@ -116,16 +142,23 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
           </button>
 
           <button
-            onClick={() => handleInject("thermal_overheat")}
+            onClick={() => handleToggle("thermal_overheat")}
             className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
-              activeScenario === "thermal_overheat"
-                ? "bg-orange-50 border-orange-300 border-l-2 border-l-orange-600 text-foreground"
+              isThermalActive
+                ? "bg-orange-50 border-orange-400 border-l-4 border-l-orange-600 text-foreground shadow-sm"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-[#ea580c]">Exercise Heat Surge</span>
-              <Flame className="w-4 h-4 text-[#ea580c]" />
+              <div className="flex items-center gap-1.5">
+                {isThermalActive && (
+                  <span className="px-1.5 py-0.2 rounded bg-orange-600 text-white text-[9px] font-bold font-mono">
+                    ACTIVE
+                  </span>
+                )}
+                <Flame className="w-4 h-4 text-[#ea580c]" />
+              </div>
             </div>
             <p className="text-[11px] text-muted">
               Surge module temp to 27.2 °C during daily 2.5h CEVIS/T2 exercise.

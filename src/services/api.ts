@@ -7,6 +7,7 @@
 
 import researchChunksRaw from "../data/researchChunks.json";
 import { generateGeminiRagResponse } from "./ai/geminiClient";
+import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator";
 import type {
   AssistantResponse,
   Astronaut,
@@ -181,17 +182,15 @@ export async function fetchAstronaut(astronautId: string): Promise<Astronaut> {
 
 export async function fetchMeasurements(
   astronautId: string,
-  windowHours = 336,
-  maxPoints = 1000
+  windowHours = 4320,
+  maxPoints = 20000
 ): Promise<Measurement[]> {
-  const seed = await loadSeedData();
-  const records = seed.measurements[astronautId] ?? seed.measurements["ASTRO-01"] ?? [];
+  const records = generate180DayTelemetry({
+    astronautId,
+    nowMs: Date.now(),
+    durationDays: 180,
+  });
 
-  if (records.length <= maxPoints && windowHours >= 336) {
-    return records;
-  }
-
-  // If time filtering is needed, filter relative to newest point
   if (records.length === 0) return [];
   const newestTime = new Date(records[records.length - 1].timestamp).getTime();
   const cutoffTime = newestTime - windowHours * 60 * 60 * 1000;
@@ -204,7 +203,7 @@ export async function fetchMeasurements(
     return filtered;
   }
 
-  // Downsample evenly to maxPoints
+  // Downsample evenly to maxPoints if requested
   const step = Math.ceil(filtered.length / maxPoints);
   const downsampled: Measurement[] = [];
   for (let i = 0; i < filtered.length; i += step) {
@@ -223,10 +222,10 @@ export async function fetchEvents(
   astronautId?: string,
   severity?: SeverityLevel
 ): Promise<HealthEvent[]> {
-  const seed = await loadSeedData();
   const storedReviews = getStoredReviews();
+  const liveEvents = generate180DayEvents(astronautId || "ASTRO-01", Date.now());
 
-  let events = seed.events.map((evt) => {
+  let events = liveEvents.map((evt) => {
     const review = storedReviews[evt.event_id];
     if (review) {
       return {
