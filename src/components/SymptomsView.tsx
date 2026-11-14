@@ -1,36 +1,33 @@
 /**
  * web/src/components/SymptomsView.tsx
- * Complete 3-Mode Symptom Reporting Suite:
- * - 💬 AI Diagnostic Chatbot (5-factor triage with suggestion prompts)
+ * Complete Symptom Reporting & Diary Suite:
  * - 📋 Symptom History Diary (search, severity filter, 1-click JSON export, NASA sample loader)
  * - ⚡ Manual Fast-Log Entry (preserving API submission to /api/symptoms)
- * Styled in the minimalist Perplexity design aesthetic: rounded-lg, font-semibold headings.
+ * - 🩺 Direct Launch to Unified HABITAT TRACE 5-Factor Clinical Triage Assistant
+ * Styled in the minimalist Perplexity design aesthetic: rounded-2xl, font-semibold headings.
  */
 
 import {
+  AlertTriangle,
   CheckCircle2,
   ClipboardList,
+  Clock,
+  Download,
+  MapPin,
   MessageSquare,
   Plus,
   Search,
-  Download,
-  Trash2,
+  Send,
   Sparkles,
   Stethoscope,
-  Send,
-  AlertTriangle,
-  Clock,
-  MapPin,
-  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchEvents, fetchSymptoms, submitSymptom } from "../services/api";
-import type { HealthEvent, ReviewStatus, SymptomReport } from "../types/api";
-import { formatDateTime, titleCase } from "../lib/format";
-import { Badge, Button } from "./ui";
-import { SymptomChatbotModule } from "../features/symptoms/SymptomChatbotModule";
-import { useCommsStore } from "../stores/commsStore";
+import { fetchSymptoms, submitSymptom } from "../services/api";
+import type { SymptomReport } from "../types/api";
+import { titleCase } from "../lib/format";
+import { useAssistantStore } from "../stores/assistantStore";
 
 const SYMPTOM_CODES = ["HEADACHE", "FATIGUE", "DIZZINESS", "NAUSEA"] as const;
 const CABIN_MODULES = [
@@ -91,7 +88,7 @@ interface SymptomsViewProps {
 }
 
 export function SymptomsView({ astronautId }: SymptomsViewProps) {
-  const [viewMode, setViewMode] = useState<"chatbot" | "history" | "manual">("chatbot");
+  const [viewMode, setViewMode] = useState<"history" | "manual">("history");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("ALL");
 
@@ -104,7 +101,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [reports, setReports] = useState<SymptomReport[]>([]);
   const [localDiary, setLocalDiary] = useState<LocalSymptomEntry[]>(() => {
     try {
-      const saved = localStorage.getItem("wayfinder_symptom_diary_v3");
+      const saved = localStorage.getItem("habitat_trace_symptom_diary_v3");
       return saved ? JSON.parse(saved) : SAMPLE_NASA_DIARY;
     } catch {
       return SAMPLE_NASA_DIARY;
@@ -117,8 +114,25 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("wayfinder_symptom_diary_v3", JSON.stringify(localDiary));
+    localStorage.setItem("habitat_trace_symptom_diary_v3", JSON.stringify(localDiary));
   }, [localDiary]);
+
+  // Reactive listener when the unified Assistant records a symptom triage
+  useEffect(() => {
+    const handleSymptomLogged = (event: Event) => {
+      try {
+        const saved = localStorage.getItem("habitat_trace_symptom_diary_v3");
+        if (saved) {
+          setLocalDiary(JSON.parse(saved));
+        }
+      } catch {
+        // Ignore
+      }
+    };
+
+    window.addEventListener("habitat_trace_symptom_logged", handleSymptomLogged);
+    return () => window.removeEventListener("habitat_trace_symptom_logged", handleSymptomLogged);
+  }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -152,18 +166,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         notes: notes.trim() || null,
       });
 
-      // Dual confirmation: the station log write already succeeded locally.
-      // The ground packet is enqueued asynchronously and may wait in LOS.
-      const comms = useCommsStore.getState();
-      comms.enqueuePacket("SYMPTOM_REPORT", `${titleCase(symptomCode)} · ${astronautId}`, {
-        reportId: createdReport.report_id,
-        symptomCode: createdReport.symptom_code,
-        severity: createdReport.severity,
-        cabinModule: createdReport.cabin_module,
-        occurredAt: createdReport.occurred_at,
-        notes: createdReport.notes,
-      });
-      const delayed = comms.linkState === "LOS" || comms.latencySeconds > 0;
+      // Station log write already succeeded locally.
 
       // Also append to local diary
       const newDiaryEntry: LocalSymptomEntry = {
@@ -180,9 +183,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       setLocalDiary((prev) => [newDiaryEntry, ...prev]);
       setNotes("");
       setNotice(
-        delayed
-          ? `✓ Recorded Locally to Station Log · 🛰️ Queued in Ground Outbox (${titleCase(symptomCode)} for ${astronautId})`
-          : `✓ Recorded Locally to Station Log · 🛰️ Transmitting to Ground (${titleCase(symptomCode)} for ${astronautId})`,
+        `✓ Recorded Locally to Station Log (${titleCase(symptomCode)} for ${astronautId})`,
       );
       await load();
       setViewMode("history");
@@ -229,6 +230,39 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* 5-Factor AI Triage Callout Banner */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-sky-50/80 via-white to-sky-50/40 border border-sky-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground">
+                Real-Time 5-Factor Clinical Triage &amp; Flight Copilot
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Mastra Online
+              </span>
+            </div>
+            <p className="text-xs text-secondary mt-0.5 max-w-2xl leading-relaxed">
+              Experiencing acute symptoms in orbit? Correlate physiological discomfort against live compartment telemetry (CO₂, Temp, Humidity, Radiation, Pressure) and certified NASA Flight Rules with interactive interim stabilization checklists.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => useAssistantStore.getState().openDrawer("chat")}
+            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Launch Clinical Triage (Ctrl+K)</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Banner & Mode Switcher */}
       <div className="p-5 sm:p-6 glass-panel rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -247,19 +281,8 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </p>
         </div>
 
-        {/* 3-Mode View Switcher */}
+        {/* 2-Mode View Switcher */}
         <div className="flex flex-wrap items-center glass-panel-subtle rounded-xl p-1.5 text-xs self-start md:self-auto gap-1">
-          <button
-            onClick={() => setViewMode("chatbot")}
-            className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
-              viewMode === "chatbot"
-                ? "bg-white text-sky-700 border-sky-200 shadow-sm"
-                : "border-transparent text-muted hover:text-foreground"
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>AI Diagnostic Chat</span>
-          </button>
           <button
             onClick={() => setViewMode("history")}
             className={`px-3.5 py-2 rounded-lg font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
@@ -299,26 +322,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         </div>
       )}
 
-      {/* MODE 1: CHATBOT */}
-      {viewMode === "chatbot" && (
-        <SymptomChatbotModule
-          onLogSymptom={(symptom, loc) => {
-            const newEntry: LocalSymptomEntry = {
-              id: `sym-${Date.now()}`,
-              symptom: symptom.slice(0, 30),
-              severity: "Moderate",
-              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC",
-              location: loc,
-              duration: "30 mins",
-              description: symptom,
-              environmentalFactor: "CO₂: 3,197 PPM · Rad: 0.20 mGy/d",
-            };
-            setLocalDiary((prev) => [newEntry, ...prev]);
-          }}
-        />
-      )}
-
-      {/* MODE 2: HISTORY DIARY */}
+      {/* MODE 1: HISTORY DIARY */}
       {viewMode === "history" && (
         <div className="space-y-6">
           <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5">
@@ -431,7 +435,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         </div>
       )}
 
-      {/* MODE 3: MANUAL FAST-LOG */}
+      {/* MODE 2: MANUAL FAST-LOG */}
       {viewMode === "manual" && (
         <div className="p-5 sm:p-6 glass-panel rounded-xl max-w-2xl mx-auto space-y-5">
           <div className="border-b border-border pb-4">

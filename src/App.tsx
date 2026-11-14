@@ -1,5 +1,5 @@
 /**
- * WAYFINDER V3 application shell: calm, focused clinical intelligence console.
+ * HABITAT TRACE application shell: calm, focused clinical intelligence console.
  * High usability, restrained color palette, and clear visual hierarchy.
  */
 
@@ -28,8 +28,7 @@ import { StandbyAgentTrigger } from "./components/StandbyAgentTrigger";
 import { SymptomsView } from "./components/SymptomsView";
 import { AlertsDeck } from "./features/alerts";
 import { SettingsView } from "./features/settings";
-import { CommsStatusChip } from "./features/comms";
-import { DossierModal } from "./features/dossier";
+import { HealthReportModal } from "./features/health-report";
 import { useSimulationSandbox } from "./features/simulation";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
@@ -83,19 +82,16 @@ const FALLBACK_COHORT = [
     astronaut_id: "ASTRO-01",
     callsign: "CDR M. Vance",
     crew_role: "Commander",
-    calibration_status: "CALIBRATING",
   },
   {
     astronaut_id: "ASTRO-02",
     callsign: "FE-1 Dr. S. Patel",
     crew_role: "Flight Engineer",
-    calibration_status: "CALIBRATING",
   },
   {
     astronaut_id: "ASTRO-03",
     callsign: "MS-1 K. Lindgren",
     crew_role: "Mission Specialist",
-    calibration_status: "CALIBRATING",
   },
 ] as const;
 
@@ -130,7 +126,7 @@ export default function App() {
     viewFromPath(window.location.pathname),
   );
   const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [isHealthReportOpen, setIsHealthReportOpen] = useState(false);
   const [now, setNow] = useState<Date>(() => new Date());
 
   const astronauts = useCohortStore((state) => state.astronauts);
@@ -204,15 +200,12 @@ export default function App() {
     }
   };
 
-  const calibration = activeAstronaut?.calibration_status ?? "CALIBRATING";
-  const calibrated = calibration === "CALIBRATED";
   const cohortChoices =
     astronauts.length > 0 ? astronauts : FALLBACK_COHORT;
   const ollamaOnline = Boolean(health?.ollama_online);
   const ollamaTitle = ollamaOnline
     ? "Local Ollama generative model online"
     : "Ollama offline — deterministic extractive synthesis active";
-  const chunkCount = health?.vector_store_chunks ?? 0;
   const clock = useMemo(() => formatCockpitClock(now), [now]);
   const activeViewMeta = useMemo(
     () => ALL_VIEWS.find((v) => v.key === activeView) ?? ALL_VIEWS[0],
@@ -246,7 +239,7 @@ export default function App() {
                 </span>
               </div>
               <p className="hidden font-mono text-[11px] text-slate-500 xl:block">
-                ISS Exp 72 · Wayfinder
+                ISS Exp 72 · Habitat Trace
               </p>
             </div>
           </div>
@@ -279,14 +272,6 @@ export default function App() {
 
           <div className="flex shrink-0 items-center gap-2">
             <Badge
-              variant={calibrated ? "success" : "warning"}
-              dot
-              pulse={!calibrated}
-              className="hidden md:inline-flex"
-            >
-              {calibration}
-            </Badge>
-            <Badge
               variant={ollamaOnline ? "accent" : "default"}
               title={ollamaTitle}
               className="hidden 2xl:inline-flex"
@@ -311,15 +296,14 @@ export default function App() {
               <span className="text-slate-500 tabular-nums">{clock.utc} UTC</span>
             </div>
 
-            <CommsStatusChip />
             <Button
               size="sm"
               variant="default"
-              onClick={() => setIsDossierOpen(true)}
+              onClick={() => setIsHealthReportOpen(true)}
               leftIcon={<FileText className="h-3.5 w-3.5 text-slate-600" />}
-              title="Generate a structured clinical investigation dossier"
+              title="Generate a structured clinical health report"
             >
-              <span className="hidden sm:inline">Dossier</span>
+              <span className="hidden sm:inline">Health Report</span>
             </Button>
 
             <div
@@ -348,7 +332,7 @@ export default function App() {
                     title={
                       locked
                         ? "Locked in Astronaut perspective · medical privacy"
-                        : `${astronaut.callsign} (${astronaut.astronaut_id}) · ${astronaut.crew_role} · ${astronaut.calibration_status}`
+                        : `${astronaut.callsign} (${astronaut.astronaut_id}) · ${astronaut.crew_role}`
                     }
                     onClick={() => selectAstronaut(astronaut.astronaut_id)}
                     className={`group flex items-center gap-1.5 rounded-md px-2 py-1 text-left cursor-pointer transition-colors ${
@@ -515,7 +499,6 @@ export default function App() {
               <AstronautAvatar
                 astronautId={activeAstronautId}
                 size="sm"
-                status={calibration}
                 label={activeAstronaut?.callsign ?? activeAstronautId}
               />
               <div className="min-w-0 flex-1">
@@ -530,14 +513,10 @@ export default function App() {
 
             <div className="rounded-lg border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 text-[11px]">
               <div className="flex items-center justify-between font-mono font-medium text-slate-700">
-                <span>EXPEDITION 72</span>
                 <span>ISS / RR-1</span>
               </div>
               <p className="mt-0.5 text-[11px] text-slate-500">
                 MMT {clock.mmt} · UTC {clock.utc}
-              </p>
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                {ollamaOnline ? "Ollama Online" : "Extractive Mode"} · {chunkCount} chunks
               </p>
             </div>
           </div>
@@ -613,23 +592,11 @@ export default function App() {
         </div>
       </div>
 
-      <footer className="relative z-10 border-t border-border bg-white px-6 py-4">
-        <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted">
-          <span>HABITAT TRACE · WAYFINDER · ISS Expedition 72 · Clinical Decision Support</span>
-          <span>
-            Non-causal temporal correlation · Flight surgeon verification required
-          </span>
-          <span className="w-full text-[11px] text-muted">
-            Crew portraits: NASA (public domain) · illustrative stand-ins for the simulated crew
-          </span>
-        </div>
-      </footer>
-
       <AssistantDrawer />
       <StandbyAgentTrigger />
-      <DossierModal
-        open={isDossierOpen}
-        onClose={() => setIsDossierOpen(false)}
+      <HealthReportModal
+        open={isHealthReportOpen}
+        onClose={() => setIsHealthReportOpen(false)}
         astronautId={activeAstronautId}
       />
     </div>

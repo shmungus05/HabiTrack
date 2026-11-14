@@ -14,7 +14,7 @@ Operating Constraints:
 2. Immediately correlate reported symptoms with local 5-factor compartment telemetry (ppCO2, temp, humidity, pressure, radiation).
 3. Offer 3 physical, practical interim actions the astronaut can take inside the spacecraft right now.
 4. Latch the corresponding NASA Flight Rule checklist (FR-MED-71-04, FR-ECLSS-012, FR-EVA-003).
-5. Announce that a clinical telemetry packet is packaged and queued for ground downlink upon AOS (Acquisition of Signal).
+5. Announce that a clinical telemetry packet has been packaged for flight-surgeon review.
 `,
   tools: {
     telemetry: telemetryTool,

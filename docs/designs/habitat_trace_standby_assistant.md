@@ -1,17 +1,17 @@
-﻿# WAYFINDER Standby AI Assistant & Operational Flight Rule RAG
+﻿# HABITAT TRACE Standby AI Assistant & Operational Flight Rule RAG
 
 * **Author:** MinnThikeTunn
 * **Status:** Approved Technical Design Document
 * **Date:** 2026-11-14
 * **Predecessor Context:** [concepts_brief.md](file:///D:/nasaResearch/concepts_brief.md)
-* **Parent Architecture:** [WAYFINDER V3](file:///D:/nasaResearch/README.md)
+* **Parent Architecture:** [HABITAT TRACE V3](file:///D:/nasaResearch/README.md)
 * **Requirements Baseline:** [PRD.md](file:///D:/nasaResearch/PRD.md), [GLOSSARY.md](file:///D:/nasaResearch/GLOSSARY.md)
 
 ---
 
 ## Overview
 
-WAYFINDER is an offline operational health intelligence and environmental exposure workstation for long-duration human spaceflight. During mission anomalies and environmental excursions (such as rapid cabin carbon dioxide elevations or cardiovascular decompensation), crewmembers and flight surgeons require immediate, procedural guidance grounded in certified operational flight rules and spaceflight research.
+HABITAT TRACE is an offline operational health intelligence and environmental exposure workstation for long-duration human spaceflight. During mission anomalies and environmental excursions (such as rapid cabin carbon dioxide elevations or cardiovascular decompensation), crewmembers and flight surgeons require immediate, procedural guidance grounded in certified operational flight rules and spaceflight research.
 
 This feature introduces a standby assistant accessible across every console view (`Overview`, `Timeline`, `Symptoms`, `Research`). The assistant pairs an unobtrusive floating trigger pill with a slide-out 500 px side drawer. It supports standard keyboard text queries (`Ctrl+K`), client-side push-to-talk (PTT) voice interaction, and a dedicated developer evaluation harness. Grounded by an in-process SQLite hybrid vector RAG pipeline (dense cosine similarity + FTS5 BM25) indexing Markdown flight rules, the assistant delivers operational procedural recommendations and scientific context through a deterministic two-stage architecture: sub-50ms threshold-to-rule latching for certified checklists, backed by single-turn contextual explanation.
 
@@ -59,7 +59,7 @@ Prototyping AI features with cloud-only frontier models introduces architectural
 2. **Autonomous Multi-Turn Agent Reasoning Loops:** The system will not permit open-ended, autonomous multi-turn tool loops during mission operations. Retrieval is single-pass and deterministic.
 3. **Medical Diagnoses or Prescriptions:** The assistant will not diagnose pathological diseases, calculate clinical drug dosages, or prescribe pharmacological therapies. All recommendations remain operational flight procedures and evidence correlations.
 4. **Mandatory Cloud Audio Streaming for Core Flight Operations:** Raw microphone audio will not be streamed to cloud LLMs for the operational flight profile. Operational voice transcription defaults to client-side or on-device engines. Cloud multimodal streaming is isolated strictly to the opt-in developer evaluation harness for Gemini 2.5 Flash Native Audio Dialog over WebSocket (`/ws/assistant/audio`).
-5. **Modification of Core Analytics Algorithms:** Existing circadian baseline algorithms (`wayfinder.core.baselines`), tripartite concordance math (`wayfinder.core.analytics`), and ISS EDA ingestion (`wayfinder.core.ingestion`) will not be refactored or modified.
+5. **Modification of Core Analytics Algorithms:** Existing circadian baseline algorithms (`habitat_trace.core.baselines`), tripartite concordance math (`habitat_trace.core.analytics`), and ISS EDA ingestion (`habitat_trace.core.ingestion`) will not be refactored or modified.
 
 ---
 
@@ -115,7 +115,7 @@ flowchart TD
         DRAWER --> STATUS_BADGE
     end
 
-    subgraph API["2. FastAPI Application Service (wayfinder/api/)"]
+    subgraph API["2. FastAPI Application Service (habitat_trace/api/)"]
         ROUTE_QUERY["POST /api/assistant/query"]
         ROUTE_LATCH["GET /api/assistant/rules/{rule_id}<br/>(In-memory latch &lt;1ms)"]
         ROUTE_RULES["GET /api/assistant/rules"]
@@ -129,7 +129,7 @@ flowchart TD
         AUDIO -.->|Live Audio Frames| ROUTE_AUDIO
     end
 
-    subgraph Core["3. Headless Computational Core (wayfinder/core/)"]
+    subgraph Core["3. Headless Computational Core (habitat_trace/core/)"]
         DISPATCH["Intent & Dispatch Coordinator"]
         LATCH["FastPathLatchingManager<br/>(Threshold &rarr; Rule Map, <50ms)"]
         RAG["VectorStoreManager (rag.py)<br/>(FTS5 BM25 + NumPy Cosine RRF)"]
@@ -154,7 +154,7 @@ flowchart TD
     end
 
     subgraph Storage["4. Authoritative Storage (data/)"]
-        SQL_DB[("wayfinder.db (WAL Mode)<br/>research_vectors (tagged)<br/>assistant_audit_logs<br/>astronauts, telemetry, events")]
+        SQL_DB[("habitat_trace.db (WAL Mode)<br/>research_vectors (tagged)<br/>assistant_audit_logs<br/>astronauts, telemetry, events")]
         RULES_DIR["data/flight_rules/*.md<br/>(Operational flight rules & checklists)"]
         RAG --> SQL_DB
         RULE_IDX --> RULES_DIR
@@ -166,7 +166,7 @@ flowchart TD
 
 ### 2. Data Models & Domain Schemas
 
-#### A. Flight Rule Domain Model (`wayfinder.core.flight_rules`)
+#### A. Flight Rule Domain Model (`habitat_trace.core.flight_rules`)
 
 Operational flight rules and emergency checklists are defined as structured Pydantic V2 models parsed from Markdown documents:
 
@@ -230,13 +230,13 @@ When cabin partial pressure of CO2 exceeds 4.0 mmHg during crew rest cycles or 5
 | 4 | Deploy portable LiOH auxiliary scrubber if P_CO2 > 6.0 mmHg | AUX-SCRUB | Auxiliary latch confirmed | Emergency flight director notification mandatory |
 ```
 
-#### B. Preserved Assistant Domain Model (`wayfinder.core.models`)
+#### B. Preserved Assistant Domain Model (`habitat_trace.core.models`)
 
-To eliminate contract churn and maintain 100% backward compatibility with existing production components, tests, and endpoints, `AssistantResponse` preserves all 12 existing fields from `wayfinder/core/models.py`, extended non-destructively with optional flight rule and provider metadata:
+To eliminate contract churn and maintain 100% backward compatibility with existing production components, tests, and endpoints, `AssistantResponse` preserves all 12 existing fields from `habitat_trace/core/models.py`, extended non-destructively with optional flight rule and provider metadata:
 
 ```python
 class AssistantResponse(BaseModel):
-    """Authoritative response envelope for WAYFINDER assistant queries."""
+    """Authoritative response envelope for HABITAT TRACE assistant queries."""
     model_config = ConfigDict(frozen=True)
     
     # Preserved 12 Production Fields (Exact Compatibility)
@@ -263,7 +263,7 @@ class AssistantResponse(BaseModel):
 
 ### 3. API Endpoints & Protocol Contracts
 
-The assistant operates across formal API contracts under `wayfinder/api/routes/assistant.py`:
+The assistant operates across formal API contracts under `habitat_trace/api/routes/assistant.py`:
 
 #### 1. Contextual Query Endpoint: `POST /api/assistant/query`
 * **Request Model (`AssistantQueryRequest`):**
@@ -279,7 +279,7 @@ The assistant operates across formal API contracts under `wayfinder/api/routes/a
 * **Error Responses:** `400 Bad Request` (invalid query), `500 Internal Server Error` (fallback to extractive response with `mode: "EXTRACTIVE_FALLBACK"`).
 
 #### 2. Fast-Path Rule Retrieval & Latching
-Fast-path latching is implemented directly in-memory via `wayfinder.core.flight_rules.get_flight_rule(rule_id: str)` running in $<0.2\text{ms}$. Pre-latched `rule_id` values are attached directly to concordance events by the analytics pipeline. If the client queries a rule directly by ID, it uses the standard endpoint:
+Fast-path latching is implemented directly in-memory via `habitat_trace.core.flight_rules.get_flight_rule(rule_id: str)` running in $<0.2\text{ms}$. Pre-latched `rule_id` values are attached directly to concordance events by the analytics pipeline. If the client queries a rule directly by ID, it uses the standard endpoint:
 * **Endpoint:** `GET /api/assistant/rules/{rule_id}` (or `GET /api/assistant/rules?rule_id=...`)
 * **Response Model:** `FlightRule` (Status: `200 OK`, latency $<1\text{ms}$)
 * **Error Responses:** `404 Not Found` (invalid rule identifier).
@@ -329,7 +329,7 @@ Fast-path latching is implemented directly in-memory via `wayfinder.core.flight_
 To reconcile real-time response speeds during mission excursions with deep knowledge grounding:
 
 1. **Stage 1 (Deterministic Fast-Path Latching, $<50\text{ms}$):**
-   - The analytics concordance engine (`wayfinder.core.analytics`) or UI detects a telemetry threshold breach (e.g., $P_{\text{CO}_2} > 5.0\text{ mmHg}$).
+   - The analytics concordance engine (`habitat_trace.core.analytics`) or UI detects a telemetry threshold breach (e.g., $P_{\text{CO}_2} > 5.0\text{ mmHg}$).
    - `FastPathLatchingManager` maps the event signature (`event_type`, `severity`, `contributing_streams`) via an in-memory lookup table to canonical `FlightRule` IDs.
    - The verified `FlightRule` and its `ChecklistStep` list are loaded directly from the indexed database and returned immediately to the UI dock. The checklist is rendered **verbatim** with verified SHA-256 hashes, requiring zero LLM inference.
 2. **Stage 2 (Single-Turn Contextual Synthesis, Asynchronous):**
@@ -343,15 +343,15 @@ To reconcile real-time response speeds during mission excursions with deep knowl
 
 ### 5. Epistemic Guardrail & Non-Causal Safety System
 
-WAYFINDER strictly adheres to an epistemic boundary: the assistant provides operational flight rule guidance and correlational scientific evidence, but never clinical medical diagnoses or pharmacological prescriptions.
+HABITAT TRACE strictly adheres to an epistemic boundary: the assistant provides operational flight rule guidance and correlational scientific evidence, but never clinical medical diagnoses or pharmacological prescriptions.
 
 #### Compiled Guardrail Regex Standard
-The codebase strictly enforces `PROHIBITED_CAUSAL_TERMS` and `MANDATORY_DISCLAIMER` defined in `wayfinder/core/assistant.py` and validated by `tests/test_assistant.py`. All generated text is processed before transmission:
+The codebase strictly enforces `PROHIBITED_CAUSAL_TERMS` and `MANDATORY_DISCLAIMER` defined in `habitat_trace/core/assistant.py` and validated by `tests/test_assistant.py`. All generated text is processed before transmission:
 
 ```python
 MANDATORY_DISCLAIMER = (
     "Non-Causal Decision Support Disclaimer: Temporal correlation indicates "
-    "co-occurrence only and does not establish clinical causation. WAYFINDER "
+    "co-occurrence only and does not establish clinical causation. HABITAT TRACE "
     "is a clinical decision-support tool, not an autonomous diagnostic system. "
     "Operational countermeasure decisions must be verified by flight surgeons."
 )
@@ -377,7 +377,7 @@ PROHIBITED_CAUSAL_TERMS = re.compile(
    - `tripwire_triggered` is set to `True`.
    - An operational warning entry is recorded in `assistant_audit_logs` capturing the offending token sequence and character offset.
 2. **Mandatory Epistemic Disclaimer:** Every response envelope is stamped with the immutable disclaimer:
-   > *"Non-Causal Decision Support Disclaimer: Temporal correlation indicates co-occurrence only and does not establish clinical causation. WAYFINDER is a clinical decision-support tool, not an autonomous diagnostic system. Operational countermeasure decisions must be verified by flight surgeons."*
+   > *"Non-Causal Decision Support Disclaimer: Temporal correlation indicates co-occurrence only and does not establish clinical causation. HABITAT TRACE is a clinical decision-support tool, not an autonomous diagnostic system. Operational countermeasure decisions must be verified by flight surgeons."*
 
 ---
 
@@ -386,7 +386,7 @@ PROHIBITED_CAUSAL_TERMS = re.compile(
 To guarantee traceability in life-critical spaceflight operations, all assistant queries, latching events, STT transactions, and failover events are persisted to the authoritative database.
 
 #### SQLite Non-Destructive Audit Schema Migration
-The existing `assistant_audit_logs` table (with primary key `log_id TEXT PRIMARY KEY`) is extended non-destructively in `wayfinder/core/storage.py` via idempotent `ALTER TABLE` checks:
+The existing `assistant_audit_logs` table (with primary key `log_id TEXT PRIMARY KEY`) is extended non-destructively in `habitat_trace/core/storage.py` via idempotent `ALTER TABLE` checks:
 
 ```python
 # Preserved existing schema: log_id TEXT PRIMARY KEY, event_id, astronaut_id, query_text,
@@ -458,10 +458,10 @@ The system records runtime metrics accessible via internal diagnostic endpoints:
 
 ### 9. Storage, Database Schema Migration & Seeding
 
-The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, idempotent migrations:
+The authoritative SQLite database (`data/habitat_trace.db`) will apply incremental, idempotent migrations:
 
 1. **Authoritative `flight_rules` Table DDL:**
-   Create the dedicated storage table for certified flight rules and procedural checklists in `wayfinder/core/storage.py`:
+   Create the dedicated storage table for certified flight rules and procedural checklists in `habitat_trace/core/storage.py`:
    ```sql
    CREATE TABLE IF NOT EXISTS flight_rules (
        rule_id TEXT PRIMARY KEY,
@@ -503,10 +503,10 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
    *Constraint Preservation Note:* To maintain backward compatibility with existing databases having `CHECK(generation_mode IN ('OLLAMA_GENERATIVE', 'EXTRACTIVE_FALLBACK'))`, `generation_mode` remains mapped to the generative vs extractive paradigm, while the runtime engine (`gemini-2.5-flash-audio`, `gemini-flash-lite`, `llama3.2:1b`, `extractive-synthesizer`) is recorded strictly in `provider_used`.
 
 5. **Idempotent Dual-Index Seeding (`seed_flight_rules`):**
-   `wayfinder.core.flight_rules.seed_flight_rules()` parses Markdown flight rules from `data/flight_rules/*.md`, verifies SHA-256 hashes, upserts structured rules into `flight_rules`, and indexes rule text into:
+   `habitat_trace.core.flight_rules.seed_flight_rules()` parses Markdown flight rules from `data/flight_rules/*.md`, verifies SHA-256 hashes, upserts structured rules into `flight_rules`, and indexes rule text into:
    - `research_vectors` for dense cosine similarity matching;
    - `research_knowledge_fts` (with `source_repository = 'NASA Flight Rules'`) for lexical BM25 matching.
-   Integrated directly into `wayfinder/provision.py:provision_mission()` so that running `python -m wayfinder.provision` reseeds telemetry without altering or dropping curated flight rules.
+   Integrated directly into `habitat_trace/provision.py:provision_mission()` so that running `python -m habitat_trace.provision` reseeds telemetry without altering or dropping curated flight rules.
 
 ---
 
@@ -524,7 +524,7 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
 
 ### Alternative C: Generatively Synthesized Operational Checklists
 * **Pros**: Flexible, natural-language generation that dynamically tailors checklist instructions to the user's specific phrasing.
-* **Cons**: Stochastic token generation risks dropping critical procedural verification steps, hallucinating unverified environmental thresholds, or generating authoritative clinical diagnoses that violate WAYFINDER's core non-causal epistemic guardrails (`PROHIBITED_CAUSAL_TERMS`).
+* **Cons**: Stochastic token generation risks dropping critical procedural verification steps, hallucinating unverified environmental thresholds, or generating authoritative clinical diagnoses that violate HABITAT TRACE's core non-causal epistemic guardrails (`PROHIBITED_CAUSAL_TERMS`).
 > **Reason for Rejection:** Operational flight rules and emergency checklists require verbatim procedural fidelity and strict source provenance. The assistant must deliver checklist steps via verbatim pass-through validated with SHA-256 checksums, restricting the LLM purely to non-causal contextual explanation.
 
 ### Alternative D: Persistent Full-Width Horizontal Bottom Bar
@@ -544,8 +544,8 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
 ### 1. Phased Implementation Task List
 
 #### Phase 1: Database Schema Migrations & Storage Methods
-* **Target Files:** `wayfinder/core/storage.py`, `wayfinder/core/models.py`
-1. Define the `flight_rules` table DDL, indexes, and migrations in `wayfinder/core/storage.py`.
+* **Target Files:** `habitat_trace/core/storage.py`, `habitat_trace/core/models.py`
+1. Define the `flight_rules` table DDL, indexes, and migrations in `habitat_trace/core/storage.py`.
 2. Add non-destructive `ALTER TABLE` migrations in `StorageManager._initialize_db()` for:
    - `research_vectors`: `corpus_type TEXT NOT NULL DEFAULT 'RESEARCH'`, `rule_id TEXT`, `sha256_hash TEXT`.
    - `assistant_audit_logs`: `trace_id TEXT`, `flight_rule_cited TEXT`, `rule_sha256 TEXT`, `stt_confidence REAL`, `stt_duration_sec REAL`, `tripwire_match_term TEXT`, `provider_used TEXT`.
@@ -554,36 +554,36 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
    - `get_flight_rule(rule_id: str) -> Optional[FlightRule]`
    - `list_flight_rules(subsystem: Optional[str] = None, severity: Optional[str] = None) -> List[FlightRule]`
 4. Update `StorageManager.insert_assistant_audit_log()` to parameterize and persist all 7 new columns.
-5. In `wayfinder/core/models.py`:
+5. In `habitat_trace/core/models.py`:
    - Extend `AssistantResponse` with `flight_rule_cited: Optional[FlightRule] = None`, `verbatim_checklist: List[ChecklistStep] = Field(default_factory=list)`, `provider_used: Optional[str] = None`, and extend `mode` literal with `"GEMINI_GENERATIVE"`.
    - Extend `AssistantAuditLog` with the 7 new audit fields.
    - Extend `VectorEmbeddingRecord` with `corpus_type: str = "RESEARCH"`, `rule_id: Optional[str] = None`, and `sha256_hash: Optional[str] = None`.
    - Define request/response models: `AssistantQueryRequest` and `ProviderStatusResponse`.
 
 #### Phase 2: Flight Rules Knowledge Base Ingestion & FTS Seeding
-* **Target Files:** `data/flight_rules/*.md`, `wayfinder/core/flight_rules.py`, `wayfinder/provision.py`
+* **Target Files:** `data/flight_rules/*.md`, `habitat_trace/core/flight_rules.py`, `habitat_trace/provision.py`
 1. Author three authenticated operational flight rules in Markdown:
    - `data/flight_rules/FR_ECLSS_001_hypercapnia.md` (Cabin P_CO2 hypercapnia mitigation).
    - `data/flight_rules/FR_CDRA_002_scrubber_cycling.md` (CDRA desiccant bed cycling and thermal regeneration).
    - `data/flight_rules/FR_EVA_003_autonomic_strain.md` (EVA acute sympathetic strain and tachycardia mitigation).
-2. Create `wayfinder/core/flight_rules.py`:
+2. Create `habitat_trace/core/flight_rules.py`:
    - Implement Pydantic V2 models: `SeverityTrigger`, `ChecklistStep`, `FlightRule`.
    - Implement YAML frontmatter parser and markdown table checklist extractor.
    - Implement SHA-256 checksum calculation over verbatim markdown bodies.
    - Define `EVENT_SIGNATURE_TO_RULE_MAP: Dict[Tuple[str, frozenset], str]` binding event types and contributing stream sets to canonical rule IDs.
    - Implement `resolve_latch_rule_id(event_type: str, contributing_streams: set[str]) -> Optional[str]`.
    - Implement `seed_flight_rules(storage: StorageManager, rag: VectorStoreManager) -> int` to parse rules, insert into `flight_rules`, index passages into `research_vectors`, and index sections into SQLite `research_knowledge_fts` (`source_repository = 'NASA Flight Rules'`).
-3. Update `wayfinder/provision.py:provision_mission()` to invoke `seed_flight_rules()` during system provisioning.
+3. Update `habitat_trace/provision.py:provision_mission()` to invoke `seed_flight_rules()` during system provisioning.
 
 #### Phase 3: Hybrid Vector Store Matrix Extension
-* **Target Files:** `wayfinder/core/rag.py`
-1. Update `VectorStoreManager.load_embeddings()` in `wayfinder/core/rag.py` to index both `corpus_type = 'RESEARCH'` and `corpus_type = 'FLIGHT_RULE'` passages into the contiguous in-memory NumPy matrix (`np.ndarray` float32).
+* **Target Files:** `habitat_trace/core/rag.py`
+1. Update `VectorStoreManager.load_embeddings()` in `habitat_trace/core/rag.py` to index both `corpus_type = 'RESEARCH'` and `corpus_type = 'FLIGHT_RULE'` passages into the contiguous in-memory NumPy matrix (`np.ndarray` float32).
 2. Extend `hybrid_search()` to accept an optional `corpus_type: Optional[str] = None` filter, applying metadata filtering during reciprocal rank fusion (RRF) between dense cosine similarity and lexical BM25.
 3. Ensure `index_research_corpus()` preserves or re-indexes flight rule passages in `research_knowledge_fts`.
 
 #### Phase 4: Decoupled Decision Support Provider Architecture
-* **Target Files:** `wayfinder/core/providers.py`
-1. Create `wayfinder/core/providers.py` defining the provider abstract base class:
+* **Target Files:** `habitat_trace/core/providers.py`
+1. Create `habitat_trace/core/providers.py` defining the provider abstract base class:
    ```python
    class DecisionSupportProvider(ABC):
        @property
@@ -610,7 +610,7 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
 3. Implement `GeminiAudioSessionManager`: Dedicated WebSocket live streaming bridge targeting **Gemini 2.5 Flash Native Audio Dialog** supporting 16kHz PCM input, real-time transcription, rule event emission, and 24kHz audio playback chunks.
 
 #### Phase 5: Assistant Orchestration & Epistemic Guardrail
-* **Target Files:** `wayfinder/core/assistant.py`
+* **Target Files:** `habitat_trace/core/assistant.py`
 1. Refactor `AssistantManager` to manage active providers with automatic graceful fallback:
    - Priority chain: Gemini Flash-Lite (if configured and key present) $\to$ Ollama Local $\to$ Extractive Synthesizer.
 2. Implement two-stage query resolution:
@@ -621,8 +621,8 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
 5. Populate all 7 new audit fields on `AssistantResponse` and persist via `StorageManager.insert_assistant_audit_log()`.
 
 #### Phase 6: FastAPI Application Endpoints
-* **Target Files:** `wayfinder/api/routes/assistant.py`
-1. Refactor existing `@router.post("/query")` endpoint in `wayfinder/api/routes/assistant.py`:
+* **Target Files:** `habitat_trace/api/routes/assistant.py`
+1. Refactor existing `@router.post("/query")` endpoint in `habitat_trace/api/routes/assistant.py`:
    - Accept upgraded `AssistantQueryRequest` (query, optional `astronaut_id`, `top_k: int = 5`, `concordance_event_id`, and `client_timestamp`).
    - Maintain full backward compatibility with `ResearchView.tsx`.
 2. Add `GET /api/assistant/rules`: Query catalog of flight rules with optional `subsystem` and `severity` filters.
@@ -686,14 +686,14 @@ The authoritative SQLite database (`data/wayfinder.db`) will apply incremental, 
 | `data/flight_rules/FR_ECLSS_001_hypercapnia.md` | Created | Operational flight rule for elevated cabin P_CO2 mitigation with verified checklist steps. |
 | `data/flight_rules/FR_CDRA_002_scrubber_cycling.md` | Created | Contingency operational rule for CDRA desiccant bed cycling anomalies and thermal regeneration. |
 | `data/flight_rules/FR_EVA_003_autonomic_strain.md` | Created | Operational rule for managing acute sympathetic overactivation and elevated heart rates during EVA preparation. |
-| `wayfinder/core/models.py` | Modified | Add `flight_rule_cited`, `verbatim_checklist`, `provider_used` to `AssistantResponse`; add 7 audit fields to `AssistantAuditLog`; add `corpus_type`, `rule_id`, `sha256_hash` to `VectorEmbeddingRecord`; define `AssistantQueryRequest` and `ProviderStatusResponse`. |
-| `wayfinder/core/storage.py` | Modified | Add `flight_rules` table DDL, CRUD methods (`insert_flight_rule`, `get_flight_rule`, `list_flight_rules`), and idempotent SQLite migrations for `research_vectors` and `assistant_audit_logs`. |
-| `wayfinder/core/flight_rules.py` | Created | Pydantic V2 domain models (`FlightRule`, `ChecklistStep`), Markdown parser, SHA-256 verifier, `EVENT_SIGNATURE_TO_RULE_MAP`, and `seed_flight_rules()`. |
-| `wayfinder/core/rag.py` | Modified | Update `VectorStoreManager` to index flight rules into `research_vectors` and `research_knowledge_fts`, supporting filtered hybrid RRF retrieval on `corpus_type`. |
-| `wayfinder/core/providers.py` | Created | `DecisionSupportProvider` ABC, concrete adapters (`GeminiFlashLiteProvider`, `OllamaLocalProvider`, `ExtractiveSynthesizerProvider`), and `GeminiAudioSessionManager`. |
-| `wayfinder/core/assistant.py` | Modified | Update assistant orchestration to execute deterministic two-stage pipeline, preserve `AssistantResponse`, and record enhanced guardrail tripwire logging. |
-| `wayfinder/provision.py` | Modified | Invoke `seed_flight_rules()` in `provision_mission()` so telemetry resets preserve curated flight rules and index both dense and FTS representations. |
-| `wayfinder/api/routes/assistant.py` | Modified | Refactor `POST /api/assistant/query`; add `GET /api/assistant/rules`, `GET /api/assistant/rules/{rule_id}`, `GET /api/assistant/provider-status`, and `WS /api/assistant/ws/audio`. |
+| `habitat_trace/core/models.py` | Modified | Add `flight_rule_cited`, `verbatim_checklist`, `provider_used` to `AssistantResponse`; add 7 audit fields to `AssistantAuditLog`; add `corpus_type`, `rule_id`, `sha256_hash` to `VectorEmbeddingRecord`; define `AssistantQueryRequest` and `ProviderStatusResponse`. |
+| `habitat_trace/core/storage.py` | Modified | Add `flight_rules` table DDL, CRUD methods (`insert_flight_rule`, `get_flight_rule`, `list_flight_rules`), and idempotent SQLite migrations for `research_vectors` and `assistant_audit_logs`. |
+| `habitat_trace/core/flight_rules.py` | Created | Pydantic V2 domain models (`FlightRule`, `ChecklistStep`), Markdown parser, SHA-256 verifier, `EVENT_SIGNATURE_TO_RULE_MAP`, and `seed_flight_rules()`. |
+| `habitat_trace/core/rag.py` | Modified | Update `VectorStoreManager` to index flight rules into `research_vectors` and `research_knowledge_fts`, supporting filtered hybrid RRF retrieval on `corpus_type`. |
+| `habitat_trace/core/providers.py` | Created | `DecisionSupportProvider` ABC, concrete adapters (`GeminiFlashLiteProvider`, `OllamaLocalProvider`, `ExtractiveSynthesizerProvider`), and `GeminiAudioSessionManager`. |
+| `habitat_trace/core/assistant.py` | Modified | Update assistant orchestration to execute deterministic two-stage pipeline, preserve `AssistantResponse`, and record enhanced guardrail tripwire logging. |
+| `habitat_trace/provision.py` | Modified | Invoke `seed_flight_rules()` in `provision_mission()` so telemetry resets preserve curated flight rules and index both dense and FTS representations. |
+| `habitat_trace/api/routes/assistant.py` | Modified | Refactor `POST /api/assistant/query`; add `GET /api/assistant/rules`, `GET /api/assistant/rules/{rule_id}`, `GET /api/assistant/provider-status`, and `WS /api/assistant/ws/audio`. |
 | `web/src/types/api.ts` | Modified | Extend `AssistantResponse` with `flight_rule_cited` and `verbatim_checklist`; add TypeScript interfaces for `FlightRule`, `ChecklistStep`, and `ProviderStatusResponse`. |
 | `web/src/services/api.ts` | Modified | Refactor `queryAssistant()`; add `fetchFlightRules()`, `fetchFlightRule()`, and `fetchProviderStatus()`. |
 | `web/src/lib/speech.ts` | Created | Client-side Web Speech API adapter for PTT audio capture, permission detection, audio waveform energy metering, text fallback, and WebSocket streaming bridge. |

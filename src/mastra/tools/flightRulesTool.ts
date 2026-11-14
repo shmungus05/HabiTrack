@@ -163,7 +163,7 @@ export const NASA_FLIGHT_RULES: Record<string, FlightRule> = {
       },
       {
         step_number: 4,
-        action: "Report ocular comfort score to Flight Surgeon upon AOS",
+        action: "Report ocular comfort score to Flight Surgeon",
         target_subsystem: "COMM-MED",
         verification: "Triage entry confirmed in queue",
         caution_warning: "If photophobia occurs, don tinted orbital goggles",

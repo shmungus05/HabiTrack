@@ -1,6 +1,5 @@
 /**
- * Strongly-typed mirror of the WAYFINDER V3 Pydantic domain models.
- * Keep in sync with `wayfinder/core/models.py`.
+ * Strongly-typed domain models for Habitat Trace.
  */
 
 export type CalibrationStatus = "CALIBRATING" | "CALIBRATED";

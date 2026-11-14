@@ -21,7 +21,6 @@ import {
   Layers,
   Radio,
   RotateCcw,
-  Satellite,
   ShieldAlert,
   Sparkles,
   Thermometer,
@@ -40,10 +39,9 @@ import {
   submitSymptom,
 } from "../services/api";
 import { useAssistantStore } from "../stores/assistantStore";
-import { useCommsStore } from "../stores/commsStore";
 import { useRoleStore } from "../stores/roleStore";
 import { AstronautOnly, SurgeonOnly } from "../features/shared";
-import { DossierModal, type DossierSourceData } from "../features/dossier";
+import { HealthReportModal, type HealthReportSourceData } from "../features/health-report";
 import { EventRationaleDisplay, parseEventRationale } from "./EventRationaleDisplay";
 import type {
   Astronaut,
@@ -477,7 +475,6 @@ function AstronautOverview({
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
   const { astronaut, measurements } = data;
-  const profileCalibrated = astronaut?.calibration_status === "CALIBRATED";
 
   let hr = latestValue(data, "stream_sim_hr");
   let rmssd = latestValue(data, "stream_sim_hrv");
@@ -515,7 +512,6 @@ function AstronautOverview({
           <AstronautAvatar
             astronautId={astronautId}
             size="xl"
-            status={astronaut?.calibration_status}
             label={astronaut?.callsign ?? astronautId}
             className="shrink-0"
           />
@@ -533,13 +529,6 @@ function AstronautOverview({
               {astronaut?.crew_role ?? "Crew member"}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge
-                variant={profileCalibrated ? "success" : "warning"}
-                dot
-                pulse={!profileCalibrated}
-              >
-                {astronaut?.calibration_status ?? "CALIBRATING"}
-              </Badge>
               <Badge variant="default">
                 <Gauge className="h-3 w-3" />
                 {astronaut?.baseline_window_days ?? 7}-day baseline
@@ -790,9 +779,9 @@ function AstronautOverview({
               ))}
             </div>
             <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500">
-              <Satellite className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-              Local station log writes are instant. Ground downlink follows the
-              communications link state independently.
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+              Every log entry is written to the local station log immediately and
+              stays available offline.
             </p>
           </section>
 
@@ -872,7 +861,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
 
-  const [dossierOpen, setDossierOpen] = useState(false);
+  const [healthReportOpen, setHealthReportOpen] = useState(false);
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
 
@@ -1024,19 +1013,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
             }
           : current,
       );
-      // Local review write already succeeded; the ground acknowledgement is
-      // queued independently and never blocks the workstation.
-      useCommsStore.getState().enqueuePacket(
-        "EVENT_ACK",
-        `Event ${updated.event_id} · ${updated.review_status}`,
-        {
-          eventId: updated.event_id,
-          astronautId: updated.astronaut_id,
-          reviewStatus: updated.review_status,
-          severity: updated.severity_level,
-          reviewedAt: new Date().toISOString(),
-        },
-      );
     } catch {
       /* Surface failures through inline retry */
     } finally {
@@ -1060,21 +1036,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
           ? { ...current, symptoms: [created, ...current.symptoms] }
           : current,
       );
-      const comms = useCommsStore.getState();
-      comms.enqueuePacket("SYMPTOM_REPORT", `${titleCase(code)} · ${astronautId}`, {
-        reportId: created.report_id,
-        symptomCode: code,
-        severity: created.severity,
-        occurredAt: created.occurred_at,
-        source: "ASTRONAUT_QUICK_LOG",
-      });
-      const delayed =
-        comms.linkState === "LOS" || comms.latencySeconds > 0;
-      setQuickNotice(
-        delayed
-          ? "✓ Recorded locally · 🛰️ Queued in ground outbox"
-          : "✓ Recorded locally · 🛰️ Transmitting to ground",
-      );
+      setQuickNotice(`✓ Recorded locally · ${titleCase(code)} logged`);
       window.setTimeout(() => setQuickNotice(null), 4500);
     } catch (caught) {
       setQuickNotice(
@@ -1086,7 +1048,7 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   };
 
   // Hooks must run before the loading/error early returns below.
-  const dossierSource = useMemo<DossierSourceData | null>(() => {
+  const healthReportSource = useMemo<HealthReportSourceData | null>(() => {
     if (!data?.astronaut) {
       return null;
     }
@@ -1130,7 +1092,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
   const measurements = data?.measurements ?? [];
   const counts = data?.symptoms.length ?? 0;
   const eventTheme = activeEvent ? severityTheme(activeEvent.severity_level) : null;
-  const profileCalibrated = astronaut?.calibration_status === "CALIBRATED";
 
   // Environmental snapshot values for the 5-Factor Health Gauge with real-time simulation overrides
   let rawCo2 = latestValue(data ?? { astronaut: null, measurements, baselines: {}, events: [], symptoms: [] }, "stream_eda_co2") ?? 3.0;
@@ -1177,7 +1138,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
           <AstronautAvatar
             astronautId={astronautId}
             size="xl"
-            status={astronaut?.calibration_status}
             label={astronaut?.callsign ?? astronautId}
             className="shrink-0"
           />
@@ -1195,13 +1155,6 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
               {astronaut?.crew_role ?? "Crew member"}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge
-                variant={profileCalibrated ? "success" : "warning"}
-                dot
-                pulse={!profileCalibrated}
-              >
-                {astronaut?.calibration_status ?? "CALIBRATING"}
-              </Badge>
               <Badge variant="default">
                 <Gauge className="h-3 w-3" />
                 {astronaut?.baseline_window_days ?? 7}-day baseline
@@ -1213,10 +1166,10 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
           <Button
             size="sm"
             variant="default"
-            onClick={() => setDossierOpen(true)}
+            onClick={() => setHealthReportOpen(true)}
             leftIcon={<FileText className="h-3.5 w-3.5 text-slate-600" />}
           >
-            Export Investigation Dossier
+            Export Health Report
           </Button>
           <span className="field-label mt-1">Last calibration</span>
           <span className="font-mono text-xs text-slate-600">
@@ -1645,11 +1598,11 @@ export function OverviewView({ astronautId }: OverviewViewProps) {
       </div>
       </SurgeonOnly>
 
-      <DossierModal
-        open={dossierOpen}
-        onClose={() => setDossierOpen(false)}
+      <HealthReportModal
+        open={healthReportOpen}
+        onClose={() => setHealthReportOpen(false)}
         astronautId={astronautId}
-        preloadedData={dossierSource}
+        preloadedData={healthReportSource}
       />
     </div>
   );

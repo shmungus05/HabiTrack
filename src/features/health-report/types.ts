@@ -1,9 +1,9 @@
 /**
- * Authoritative contracts for the structured clinical investigation dossier.
+ * Authoritative contracts for the structured clinical health report.
  *
- * The dossier is a projection of authoritative cohort state, never a new
+ * The health report is a projection of authoritative cohort state, never a new
  * source of truth: the compiler reads typed API payloads and emits a portable
- * report for download, clipboard use, print-to-PDF, or ground downlink.
+ * report for PDF download or print-to-PDF.
  */
 
 import type {
@@ -19,7 +19,7 @@ import type {
 export type VitalStatus = "NOMINAL" | "SUSPECT" | "ANOMALOUS";
 export type EnvironmentalStatus = "NOMINAL" | "CAUTION" | "ALERT";
 
-export interface DossierVitalsRow {
+export interface HealthReportVitalsRow {
   parameter: string;
   value: string;
   unit: string;
@@ -29,7 +29,7 @@ export interface DossierVitalsRow {
   qualityStatus: QualityStatus;
 }
 
-export interface DossierEnvironmentalRow {
+export interface HealthReportEnvironmentalRow {
   parameter: string;
   value: string;
   unit: string;
@@ -37,7 +37,7 @@ export interface DossierEnvironmentalRow {
   qualityStatus: QualityStatus;
 }
 
-export interface DossierSymptomRow {
+export interface HealthReportSymptomRow {
   occurredAt: string;
   symptom: string;
   severity: number;
@@ -46,7 +46,7 @@ export interface DossierSymptomRow {
   nonCausalFlag?: boolean;
 }
 
-export interface DossierConcordanceRow {
+export interface HealthReportConcordanceRow {
   eventId: string;
   title: string;
   severity: string;
@@ -54,28 +54,28 @@ export interface DossierConcordanceRow {
   timeWindow: string;
 }
 
-export interface DossierFlightRuleStep {
+export interface HealthReportFlightRuleStep {
   stepNumber: number;
   instruction: string;
   verified: boolean;
   verifiedAt?: string;
 }
 
-export interface DossierFlightRuleRow {
+export interface HealthReportFlightRuleRow {
   ruleId: string;
   title: string;
-  checklistSteps: DossierFlightRuleStep[];
+  checklistSteps: HealthReportFlightRuleStep[];
   sha256Hash: string;
 }
 
-export interface DossierSourceReference {
+export interface HealthReportSourceReference {
   sourceName: string;
   datasetIdentifier: string;
   doi?: string;
   provenance: "AUTHENTIC_NASA_EDA" | "SYNTHETIC_SIMULATION" | "CREW_REPORTED";
 }
 
-export interface DossierMetadata {
+export interface HealthReportMetadata {
   reportId: string;
   generatedAt: string;
   timeWindow: {
@@ -89,23 +89,23 @@ export interface DossierMetadata {
   crewRole: string;
 }
 
-export interface DossierReport {
-  metadata: DossierMetadata;
-  vitalsSummary: DossierVitalsRow[];
-  environmentalSnapshot: DossierEnvironmentalRow[];
-  symptomHistory: DossierSymptomRow[];
-  concordanceEvents: DossierConcordanceRow[];
-  verifiedFlightRules: DossierFlightRuleRow[];
-  sourceReferences: DossierSourceReference[];
+export interface HealthReport {
+  metadata: HealthReportMetadata;
+  vitalsSummary: HealthReportVitalsRow[];
+  environmentalSnapshot: HealthReportEnvironmentalRow[];
+  symptomHistory: HealthReportSymptomRow[];
+  concordanceEvents: HealthReportConcordanceRow[];
+  verifiedFlightRules: HealthReportFlightRuleRow[];
+  sourceReferences: HealthReportSourceReference[];
   epistemicDisclaimer: string;
 }
 
 /**
  * Raw inputs, exactly as returned by the typed FastAPI client.
- * `activeFlightRules` is optional so a dossier still compiles when the rule
+ * `activeFlightRules` is optional so a health report still compiles when the rule
  * corpus is unavailable.
  */
-export interface DossierSourceData {
+export interface HealthReportSourceData {
   astronaut: Astronaut;
   baselines: Baselines;
   measurements: Measurement[];
@@ -114,7 +114,7 @@ export interface DossierSourceData {
   activeFlightRules?: FlightRule[];
 }
 
-export interface DossierCompilerInput extends DossierSourceData {
+export interface HealthReportInput extends HealthReportSourceData {
   timeWindow?: {
     start: string;
     end: string;
@@ -124,8 +124,7 @@ export interface DossierCompilerInput extends DossierSourceData {
   now?: Date;
 }
 
-export interface CompiledDossier {
-  report: DossierReport;
-  markdown: string;
+export interface CompiledHealthReport {
+  report: HealthReport;
   html: string;
 }

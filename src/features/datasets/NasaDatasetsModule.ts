@@ -190,7 +190,7 @@ export function exportDatasetToJson(datasetId: string, customPayload?: unknown):
   const payload = customPayload ?? {
     exportMetadata: {
       exportedAt: new Date().toISOString(),
-      platform: "WAYFINDER V3 Clinical Intelligence Workstation",
+      platform: "Habitat Trace Clinical Intelligence Workstation",
       datasetId: dataset.id,
       doi: dataset.doi,
       attribution: dataset.attribution,

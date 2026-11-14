@@ -1,4 +1,4 @@
-# SPEC-002: Zero-Backend Pure-TypeScript Architecture & Clinical Interim Triage
+﻿# SPEC-002: Zero-Backend Pure-TypeScript Architecture & Clinical Interim Triage
 
 ## Status: Approved Architecture Specification
 ## Target Platform: Client-Side Web (Vite + React 18 + Tailwind) / Render Static Site
@@ -9,7 +9,7 @@
 
 ## 1. System Overview & Core Philosophy
 
-WAYFINDER operates as an offline-capable, **zero-backend, 100% Pure TypeScript clinical decision-support workstation** for long-duration human spaceflight (e.g. ISS Expedition 71, lunar/Mars transit). 
+HABITAT TRACE operates as an offline-capable, **zero-backend, 100% Pure TypeScript clinical decision-support workstation** for long-duration human spaceflight (e.g. ISS Expedition 71, lunar/Mars transit). 
 
 It eliminates all server-side dependencies (Python, FastAPI, Uvicorn, SQLite WAL server) and replaces them with:
 1. **Mastra Agentic Orchestration Layer (`src/mastra/`)**: Type-safe Directed Acyclic Graph (DAG) workflows and onboard agent tools powered by `@mastra/core` and `zod`.
@@ -130,7 +130,7 @@ D:\HabiTrack\src\mastra\
 
 ### 4.2 Primitive Responsibilities
 
-| Mastra Primitive | Location | Specific Responsibility in WAYFINDER |
+| Mastra Primitive | Location | Specific Responsibility in HABITAT TRACE |
 | :--- | :--- | :--- |
 | **`createTool`** | `src/mastra/tools/*.ts` | Exposes telemetry and NASA flight rule catalog entries to the conversational agent. |
 | **`createStep`** | `src/mastra/steps/*.ts` | Type-safe Zod-validated pipeline steps for symptom classification, environmental correlation, interim physical countermeasure generation, and epistemic guardrails. |

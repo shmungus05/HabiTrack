@@ -1,7 +1,7 @@
 import React from "react";
 
 export interface StatusDotProps {
-  status?: "online" | "offline" | "calibrated" | "calibrating" | "warn" | "error";
+  status?: "online" | "offline" | "warn" | "error";
   pulse?: boolean;
   size?: "sm" | "md";
   className?: string;
@@ -10,8 +10,6 @@ export interface StatusDotProps {
 const STATUS_COLORS: Record<string, string> = {
   online: "bg-emerald-500",
   offline: "bg-slate-400",
-  calibrated: "bg-emerald-500",
-  calibrating: "bg-amber-500",
   warn: "bg-amber-500",
   error: "bg-red-600",
 };

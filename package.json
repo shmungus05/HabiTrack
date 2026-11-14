@@ -1,15 +1,18 @@
 {
-  "name": "wayfinder-console",
+  "name": "habitat-trace",
   "private": true,
   "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "tsc": "tsc --noEmit",
+    "test": "node --experimental-strip-types src/features/health-report/healthReportCompiler.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "lucide-react": "^0.468.0",
     "plotly.js-basic-dist-min": "^2.35.3",
     "react": "^18.3.1",

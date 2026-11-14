@@ -1,4 +1,4 @@
-# WAYFINDER
+# HABITAT TRACE
 ## Offline Astronaut Health Intelligence & Environmental Exposure Analysis
 
 **Product Requirements Document (PRD)**  
@@ -11,7 +11,7 @@
 
 # 1. Executive Summary
 
-WAYFINDER is an offline-first astronaut health intelligence platform designed to help astronauts and medical-support personnel investigate changes in astronaut health by combining personal health information, environmental measurements, and crew-reported symptoms.
+Habitat Trace is an offline-first astronaut health intelligence platform designed to help astronauts and medical-support personnel investigate changes in astronaut health by combining personal health information, environmental measurements, and crew-reported symptoms.
 
 The system organizes data from different sources, validates its quality, aligns measurements over time, and identifies noteworthy changes and possible relationships between environmental conditions and reported symptoms.
 
@@ -25,7 +25,7 @@ Its core capabilities are:
 6. Offline health information access and event recording.
 7. Medical decision support with transparent uncertainty.
 
-WAYFINDER is a research and demonstration prototype. It is not a replacement for NASA operational systems, qualified medical professionals, or approved mission medical procedures.
+Habitat Trace is a research and demonstration prototype. It is not a replacement for NASA operational systems, qualified medical professionals, or approved mission medical procedures.
 
 ## Product principle
 
@@ -43,7 +43,7 @@ A single measurement may not adequately describe an astronaut's health condition
 
 Long-duration missions introduce another challenge: communication delays or temporary disconnection can limit immediate access to ground-based medical support.
 
-WAYFINDER addresses these challenges by organizing relevant information into a unified, explainable, offline-capable health investigation workflow.
+Habitat Trace addresses these challenges by organizing relevant information into a unified, explainable, offline-capable health investigation workflow.
 
 ## Main questions the product should help answer
 
@@ -75,7 +75,7 @@ Build a mission-ready concept for astronaut health intelligence that connects th
 
 ## Non-goals
 
-WAYFINDER will not:
+Habitat Trace will not:
 
 - Diagnose diseases or medical emergencies.
 - Claim that a correlation proves causation.
@@ -115,13 +115,13 @@ Needs to:
 - Understand system findings and limitations.
 - Export structured reports for further analysis.
 
-**Delivery status (Version 5): 100% Delivered.** The console exposes a persistent, zero-authentication perspective switch (`localStorage: wayfinder_active_role`). **Astronaut perspective** locks the cohort to the active crewmember, renders three glanceable status cards, and provides one-tap symptom logging. **Flight Surgeon perspective** retains full diagnostic depth: multi-cohort switching, telemetry scrubbers, anomaly injection, threshold overrides, risk matrices, and event sign-off. Switching perspective never discards in-progress work or refetches authoritative state.
+**Delivery status (Version 5): 100% Delivered.** The console exposes a persistent, zero-authentication perspective switch (`localStorage: habitat_trace_active_role`). **Astronaut perspective** locks the cohort to the active crewmember, renders three glanceable status cards, and provides one-tap symptom logging. **Flight Surgeon perspective** retains full diagnostic depth: multi-cohort switching, telemetry scrubbers, anomaly injection, threshold overrides, risk matrices, and event sign-off. Switching perspective never discards in-progress work or refetches authoritative state.
 
 ---
 
 # 5. Core Product Concept
 
-WAYFINDER combines three perspectives:
+Habitat Trace combines three perspectives:
 
 ### A. The astronaut
 
@@ -408,7 +408,7 @@ Offline functionality should include:
 - Local reference retrieval in later releases.
 - Clear synchronization status.
 
-**Delivery status (Version 5): 100% Delivered.** Local reads, symptom and event writes, timeline access, and reference retrieval remain fully offline. Synchronization status is now explicit through the **Deep Space Communications & Outbox Simulator** (`FR-11`): AOS/LOS link state, 0–24 minute one-way propagation latency with ISS / Lunar Gateway / Mars Opposition / Mars Conjunction presets, 1x/10x/60x/Instant time warp, and an onboard outbox that buffers ground packets during LOS and drains FIFO on acquisition. Local workstation operations never block on the simulated link.
+**Delivery status (Version 5): 100% Delivered.** Local reads, symptom and event writes, timeline access, and reference retrieval remain fully offline. All workstation operations are local-first and never wait on a network round trip; a visible synchronization-status indicator was intentionally removed with the deep-space link simulator, so the console no longer implies a live ground link it does not have.
 
 ## FR-12: Reports and Review
 
@@ -696,7 +696,7 @@ Use local storage for the prototype and avoid collecting unnecessary personal in
 
 The first release is successful when a user can:
 
-1. Open WAYFINDER without an internet connection after setup.
+1. Open Habitat Trace without an internet connection after setup.
 2. Load a selected historical environmental dataset.
 3. See only variables that actually exist in that dataset.
 4. Inspect values, units, timestamps, and source information.
@@ -719,7 +719,7 @@ All live-looking data in this scenario is synthetic unless explicitly identified
 1. The system loads a historical NASA environmental dataset or a labeled synthetic environmental stream.
 2. The environmental timeline shows a change in an available measurement.
 3. The astronaut submits a symptom report.
-4. WAYFINDER aligns the report with nearby environmental measurements.
+4. Habitat Trace aligns the report with nearby environmental measurements.
 5. The system highlights temporal overlap and displays measurement quality.
 6. The system explains what is known, what is missing, and what cannot be concluded.
 7. The astronaut or medical-support user reviews the event.
@@ -766,7 +766,7 @@ No clinical sensitivity, specificity, or emergency-prediction performance should
 
 # 17. Product Release Strategy
 
-WAYFINDER will be developed in progressive releases.
+Habitat Trace will be developed in progressive releases.
 
 **Version 1 — Core Environmental Health Investigation**
 - Environmental dataset ingestion.
@@ -810,8 +810,7 @@ WAYFINDER will be developed in progressive releases.
 - **3-Mode Crew Symptom Capture Suite**: Quick severity chips, clinical structured reporting, and conversational triage chatbot.
 - **Expo Obsidian Design System**: Strict 8 px radius, hairline borders on a pitch-black canvas, JetBrains Mono typography, restrained hue reserved for interaction and critical alerts.
 - **Multi-Role Perspective Shell (Delivered)**: Persistent Astronaut / Flight Surgeon toggle with cohort locking, glanceable crew status cards, one-tap symptom logging, and role-gated diagnostic depth.
-- **Structured Clinical Investigation Dossier (Delivered)**: Typed, non-causal report compiler with Markdown download, clipboard copy, native print-to-PDF, and comms downlink.
-- **Deep Space Communications & Outbox Simulator (Delivered)**: AOS/LOS link control, 0–24 minute latency presets, time-warp multipliers, and a FIFO ground outbox decoupled from local writes.
+- **Structured Clinical Investigation Dossier (Delivered)**: Typed, non-causal report compiler with Markdown download, clipboard copy, native print-to-PDF, and PDF export.
 - **Phase 2 Expansion (Roadmap)**: Multi-agent peer consensus for expedition medical teams and embedded edge NPU inference profiling.
 
 Each version must preserve the safety and data-integrity requirements established in Version 1.
@@ -820,7 +819,7 @@ Each version must preserve the safety and data-integrity requirements establishe
 
 # 18. Final Product Positioning
 
-WAYFINDER is not simply a vital-sign dashboard or an AI medical chatbot.
+Habitat Trace is not simply a vital-sign dashboard or an AI medical chatbot.
 
 It is an integrated astronaut health investigation system that connects:
 
@@ -841,9 +840,9 @@ Monitor the astronaut. Understand the environment. Investigate the change. Suppo
 
 | Requirement | Capability | Status |
 | :--- | :--- | :--- |
-| `FR-11` | Deep Space Communications & Outbox Simulator; offline synchronization status | ✅ 100% Delivered |
+| `FR-11` | Offline-first local read/write access and reference retrieval | ✅ Delivered |
 | `FR-12` | Structured Clinical Investigation Dossier (Markdown, print-PDF, downlink) | ✅ 100% Delivered |
 | `Section 4` | Multi-Role Perspective Switcher (Astronaut / Flight Surgeon) | ✅ 100% Delivered |
 | `FR-01`–`FR-10` | Cohort profiles, ingestion, quality, environment, symptoms, timeline, baselines, analytics, alerts, local assistant | ✅ Delivered (V1–V4) |
 
-**Important limitation:** WAYFINDER is a hackathon research prototype, not flight-certified medical software. Operational use would require appropriate clinical, engineering, security, human-factors, and mission-system validation.
+**Important limitation:** Habitat Trace is a hackathon research prototype, not flight-certified medical software. Operational use would require appropriate clinical, engineering, security, human-factors, and mission-system validation.

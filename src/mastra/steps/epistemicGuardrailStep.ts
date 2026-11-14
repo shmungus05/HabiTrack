@@ -4,7 +4,7 @@ import { createStep } from "../core";
 const PROHIBITED_CAUSAL_TERMS = /\b(cause|causes|caused|causing|proves|proven|diagnose|diagnosed|diagnosis|prescribe|prescribes|prescribed|prescription|treat|treated|treating|treatment|cure|remedy)\b/gi;
 
 const MANDATORY_DISCLAIMER =
-  "Non-Causal Decision Support Disclaimer: Temporal correlation indicates co-occurrence only and does not establish clinical causation. WAYFINDER is an onboard clinical decision-support triage assistant, not an autonomous diagnostic system. Operational countermeasure decisions must be verified by flight surgeons upon AOS.";
+  "Non-Causal Decision Support Disclaimer: Temporal correlation indicates co-occurrence only and does not establish clinical causation. Habitat Trace is an onboard clinical decision-support triage assistant, not an autonomous diagnostic system. Operational countermeasure decisions must be verified by a flight surgeon.";
 
 export const epistemicGuardrailStep = createStep({
   id: "epistemic-guardrail",
