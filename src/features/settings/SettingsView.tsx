@@ -250,10 +250,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span className="max-w-[200px] truncate">{scenarioNotice}</span>
               </span>
             )}
-
-            <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-mono text-slate-700">
-              {profile.mission} · Day {profile.daysInSpace}
-            </span>
           </div>
         </div>
 
@@ -311,10 +307,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
             </div>
-
-            <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
-              ALARA: {profile.careerRadiationDoseMsv} / {profile.careerLimitMsv} mSv
-            </span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -1423,10 +1415,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-              <span className="text-[11px] text-slate-400">
-                Direct anomaly injectors with live propagation to Overview, Alerts &amp; Timeline.
-              </span>
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
