@@ -558,7 +558,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
   };
 
   return (
-    <section className={`p-5 sm:p-6 glass-panel rounded-xl relative overflow-hidden ${className}`}>
+    <section className={`p-6 sm:p-8 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs relative overflow-hidden ${className}`}>
       {/* Top Banner with Real-time Telemetry Pills */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-border">
         <div>
@@ -568,7 +568,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
               Real-Time Flight Medicine &amp; ECLSS Anomaly Detection
             </span>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2.5">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <span>Cabin Alerts &amp; Clinical Health Action Plans</span>
             <span className="text-xs font-normal text-muted font-mono">
               ({activeAstronautId})
@@ -835,17 +835,17 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
           displayedAlerts.map((alert) => {
             const isResolved = alert.acknowledged;
             const levelAccent = isResolved
-              ? "opacity-60 border-slate-200 bg-slate-50/50"
+              ? "opacity-60 border-slate-200/80 bg-slate-50/50"
               : alert.level === "critical"
-              ? "border-l-4 border-l-red-500 border-red-200 bg-red-50/20"
+              ? "border-red-200/90 bg-red-50/30 text-red-950 hover:border-red-300"
               : alert.level === "warning"
-              ? "border-l-4 border-l-amber-500 border-amber-200 bg-amber-50/20"
-              : "border-l-4 border-l-emerald-500 border-emerald-200 bg-emerald-50/20";
+              ? "border-amber-200/90 bg-amber-50/30 text-amber-950 hover:border-amber-300"
+              : "border-emerald-200/90 bg-emerald-50/30 text-emerald-950 hover:border-emerald-300";
 
             return (
               <div
                 key={alert.id}
-                className={`p-3 sm:p-3.5 rounded-xl border glass-panel transition-all duration-150 shadow-2xs ${levelAccent}`}
+                className={`p-3.5 sm:p-4 rounded-2xl border glass-panel transition-all duration-150 shadow-2xs ${levelAccent}`}
               >
                 {/* Header Row */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/70">

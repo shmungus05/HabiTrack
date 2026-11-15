@@ -726,9 +726,9 @@ export function TimelineView({
   return (
     <div className="space-y-4">
       {/* Top Header Card in Clean White Theme */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl glass-panel bg-white border border-border shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-6 sm:p-7 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 flex items-center gap-2">
             Environmental Trends
           </h2>
           {isSimulation ? (
@@ -860,7 +860,7 @@ export function TimelineView({
 
       {/* Main Chart Container */}
       <div className="w-full">
-        <div className="rounded-xl border border-border bg-white relative h-[calc(100vh-260px)] min-h-[580px] overflow-hidden p-2 shadow-sm">
+        <div className="rounded-[32px] border border-slate-200/90 bg-white relative h-[calc(100vh-260px)] min-h-[580px] overflow-hidden p-4 sm:p-5 shadow-2xs">
           {!hasTelemetry && !isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted">
               <span className="grid h-12 w-12 place-items-center rounded-lg border border-border bg-surface-subtle text-sky-600">

@@ -376,18 +376,20 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   return (
     <div className="space-y-6">
       {/* Top Banner & Mode Switcher */}
-      <div className="p-5 sm:p-6 glass-panel rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-6 sm:p-8 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <Stethoscope className="w-4 h-4 text-sky-600" />
+            <span className="p-1 rounded-md bg-sky-50 text-sky-600 border border-sky-100">
+              <Stethoscope className="w-4 h-4" />
+            </span>
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">
               Flight Medicine · Crew Health Logging
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Symptom Diary &amp; Clinical Concordance
           </h2>
-          <p className="text-xs text-muted mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Subjective symptoms logged here immediately correlate with active ECLSS telemetry, 
             circadian envelopes, and NASA flight rules.
           </p>
@@ -451,7 +453,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       {/* MODE 1: HISTORY DIARY */}
       {viewMode === "history" && (
         <div className="space-y-6">
-          <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5">
+          <div className="p-6 sm:p-8 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs space-y-6">
             {/* Flight Surgeon Expedition Fleet Filter Bar */}
             {isFlightSurgeon && (
               <div className="p-3.5 rounded-xl bg-slate-50 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -717,7 +719,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
 
       {/* MODE 2: MANUAL FAST-LOG */}
       {viewMode === "manual" && (
-        <div className="p-5 sm:p-6 glass-panel rounded-xl max-w-2xl mx-auto space-y-5">
+        <div className="p-6 sm:p-8 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs max-w-2xl mx-auto space-y-6">
           <div className="border-b border-border pb-4">
             <h3 className="text-base font-semibold text-foreground">Manual Crew Symptom Entry</h3>
             <p className="text-xs text-muted">Validated submission feeding clinical concordance models</p>

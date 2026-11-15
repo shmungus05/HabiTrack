@@ -302,12 +302,13 @@ export async function generateLocalRagResponse(
     { role: "system", content: SYSTEM_INSTRUCTION },
   ];
 
-  // Add up to 6 turns of conversation history
-  const recentHistory = history.slice(-6);
+  // Add up to 3 turns of recent conversation history (concisely bounded to prevent KV-cache bloat)
+  const recentHistory = history.slice(-3);
   for (const h of recentHistory) {
+    const trimmedText = h.text.length > 220 ? `${h.text.slice(0, 220)}...` : h.text;
     messages.push({
       role: h.role === "model" ? "assistant" : "user",
-      content: h.text,
+      content: trimmedText,
     });
   }
 
@@ -315,8 +316,8 @@ export async function generateLocalRagResponse(
 
   const reply = await engineInstance.chat.completions.create({
     messages,
-    temperature: 0.3,
-    max_tokens: 600,
+    temperature: 0.35,
+    max_tokens: 250,
   });
 
   const rawAnswer = reply.choices[0]?.message?.content?.trim() || "No response generated.";
@@ -381,7 +382,7 @@ Return JSON ONLY formatted as:
       { role: "user", content: prompt },
     ],
     temperature: 0.2,
-    max_tokens: 800,
+    max_tokens: 450,
   });
 
   const content = reply.choices[0]?.message?.content?.trim() || "";

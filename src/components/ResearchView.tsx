@@ -90,10 +90,10 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
             Research Workspace
           </h2>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-xs text-slate-500">
             Hybrid BM25 + dense cosine retrieval over NASA HRR / OSDR passages.
           </p>
         </div>
@@ -103,8 +103,8 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
         </Badge>
       </div>
 
-      <div className="rounded-xl glass-panel p-4 sm:p-5">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-subtle px-3.5 py-2.5 transition-colors focus-within:border-sky-500 focus-within:bg-white">
+      <div className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition-colors focus-within:border-sky-500 focus-within:bg-white shadow-2xs">
           <Search className="h-4 w-4 shrink-0 text-sky-600" />
           <input
             value={queryText}
@@ -122,8 +122,8 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted mr-1">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-500 font-semibold mr-1">
             Try:
           </span>
           {EXAMPLE_QUERIES.map((example) => (
@@ -131,7 +131,7 @@ export function ResearchView({ astronautId }: ResearchViewProps) {
               key={example}
               type="button"
               onClick={() => chooseExample(example)}
-              className="rounded-lg glass-panel-subtle px-2.5 py-1 text-xs text-secondary transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 cursor-pointer"
+              className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs text-slate-700 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 cursor-pointer shadow-2xs"
             >
               {example}
             </button>
