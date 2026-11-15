@@ -17,7 +17,7 @@ function check(condition: boolean, message: string): void {
 }
 
 async function runTests(): Promise<void> {
-  console.log("Starting Sargalay AI Gateway unit tests...");
+  console.log("Starting Sargalay SI Gateway unit tests...");
 
   // Test 1: Key retrieval & default key
   const apiKey = getSargalayApiKey();
@@ -55,7 +55,7 @@ async function runTests(): Promise<void> {
   check(Boolean(completion.modelUsed), "Model used should be reported");
   console.log(`[PASS] Test 4: Chat completion verified via ${completion.modelUsed}: "${completion.content}"`);
 
-  console.log(`\nPASS · ${assertions} assertions · Sargalay AI Gateway unit tests completed cleanly.`);
+  console.log(`\nPASS · ${assertions} assertions · Sargalay SI Gateway unit tests completed cleanly.`);
 }
 
 runTests().catch((err) => {

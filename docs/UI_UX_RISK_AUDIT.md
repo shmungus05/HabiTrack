@@ -72,13 +72,13 @@ This document categorizes and ranks all complex UI/UX elements, data presentatio
 * **What it does:** Presents three competing mechanisms for handling symptoms:
   1. A manual 5-field web form (Symptom Code, Severity 1–5 slider, Cabin Location text, Notes).
   2. A diary table with search filters, severity filters, status toggles, JSON export, and a button titled *"Load NASA Sample Data"*.
-  3. The conversational Mastra AI Assistant drawer (`AssistantDrawer.tsx`).
+  3. The conversational Mastra SI Assistant drawer (`AssistantDrawer.tsx`).
 * **Why it's hazardous:**
   * Having a button that loads synthetic sample data inside an operational medical diary creates a severe risk of polluting authentic medical records with fake entries.
-  * Redundant input methods confuse the crew: astronauts in microgravity do not want to fill out desktop web forms when an AI voice/chat assistant already triages symptoms.
+  * Redundant input methods confuse the crew: astronauts in microgravity do not want to fill out desktop web forms when an SI voice/chat assistant already triages symptoms.
 * **Recommended Team Fix:**
   * Remove the *"Load NASA Sample Data"* button from the production UI.
-  * Unify symptom entry: route crew symptom reporting through the AI Assistant or a single 1-tap fast logger, while keeping the diary view strictly read-only/auditable for the Flight Surgeon.
+  * Unify symptom entry: route crew symptom reporting through the SI Assistant or a single 1-tap fast logger, while keeping the diary view strictly read-only/auditable for the Flight Surgeon.
 
 ---
 
@@ -131,7 +131,7 @@ This document categorizes and ranks all complex UI/UX elements, data presentatio
   2. Active View Breadcrumb
   3. Mission Path Switcher (Astronaut vs Flight Surgeon)
   4. Calibration Status Badge
-  5. Extractive / Ollama AI Status Badge
+  5. Extractive / Ollama SI Status Badge
   6. Dual UTC / MMT Cockpit Clock
   7. Comms Radio Status Chip
   8. Health Report Generation Button

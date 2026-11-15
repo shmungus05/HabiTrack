@@ -1,4 +1,4 @@
-# SPEC-003: Clinical AI Diagnostic Chatbot ("First-Response Interim Advisor")
+# SPEC-003: Clinical SI Diagnostic Chatbot ("First-Response Interim Advisor")
 
 ## Status: Approved Architecture Specification
 ## Target Platform: Client-Side TypeScript (Vite + React 18) / Render Static Site
@@ -10,7 +10,7 @@
 
 During long-duration spaceflight (ISS expeditions, Lunar Gateway, and Mars transit), communication with Earth experiences **Loss of Signal (LOS)** intervals or transmission propagation delays (up to 22 minutes one-way).
 
-The **Clinical AI Diagnostic Chatbot** acts as an **Onboard Interim First Responder**. It is explicitly designed **not** to diagnose autonomously or replace the flight surgeon, but to perform rapid **"quick-think" stabilization triage**:
+The **Clinical SI Diagnostic Chatbot** acts as an **Onboard Interim First Responder**. It is explicitly designed **not** to diagnose autonomously or replace the flight surgeon, but to perform rapid **"quick-think" stabilization triage**:
 > **"Correlate symptoms immediately with local compartment telemetry, prescribe physical interim countermeasures before the surgeon arrives, latch NASA flight rules, and prepare a structured handoff packet ready for ground downlink."**
 
 ---

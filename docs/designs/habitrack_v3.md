@@ -1,4 +1,4 @@
-﻿# HABITRACK Version 3: Evidence-Grounded Local AI & React Console Architecture
+﻿# HABITRACK Version 3: Evidence-Grounded Local SI & React Console Architecture
 
 * **Author:** MinnThikeTunn
 * **Date:** 2026-11-14
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-HABITRACK Version 3 transitions the platform from a prototype demonstration workstation into an **Evidence-Grounded Local AI Health Intelligence System** backed by a decoupled **React + TypeScript + Tailwind CSS** presentation console and a Python **FastAPI** service.
+HABITRACK Version 3 transitions the platform from a prototype demonstration workstation into an **Evidence-Grounded Local SI Health Intelligence System** backed by a decoupled **React + TypeScript + Tailwind CSS** presentation console and a Python **FastAPI** service.
 
 The system correlates authentic NASA ISS Environmental Data Application (EDA) telemetry, deterministic multi-day physiological vitals with non-linear inverse RMSSD dynamics, and crew-logged symptom reports against a curated NASA spaceflight biomedical research corpus. It introduces an in-process embedded vector store (SQLite-backed float32 embeddings with contiguous in-memory NumPy matrix dot-product similarity) fused with SQLite FTS5 BM25 via Reciprocal Rank Fusion (RRF), a contextual Knowledge Assistant providing 1-click citation-grounded explanations within a non-blocking sliding side drawer, a resilient local LLM integration with deterministic non-causal safety guardrails and instant extractive fallback, and a full React console adhering to a high-end minimalist 'Perplexity' aesthetic.
 
@@ -65,7 +65,7 @@ The Streamlit prototype console (`habitrack/ui/`) established proof of concept, 
    - High-performance Python FastAPI backend (`habitrack/api/`) exposing REST endpoints and serving compiled static assets (`web/dist/`) with Single-Page Application (SPA) catch-all fallback.
 
 ### 3.2 Out-of-Scope Non-Goals
-- **Cloud-Based AI APIs:** Zero cloud dependencies; strictly 100% offline edge execution.
+- **Cloud-Based SI APIs:** Zero cloud dependencies; strictly 100% offline edge execution.
 - **Autonomous Medical Diagnosis:** The system must never independently calculate clinical risk, diagnose pathology, or prescribe medical countermeasures.
 - **External Vector Database Daemons:** No ChromaDB, Milvus, Qdrant, or external vector service processes.
 - **Modifying Headless Core Invariants:** All existing mathematical algorithms in `habitrack.core` (circadian hourly binning, physiological variance floors $\sigma_{\min}$, pre-severity interval coalescence, tripartite concordance) and their 64 passing pytest tests must remain untouched and backward compatible.

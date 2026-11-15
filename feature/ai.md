@@ -1,23 +1,23 @@
-# SpaceCare AI
-## AI-Powered Astronaut Health & Wellness Assistant
+# SpaceCare SI
+## SI-Powered Astronaut Health & Wellness Assistant
 
-**Feature:** SpaceCare AI  
-**Type:** Conversational AI & Knowledge Retrieval  
+**Feature:** SpaceCare SI  
+**Type:** Conversational SI & Knowledge Retrieval  
 **Status:** MVP Specification
 
 ## 1. Overview
 
-SpaceCare AI is an AI-powered conversational assistant designed to help astronauts access relevant health, wellness, and daily living guidance during space missions.
+SpaceCare SI is an SI-powered conversational assistant designed to help astronauts access relevant health, wellness, and daily living guidance during space missions.
 
 Astronauts should be able to communicate naturally with the assistant, describe their concerns, and ask questions.
 
-The AI retrieves relevant information from SpaceLife Library and provides contextual responses with appropriate instructional resources such as videos, GIFs, images, and step-by-step guides.
+The SI retrieves relevant information from SpaceLife Library and provides contextual responses with appropriate instructional resources such as videos, GIFs, images, and step-by-step guides.
 
 **Core concept:** Transform astronaut-specific knowledge into accessible, contextual guidance through natural conversation.
 
 ## 2. Objectives
 
-- Allow astronauts to communicate naturally with an AI assistant.
+- Allow astronauts to communicate naturally with an SI assistant.
 - Understand questions and reported discomfort.
 - Identify relevant intent and contextual information.
 - Retrieve relevant knowledge from SpaceLife Library.
@@ -44,7 +44,7 @@ The assistant should support conversational follow-up questions and maintain rel
 
 ### 3.2 Intent Understanding
 
-The AI should identify the general purpose of each message.
+The SI should identify the general purpose of each message.
 
 Suggested intent categories:
 
@@ -61,7 +61,7 @@ These categories should be extensible.
 
 ### 3.3 Symptom Information Extraction
 
-When an astronaut reports a health concern, the AI should extract relevant information.
+When an astronaut reports a health concern, the SI should extract relevant information.
 
 Example:
 
@@ -77,7 +77,7 @@ Example:
 }
 ```
 
-The AI should:
+The SI should:
 
 - Identify reported symptoms.
 - Identify the affected body area when available.
@@ -92,9 +92,9 @@ Do not treat extracted information as a medical diagnosis.
 
 ### 3.4 Knowledge Retrieval (RAG)
 
-This is the primary integration between SpaceCare AI and SpaceLife Library.
+This is the primary integration between SpaceCare SI and SpaceLife Library.
 
-The AI must use the library as its primary source for astronaut-specific educational and instructional recommendations.
+The SI must use the library as its primary source for astronaut-specific educational and instructional recommendations.
 
 #### Retrieval Workflow
 
@@ -119,7 +119,7 @@ The AI must use the library as its primary source for astronaut-specific educati
 - Do not invent resources.
 - If no relevant resources are found, communicate that clearly.
 
-The AI should not recommend a resource solely because it contains similar keywords.
+The SI should not recommend a resource solely because it contains similar keywords.
 
 ### 3.5 Instructional Media Recommendations
 
@@ -139,11 +139,11 @@ Example:
 
 "My muscles are sore after exercising."
 
-**AI:**
+**SI:**
 
 "I can help you find relevant guidance. First, can you tell me where you're experiencing soreness and how severe it is?"
 
-After gathering context and checking the relevant safety guidance, the AI may display:
+After gathering context and checking the relevant safety guidance, the SI may display:
 
 **Related Resource: Exercise & Recovery Guide**
 
@@ -152,13 +152,13 @@ After gathering context and checking the relevant safety guidance, the AI may di
 - Description: Relevant educational information.
 - Action: View resource.
 
-The AI must not independently prescribe exercises as treatment for unexplained pain.
+The SI must not independently prescribe exercises as treatment for unexplained pain.
 
 ### 3.6 Safety & Medical Escalation
 
 This is a mandatory system requirement.
 
-SpaceCare AI is a support and educational tool, not an autonomous medical decision-maker.
+SpaceCare SI is a support and educational tool, not an autonomous medical decision-maker.
 
 The assistant must:
 
@@ -173,7 +173,7 @@ The assistant must:
 
 Medical escalation rules must come from verified, approved mission medical protocols. Do not invent triage thresholds or clinical procedures.
 
-If an appropriate medical protocol is unavailable, the AI should communicate its limitations and direct the astronaut to qualified medical support.
+If an appropriate medical protocol is unavailable, the SI should communicate its limitations and direct the astronaut to qualified medical support.
 
 ## 4. Conversation Examples
 
@@ -183,7 +183,7 @@ If an appropriate medical protocol is unavailable, the AI should communicate its
 
 "I have muscle soreness after exercising."
 
-**Expected AI behavior:**
+**Expected SI behavior:**
 
 1. Identify the health-related intent.
 2. Ask about the affected area, severity, and duration.
@@ -198,7 +198,7 @@ If an appropriate medical protocol is unavailable, the AI should communicate its
 
 "I am having trouble sleeping."
 
-**Expected AI behavior:**
+**Expected SI behavior:**
 
 1. Identify the sleep-related concern.
 2. Ask relevant follow-up questions.
@@ -212,7 +212,7 @@ If an appropriate medical protocol is unavailable, the AI should communicate its
 
 "How can I exercise in microgravity?"
 
-**Expected AI behavior:**
+**Expected SI behavior:**
 
 1. Identify exercise guidance intent.
 2. Search the exercise category.
@@ -226,7 +226,7 @@ If an appropriate medical protocol is unavailable, the AI should communicate its
 
 "I am experiencing severe chest pain."
 
-**Expected AI behavior:**
+**Expected SI behavior:**
 
 1. Recognize a potentially serious concern.
 2. Prioritize immediate medical escalation.
@@ -234,7 +234,7 @@ If an appropriate medical protocol is unavailable, the AI should communicate its
 4. Do not recommend ordinary exercise or wellness content.
 5. Do not delay escalation while searching the library.
 
-## 5. AI Response Structure
+## 5. SI Response Structure
 
 The backend should return structured responses so the frontend can render text, questions, safety information, and media separately.
 
@@ -282,27 +282,27 @@ Safety decisions must not depend exclusively on an LLM-generated JSON field.
 
 ### FR-01: Conversational Interface
 
-Users can send messages and receive AI responses.
+Users can send messages and receive SI responses.
 
 ### FR-02: Intent Recognition
 
-The AI identifies the general intent of incoming messages.
+The SI identifies the general intent of incoming messages.
 
 ### FR-03: Symptom Information Extraction
 
-The AI extracts relevant reported symptom information without making diagnoses.
+The SI extracts relevant reported symptom information without making diagnoses.
 
 ### FR-04: Follow-up Questions
 
-The AI can request additional information when necessary.
+The SI can request additional information when necessary.
 
 ### FR-05: Library Retrieval
 
-The AI retrieves relevant resources from SpaceLife Library through its backend API or an approved shared retrieval service.
+The SI retrieves relevant resources from SpaceLife Library through its backend API or an approved shared retrieval service.
 
 ### FR-06: Resource Recommendation
 
-The AI returns relevant instructional resources with source attribution.
+The SI returns relevant instructional resources with source attribution.
 
 ### FR-07: Media Rendering
 
@@ -314,11 +314,11 @@ Potentially serious concerns must trigger the approved escalation workflow.
 
 ### FR-09: Conversation Context
 
-The AI should maintain relevant context throughout the current conversation.
+The SI should maintain relevant context throughout the current conversation.
 
 ### FR-10: Retrieval Transparency
 
-The AI should distinguish between:
+The SI should distinguish between:
 - Information retrieved from the library.
 - General conversational explanations.
 - Information that is unavailable or unverified.
@@ -331,7 +331,7 @@ Use the existing project stack wherever possible.
 |---|---|
 | Frontend | Next.js |
 | Backend | FastAPI |
-| AI Model | Gemini API |
+| SI Model | Gemini API |
 | Database | Supabase PostgreSQL |
 | Vector Search | pgvector |
 | Retrieval | RAG |
@@ -339,11 +339,11 @@ Use the existing project stack wherever possible.
 
 Avoid unnecessary multi-agent architecture for the MVP.
 
-A single well-designed AI workflow with retrieval, validation, and safety controls is sufficient.
+A single well-designed SI workflow with retrieval, validation, and safety controls is sufficient.
 
 ## 8. Integration Requirements
 
-SpaceCare AI must integrate with SpaceLife Library.
+SpaceCare SI must integrate with SpaceLife Library.
 
 The library remains an independent feature.
 
@@ -354,26 +354,26 @@ Integration requirements:
 3. Respect resource approval status.
 4. Retrieve relevant metadata and media references.
 5. Preserve source attribution.
-6. Avoid duplicating library content in the AI database.
+6. Avoid duplicating library content in the SI database.
 7. Handle unavailable or failed retrieval gracefully.
 
-The AI should not directly depend on the library's frontend implementation.
+The SI should not directly depend on the library's frontend implementation.
 
 ## 9. Acceptance Criteria
 
-- [ ] Astronauts can communicate naturally with AI.
-- [ ] AI can identify basic user intent.
-- [ ] AI can extract reported symptom information.
-- [ ] AI can ask contextual follow-up questions.
-- [ ] AI can search SpaceLife Library.
-- [ ] AI can retrieve relevant approved resources.
-- [ ] AI can display videos, GIFs, and images in chat.
-- [ ] AI responses include resource attribution.
-- [ ] AI does not fabricate resources.
-- [ ] AI recognizes potentially serious health concerns.
-- [ ] AI follows approved medical escalation rules.
-- [ ] AI handles retrieval failures gracefully.
-- [ ] AI works with the library without duplicating its data.
+- [ ] Astronauts can communicate naturally with SI.
+- [ ] SI can identify basic user intent.
+- [ ] SI can extract reported symptom information.
+- [ ] SI can ask contextual follow-up questions.
+- [ ] SI can search SpaceLife Library.
+- [ ] SI can retrieve relevant approved resources.
+- [ ] SI can display videos, GIFs, and images in chat.
+- [ ] SI responses include resource attribution.
+- [ ] SI does not fabricate resources.
+- [ ] SI recognizes potentially serious health concerns.
+- [ ] SI follows approved medical escalation rules.
+- [ ] SI handles retrieval failures gracefully.
+- [ ] SI works with the library without duplicating its data.
 
 ## 10. Out of Scope
 
@@ -389,12 +389,12 @@ Do not implement these unless specifically requested:
 
 ## 11. Instructions for Coding Agent
 
-Act as a senior AI engineer and software architect.
+Act as a senior SI engineer and software architect.
 
 Before implementation:
 
 1. Inspect the existing repository.
-2. Understand the existing AI integration.
+2. Understand the existing SI integration.
 3. Identify the available library APIs and data structures.
 4. Review the database schema.
 5. Understand existing authentication and conversation handling.
@@ -402,7 +402,7 @@ Before implementation:
 
 Then propose:
 
-- AI architecture.
+- SI architecture.
 - Conversation workflow.
 - Intent recognition strategy.
 - Symptom information extraction.
@@ -422,4 +422,4 @@ Do not assume the library API exists until you have inspected the repository or 
 
 **Important:** This feature must remain modular. It should consume SpaceLife Library resources through a defined backend interface rather than tightly coupling the two implementations.
 
-**Product Vision:** SpaceCare AI transforms astronaut-specific knowledge into accessible, contextual guidance through natural conversation.
+**Product Vision:** SpaceCare SI transforms astronaut-specific knowledge into accessible, contextual guidance through natural conversation.

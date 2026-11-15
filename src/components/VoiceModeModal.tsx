@@ -1,5 +1,5 @@
 /**
- * web/src/components/VoiceModeModal.tsx: Dedicated Interactive AI Voice Mode
+ * web/src/components/VoiceModeModal.tsx: Dedicated Interactive SI Voice Mode
  *
  * Implements a high-end, minimalist Perplexity/Gemini Live conversational workspace:
  * - font-black headings, generous whitespace, rounded-[32px] containers
@@ -346,7 +346,7 @@ export const VoiceModeModal: React.FC = () => {
 
         {/* Top Right Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Active AI Model Badge */}
+          {/* Active SI Model Badge */}
           <button
             type="button"
             onClick={() => {

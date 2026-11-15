@@ -1,4 +1,4 @@
-/**
+ /**
  * src/services/ai/core/FlightSI.ts
  *
  * Deep Module: FlightSI
@@ -24,6 +24,7 @@ import type {
 import {
   ExtractiveFallbackAdapter,
   GeminiFrontierAdapter,
+  OllamaAdapter,
   SargalayAdapter,
   WebGpuLocalAdapter,
 } from "./adapters/index.ts";
@@ -219,7 +220,19 @@ export class FlightSIImpl implements FlightSI {
     if (this.adapter) return this.adapter;
     if (typeof window === "undefined") return this.fallbackAdapter;
 
-    // Prioritize Sargalay Multi-Model Gateway
+    let mode = "frontier";
+    try {
+      mode = localStorage.getItem("habitrack_si_model_mode") || "frontier";
+    } catch {
+      // ignore storage error
+    }
+
+    // 1. Local Mode -> Local Ollama Station Bridge
+    if (mode === "local") {
+      return new OllamaAdapter();
+    }
+
+    // 2. Online Mode -> Prioritize Sargalay Multi-Model Gateway
     const sargalayAdapter = new SargalayAdapter();
     if (sargalayAdapter.isReady()) return sargalayAdapter;
 
@@ -717,7 +730,7 @@ Core Operating Directives:
       ? searchSpaceLifeGuides({ query: symptomText, category: resourceCategory, symptomCodes, limit: 2 })
       : [];
 
-    // Attempt Dynamic AI Reasoning via Active Adapter
+    // Attempt Dynamic SI Reasoning via Active Adapter
     const activeAdapter = this.resolveAdapter();
     let finalActions = deterministicActions;
     let finalRationale = rationale;

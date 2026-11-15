@@ -52,7 +52,7 @@ interface LocalSymptomEntry {
   acknowledgmentNotes?: string | null;
 }
 
-/** Formats cabin telemetry into concise operational readout without AI boilerplate */
+/** Formats cabin telemetry into concise operational readout without SI boilerplate */
 function formatCabinTelemetry(factor?: string): string {
   if (!factor) return "";
   return factor
@@ -63,7 +63,7 @@ function formatCabinTelemetry(factor?: string): string {
     .trim();
 }
 
-/** Cleans robotic AI placeholder text into natural operational log wording */
+/** Cleans robotic SI placeholder text into natural operational log wording */
 function cleanDescription(desc?: string): string {
   if (!desc) return "Onset noted during shift activities.";
   const trimmed = desc.trim();
@@ -73,7 +73,7 @@ function cleanDescription(desc?: string): string {
   return trimmed;
 }
 
-/** Distills corporate AI disclaimers into standard flight medicine sign-off */
+/** Distills corporate SI disclaimers into standard flight medicine sign-off */
 function cleanAcknowledgmentNotes(notes?: string | null): string {
   if (!notes) return "Logged to medical record · Follow-up via PMC.";
   if (
@@ -407,7 +407,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </p>
         </div>
 
-        {/* View Mode Switcher + AI Assistant Launcher */}
+        {/* View Mode Switcher + SI Assistant Launcher */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Direct Trigger to Unified Standby Assistant */}
           <button

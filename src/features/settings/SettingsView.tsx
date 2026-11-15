@@ -43,13 +43,14 @@ import { useAssistantStore } from "../../stores/assistantStore";
 import { getAvailableVoices, type VoicePersona } from "../../lib/speech";
 import {
   getSargalayApiKey,
-  getSargalayModel,
   getSargalayModelLabel,
-  setSargalayApiKey,
-  setSargalayModel,
   testSargalayApiKey,
-  SARGALAY_CURATED_MODELS,
 } from "../../services/ai/sargalayClient";
+import {
+  checkOllamaStatus,
+  loadOllamaModel,
+  type OllamaStatusResult,
+} from "../../services/ai/ollamaClient";
 import { useBiomedicalSettings } from "./SettingsModule";
 import { useSimulationSandbox } from "../simulation";
 
@@ -96,19 +97,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     speakMessage,
     isSpeaking,
     openVoiceModal,
+    aiModelMode,
+    setAiModelMode,
+    localModelStatus,
+    localModelProgress,
+    localModelStatusText,
+    localModelError,
+    loadLocalModel,
+    unloadLocalModel,
   } = useAssistantStore();
 
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>("profile");
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [sargalayKeyInput, setSargalayKeyInput] = useState(getSargalayApiKey() || "");
-  const [selectedModel, setSelectedModel] = useState(getSargalayModel());
-  const [showKey, setShowKey] = useState(false);
   const [isTestingKey, setIsTestingKey] = useState(false);
   const [keyTestResult, setKeyTestResult] = useState<{
     success: boolean;
     message: string;
     latencyMs?: number;
   } | null>(null);
+
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatusResult | null>(null);
+  const [isCheckingOllama, setIsCheckingOllama] = useState(false);
+
+  const refreshOllama = async () => {
+    setIsCheckingOllama(true);
+    const res = await checkOllamaStatus();
+    setOllamaStatus(res);
+    setIsCheckingOllama(false);
+  };
+
+  useEffect(() => {
+    if (activeCategory === "intelligence" || activeCategory === "all") {
+      refreshOllama();
+    }
+  }, [activeCategory]);
 
   useEffect(() => {
     const updateVoices = () => {
@@ -253,7 +275,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {[
               { id: "profile", label: "Crew Profile", icon: User },
               { id: "telemetry", label: "Telemetry & Limits", icon: Sliders },
-              { id: "intelligence", label: "AI Engine", icon: Cpu },
+              { id: "intelligence", label: "SI Engine", icon: Cpu },
               { id: "comms", label: "Audio & Comms", icon: Volume2 },
               { id: "simulation", label: "Simulation Sandbox", icon: Zap },
               { id: "all", label: "All Settings", icon: Layers },
@@ -661,7 +683,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {/* 4. Sargalay AI Gateway & Multi-Model Fallback Engine */}
+      {/* 4. SI Engine: Online SI vs Local SI */}
       {showSection("intelligence") && (
         <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -671,172 +693,304 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  Sargalay AI Multi-Model Gateway
+                  SI Engine
                 </h2>
                 <p className="text-xs text-slate-500">
-                  OpenAI-compatible AI agent gateway with automatic 4-tier model fallback cascade
+                  Select between Online SI and Local SI.
                 </p>
               </div>
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-300 self-start sm:self-auto">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Multi-Model Fallback Resilient
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-auto ${
+                aiModelMode === "local"
+                  ? localModelStatus === "ready"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                    : "bg-amber-50 text-amber-800 border-amber-300"
+                  : "bg-sky-50 text-sky-800 border-sky-300"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  aiModelMode === "local"
+                    ? localModelStatus === "ready"
+                      ? "bg-emerald-500 animate-pulse"
+                      : "bg-amber-500"
+                    : "bg-sky-500 animate-pulse"
+                }`}
+              />
+              {aiModelMode === "frontier"
+                ? "Online SI Active"
+                : localModelStatus === "ready"
+                ? "Local SI Ready"
+                : "Local SI (Needs Load)"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Primary Model Selection */}
-            <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
-              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Primary Agent Model</span>
-                </span>
-                <span className="text-[10px] text-sky-700 font-mono">Top-tier Reasoning</span>
-              </label>
-
-              <select
-                value={selectedModel}
-                onChange={(e) => {
-                  setSelectedModel(e.target.value);
-                  setSargalayModel(e.target.value);
-                  setKeyTestResult(null);
-                }}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-sky-500 shadow-2xs cursor-pointer"
-              >
-                {SARGALAY_CURATED_MODELS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} — {m.description}
-                  </option>
-                ))}
-              </select>
-
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                When an astronaut asks questions or reports symptoms, this model is prioritized for reasoning, tool execution, and biomedical RAG.
-              </p>
-            </div>
-
-            {/* Active Fallback Cascade Chain */}
-            <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Automated Fallback Cascade</span>
-                </span>
-                <span className="text-[10px] text-emerald-700 font-mono font-bold">Zero-Downtime</span>
-              </div>
-
-              <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
-                  <span className="flex items-center gap-1.5 text-sky-900 font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                    Tier 1 (Main):
-                  </span>
-                  <span className="truncate max-w-[200px] font-semibold text-slate-900">{getSargalayModelLabel(selectedModel)}</span>
+          {/* Master 2-Mode Buttons: Online SI and Local SI */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Button 1: Online SI */}
+            <button
+              type="button"
+              onClick={() => setAiModelMode("frontier")}
+              className={`p-4.5 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 ${
+                aiModelMode === "frontier"
+                  ? "bg-white border-sky-500 shadow-xs ring-2 ring-sky-500/20"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>Online SI</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Hosted Gateway · Gemini 2.5 Flash, DeepSeek &amp; GPT-4o-mini
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
-                  <span className="flex items-center gap-1.5 text-amber-900 font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Tier 2 (Fallback):
-                  </span>
-                  <span className="truncate max-w-[200px]">google/gemini-2.5-flash-lite</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
-                  <span className="flex items-center gap-1.5 text-purple-900 font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                    Tier 3 (Fallback):
-                  </span>
-                  <span className="truncate max-w-[200px]">deepseek/deepseek-chat</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
-                  <span className="flex items-center gap-1.5 text-emerald-900 font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Tier 4 (Offline):
-                  </span>
-                  <span className="truncate max-w-[200px]">Deterministic Extractive Engine</span>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                    aiModelMode === "frontier"
+                      ? "border-sky-600 bg-sky-600 text-white"
+                      : "border-slate-300 bg-white"
+                  }`}
+                >
+                  {aiModelMode === "frontier" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                 </div>
               </div>
-            </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-100">
+                <span>Latency: ~400ms</span>
+                <span>•</span>
+                <span>Self-Healing Multi-Model Failover</span>
+              </div>
+            </button>
+
+            {/* Button 2: Local SI */}
+            <button
+              type="button"
+              onClick={() => setAiModelMode("local")}
+              className={`p-4.5 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 ${
+                aiModelMode === "local"
+                  ? "bg-white border-sky-500 shadow-xs ring-2 ring-sky-500/20"
+                  : "bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>Local SI</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      100% Station Offline · Ollama port 11434 (qwen2.5:7b / tommy)
+                    </p>
+                  </div>
+                </div>
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                    aiModelMode === "local"
+                      ? "border-sky-600 bg-sky-600 text-white"
+                      : "border-slate-300 bg-white"
+                  }`}
+                >
+                  {aiModelMode === "local" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-100">
+                <span>Latency: ~120ms</span>
+                <span>•</span>
+                <span>Zero Cloud Dependency</span>
+              </div>
+            </button>
           </div>
 
-          {/* Sargalay Gateway API Key Configuration & Test */}
-          <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-sky-600" />
-                <span>Sargalay API Key Authentication</span>
-              </label>
-              <span className="text-[10px] text-slate-500 font-mono">
-                OpenAI-Compatible endpoint: api.sargalay.com/v1
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type={showKey ? "text" : "password"}
-                  value={sargalayKeyInput}
-                  onChange={(e) => {
-                    setSargalayKeyInput(e.target.value);
-                    setSargalayApiKey(e.target.value);
-                    setKeyTestResult(null);
-                  }}
-                  placeholder="sk-..."
-                  aria-label="Sargalay API Key"
-                  className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 shadow-2xs"
-                />
+          {/* Mode 1 Details: Online SI */}
+          {aiModelMode === "frontier" && (
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
-                  title={showKey ? "Hide API Key" : "Show API Key"}
+                  disabled={isTestingKey}
+                  onClick={async () => {
+                    setIsTestingKey(true);
+                    setKeyTestResult(null);
+                    const res = await testSargalayApiKey(getSargalayApiKey() || "");
+                    setKeyTestResult(res);
+                    setIsTestingKey(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0 self-start sm:self-auto"
                 >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {isTestingKey ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Radio className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isTestingKey ? "Pinging Gateway..." : "Test Gateway Connection"}</span>
                 </button>
               </div>
 
-              <button
-                type="button"
-                disabled={!sargalayKeyInput.trim() || isTestingKey}
-                onClick={async () => {
-                  setIsTestingKey(true);
-                  setKeyTestResult(null);
-                  const res = await testSargalayApiKey(sargalayKeyInput, selectedModel);
-                  setKeyTestResult(res);
-                  setIsTestingKey(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
-              >
-                {isTestingKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>{isTestingKey ? "Testing..." : "Test Connection"}</span>
-              </button>
-            </div>
-
-            {keyTestResult && (
-              <div
-                className={`p-3 rounded-xl text-xs flex items-center justify-between border ${
-                  keyTestResult.success
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : "bg-rose-50 text-rose-800 border-rose-200"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {keyTestResult.success ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              {keyTestResult && (
+                <div
+                  className={`p-3 rounded-xl text-xs flex items-center justify-between border ${
+                    keyTestResult.success
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : "bg-rose-50 text-rose-800 border-rose-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {keyTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    <span className="font-medium">{keyTestResult.message}</span>
+                  </div>
+                  {keyTestResult.latencyMs && (
+                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      {keyTestResult.latencyMs} ms
+                    </span>
                   )}
-                  <span className="font-medium">{keyTestResult.message}</span>
                 </div>
-                {keyTestResult.latencyMs && (
-                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                    {keyTestResult.latencyMs} ms
+              )}
+            </div>
+          )}
+
+          {/* Mode 2 Details: Local SI */}
+          {aiModelMode === "local" && (
+            <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70">
+                <div className="flex items-center gap-2.5">
+                  <HardDrive className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                      <span>Local SI Station Bridge</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                        localhost:11434
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Native background runtime for autonomous flight operations without telemetry uplink.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Primary Action: Load into VRAM / Check Button */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    disabled={isCheckingOllama}
+                    onClick={refreshOllama}
+                    className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs transition-all cursor-pointer shadow-2xs"
+                    title="Refresh Ollama daemon probe"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCheckingOllama ? "animate-spin text-sky-600" : ""}`} />
+                  </button>
+
+                  {localModelStatus === "ready" ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={loadLocalModel}
+                        className="px-3.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>VRAM Loaded</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={unloadLocalModel}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Free GPU VRAM memory"
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                        <span>Unload</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={localModelStatus === "loading"}
+                      onClick={loadLocalModel}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                    >
+                      {localModelStatus === "loading" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Zap className="w-4 h-4" />
+                      )}
+                      <span>
+                        {localModelStatus === "loading"
+                          ? "Loading into VRAM..."
+                          : "Load Local SI into VRAM"}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Status and Diagnostics */}
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                  <span className="text-slate-600 font-medium">Local SI Daemon:</span>
+                  <span
+                    className={`font-mono font-bold flex items-center gap-1.5 ${
+                      ollamaStatus?.online
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        ollamaStatus?.online ? "bg-emerald-500" : "bg-amber-500"
+                      }`}
+                    />
+                    {ollamaStatus?.online
+                      ? "Online & Responding (Port 11434)"
+                      : "Checking or Offline"}
                   </span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                  <span className="text-slate-600 font-medium">Model Execution State:</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {localModelStatusText || "Idle / Not loaded"}
+                  </span>
+                </div>
+
+                {/* Loading Progress Bar */}
+                {localModelStatus === "loading" && (
+                  <div className="space-y-1.5 p-3 rounded-xl bg-white border border-emerald-200 shadow-2xs">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-emerald-800 font-bold">Warming up model pipeline</span>
+                      <span className="text-emerald-700 font-bold">{localModelProgress}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        style={{ width: `${localModelProgress}%` }}
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {localModelError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{localModelError}</span>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       )}
 

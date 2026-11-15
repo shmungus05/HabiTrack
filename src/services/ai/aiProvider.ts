@@ -30,6 +30,10 @@ import {
   getSargalayModelLabel,
   type SargalayChatMessage,
 } from "./sargalayClient.ts";
+import {
+  generateOllamaChatCompletion,
+  type OllamaChatMessage,
+} from "./ollamaClient.ts";
 
 export type SIModelMode = "frontier" | "local";
 export type AIModelMode = SIModelMode;
@@ -67,27 +71,73 @@ export async function generateUnifiedRagResponse(params: {
     telemetryContext = null,
   } = params;
 
-  // 1. Local WebGPU Execution (if explicitly requested)
-  if (mode === "local") {
-    if (isLocalModelReady()) {
-      try {
-        const localRes = await generateLocalRagResponse(
-          userQuery,
-          evidence,
-          crewContext,
-          history,
-          telemetryContext
-        );
-        return {
-          answer: localRes.answer,
-          provider: localRes.provider,
-          isFallback: false,
-        };
-      } catch (localErr) {
-        console.warn("[siProvider] Local model inference failed:", localErr);
+  // 1. Local Ollama Execution (preferred offline runtime, then WebGPU)
+  if (mode === "local" && typeof window !== "undefined") {
+    try {
+      const ollamaMessages: OllamaChatMessage[] = [
+        {
+          role: "system",
+          content:
+            "You are HabiTrack Flight SI, an onboard clinical decision-support and crew health synthetic intelligence system for ISS Expedition 71. Ground your answers in spaceflight physiology and NASA Flight Rules, maintaining non-causal epistemic guardrails.",
+        },
+      ];
+
+      if (history.length > 0) {
+        for (const h of history) {
+          if (h.text && h.text.trim()) {
+            ollamaMessages.push({
+              role: h.role === "user" ? "user" : "assistant",
+              content: h.text,
+            });
+          }
+        }
       }
-    } else {
-      console.warn("[siProvider] Local model selected but not yet loaded.");
+
+      let promptText = "";
+      if (evidence.length > 0) {
+        promptText += `Relevant NASA Biomedical Evidence:\n${evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join("\n\n")}\n\n`;
+      }
+      if (telemetryContext) {
+        promptText += `Station Telemetry (${telemetryContext.compartment || "Onboard"}):\n- CO2: ${telemetryContext.co2Ppm} ppm | Temp: ${telemetryContext.tempC}°C | Humidity: ${telemetryContext.humidityPct}% | Rad: ${telemetryContext.radiationRateMGy} mGy/d | Pressure: ${telemetryContext.pressureMmHg} mmHg\n\n`;
+      }
+      if (crewContext) {
+        promptText += `Active Crewmember: ${crewContext}\n\n`;
+      }
+      promptText += `Crew Query: "${userQuery}"`;
+
+      ollamaMessages.push({ role: "user", content: promptText });
+
+      const ollamaRes = await generateOllamaChatCompletion({
+        messages: ollamaMessages,
+        temperature: 0.3,
+        maxTokens: 800,
+      });
+
+      return {
+        answer: ollamaRes.content,
+        provider: `Ollama Local (${ollamaRes.modelUsed})`,
+        isFallback: false,
+      };
+    } catch (ollamaErr) {
+      console.warn("[siProvider] Local Ollama call failed, checking WebGPU or fallback:", ollamaErr);
+      if (isLocalModelReady()) {
+        try {
+          const localRes = await generateLocalRagResponse(
+            userQuery,
+            evidence,
+            crewContext,
+            history,
+            telemetryContext
+          );
+          return {
+            answer: localRes.answer,
+            provider: localRes.provider,
+            isFallback: false,
+          };
+        } catch (localErr) {
+          console.warn("[siProvider] Local WebGPU model inference failed:", localErr);
+        }
+      }
     }
   }
 
@@ -204,11 +254,37 @@ export async function generateUnifiedTriageSI(params: {
 }): Promise<DynamicTriageSIResponse> {
   const { mode, ...payload } = params;
 
-  if (mode === "local" && isLocalModelReady()) {
+  if (mode === "local" && typeof window !== "undefined") {
     try {
-      return await generateLocalClinicalTriage(payload);
-    } catch (err) {
-      console.warn("[siProvider] Local clinical triage inference failed, attempting cloud fallback:", err);
+      const systemInstruction =
+        "You are an expert spaceflight clinical triage assistant. Respond strictly with valid JSON conforming to the DynamicTriageSIResponse schema.";
+      const prompt = `Perform clinical triage for reported symptom: "${payload.symptomText}" in compartment "${payload.compartmentName}". Telemetry: CO2 ${payload.snapshot.co2Ppm} ppm, Temp ${payload.snapshot.tempC}°C. Return JSON with fields: symptom, category, primaryEtiology, ruleId, ruleTitle, ruleAction, recommendation, recommendedActions, immediateChecklist, escalationRequired, rationale, disclaimer, differentialConsiderations, telemetryAssessment.`;
+
+      const ollamaRes = await generateOllamaChatCompletion({
+        messages: [
+          { role: "system", content: systemInstruction },
+          { role: "user", content: prompt },
+        ],
+        format: "json",
+        temperature: 0.1,
+      });
+
+      let cleaned = ollamaRes.content.trim();
+      if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.replace(/^```json\s*/, "").replace(/```$/, "").trim();
+      } else if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```\s*/, "").replace(/```$/, "").trim();
+      }
+      return JSON.parse(cleaned) as DynamicTriageSIResponse;
+    } catch (ollamaErr) {
+      console.warn("[siProvider] Local Ollama triage failed, attempting WebGPU or cloud fallback:", ollamaErr);
+      if (isLocalModelReady()) {
+        try {
+          return await generateLocalClinicalTriage(payload);
+        } catch (err) {
+          console.warn("[siProvider] Local WebGPU clinical triage inference failed, attempting cloud fallback:", err);
+        }
+      }
     }
   }
 

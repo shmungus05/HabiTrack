@@ -45,6 +45,10 @@ import {
   unloadLocalModel as unloadWebLlm,
   type LocalModelStatus,
 } from "../services/ai/localModelService";
+import {
+  checkOllamaStatus,
+  loadOllamaModel,
+} from "../services/ai/ollamaClient";
 
 export type PttState = "IDLE" | "LISTENING" | "PROCESSING";
 export type AssistantTab = "chat" | "checklists" | "evidence";
@@ -394,6 +398,38 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   },
 
   loadLocalModel: async () => {
+    set({
+      localModelStatus: "loading",
+      localModelProgress: 15,
+      localModelStatusText: "Probing local station Ollama (port 11434)...",
+      localModelError: null,
+    });
+
+    try {
+      const ollamaRes = await loadOllamaModel();
+      if (ollamaRes.success) {
+        set({
+          localModelStatus: "ready",
+          localModelProgress: 100,
+          localModelStatusText: `Loaded ${ollamaRes.model} in VRAM (Ollama Online)`,
+          localModelError: null,
+          aiModelMode: "local",
+          siModelMode: "local",
+        });
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(SI_MODEL_MODE_STORAGE_KEY, "local");
+            localStorage.setItem(LEGACY_AI_MODEL_MODE_STORAGE_KEY, "local");
+          } catch {
+            // ignore
+          }
+        }
+        return;
+      }
+    } catch {
+      // Ollama not reachable, fall through to WebGPU check
+    }
+
     if (isLocalModelReady()) {
       set({
         localModelStatus: "ready",
@@ -406,7 +442,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
 
     set({
       localModelStatus: "loading",
-      localModelProgress: 0,
+      localModelProgress: 35,
       localModelStatusText: "Initializing WebGPU pipeline...",
       localModelError: null,
     });
@@ -442,7 +478,7 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         localModelError:
           err instanceof Error
             ? err.message
-            : "Failed to initialize WebGPU local model.",
+            : "Failed to connect to local Ollama or initialize WebGPU local model.",
         localModelStatusText: "Initialization failed",
       });
     }
