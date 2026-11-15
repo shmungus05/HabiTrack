@@ -1,5 +1,5 @@
 /**
- * src/components/GeminiApiKeyModal.tsx: Onboard Gemini 2.5 Flash API Key & Diagnostics
+ * src/components/GeminiApiKeyModal.tsx: Onboard Gemini Generative API Key & Diagnostics
  *
  * Minimalist Perplexity-styled modal allowing crew & flight surgeons to view,
  * configure, test, and persist their Google Gemini API key with live diagnostics.
@@ -18,10 +18,15 @@ import {
   Sparkles,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import {
+  GEMINI_MODELS,
   getGeminiApiKey,
+  getGeminiModel,
+  getGeminiModelLabel,
   setGeminiApiKey,
+  setGeminiModel,
   testGeminiApiKey,
 } from "../services/ai/geminiClient";
 
@@ -35,6 +40,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
   onClose,
 }) => {
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState<string>(getGeminiModel());
   const [showKey, setShowKey] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -46,6 +52,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
     if (isOpen) {
       const existing = getGeminiApiKey() || "";
       setApiKeyInput(existing);
+      setSelectedModel(getGeminiModel());
       setTestResult(null);
     }
   }, [isOpen]);
@@ -56,7 +63,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await testGeminiApiKey(apiKeyInput);
+      const res = await testGeminiApiKey(apiKeyInput, selectedModel);
       setTestResult(res);
     } catch (err) {
       setTestResult({
@@ -69,6 +76,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
   };
 
   const handleSave = () => {
+    setGeminiModel(selectedModel);
     setGeminiApiKey(apiKeyInput);
     onClose();
   };
@@ -84,7 +92,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in-50 duration-150">
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -93,7 +101,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-black tracking-tight text-slate-900">
-                Gemini 2.5 Flash Engine
+                Gemini Generative Engine
               </h2>
               <p className="text-xs text-slate-500 font-medium">
                 Client-Side Browser Execution &amp; Multi-Turn Chat
@@ -117,7 +125,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
             {apiKeyInput ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100/70 text-emerald-800 font-semibold border border-emerald-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Gemini 2.5 Flash Generative AI
+                {getGeminiModelLabel(selectedModel)}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100/70 text-amber-800 font-semibold border border-amber-300">
@@ -127,8 +135,69 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            HabiTrack executes directly in your browser with zero backend latency. Providing your Google Gemini API key enables fluent multi-turn conversations, adaptive clinical reasoning, and rich dialogue like ChatGPT.
+            HabiTrack executes directly in your browser with zero backend latency. Providing your Google Gemini API key enables fluent multi-turn conversations, adaptive clinical reasoning, and rich dialogue.
           </p>
+        </div>
+
+        {/* Model Tier Selection */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-mono font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Model Tier Selection</span>
+            </label>
+            <span className="text-[11px] text-emerald-700 font-semibold">
+              Flash-Lite fixes rate limits
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {GEMINI_MODELS.map((m) => {
+              const isSelected = selectedModel === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedModel(m.id);
+                    setTestResult(null);
+                  }}
+                  className={`flex items-start justify-between p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-200"
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <div className="pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-black ${isSelected ? "text-emerald-950" : "text-slate-900"}`}>
+                        {m.name}
+                      </span>
+                      {m.id === "gemini-2.5-flash-lite" && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+                          Recommended · High Quota
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                      {m.description}
+                    </p>
+                  </div>
+                  <div className="pt-0.5">
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-600"
+                          : "border-slate-300 bg-white"
+                      }`}
+                    >
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Input & Form */}

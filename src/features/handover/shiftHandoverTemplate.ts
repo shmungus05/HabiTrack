@@ -13,7 +13,7 @@ export function renderDeterministicBriefingProse(briefing: ShiftHandoverBriefing
   const lines: string[] = [];
 
   // Header
-  lines.push(`## 📋 Flight Surgeon Shift Handover Briefing (${window.hours}-Hour Window)`);
+  lines.push(`## Flight Surgeon Shift Handover Briefing (${window.hours}-Hour Window)`);
   lines.push("");
 
   // 1. Window Section
@@ -75,7 +75,7 @@ export function renderDeterministicBriefingProse(briefing: ShiftHandoverBriefing
     lines.push(`- **Stream Completeness**: All 5 primary cabin environmental streams active and reporting.`);
   }
   if (dataQuality.clockWarning) {
-    lines.push(`- ⚠️ **Data Epoch Caveat**: ${dataQuality.clockWarning}`);
+    lines.push(`- **Data Epoch Caveat**: ${dataQuality.clockWarning}`);
   }
   lines.push("");
 

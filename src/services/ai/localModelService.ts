@@ -78,7 +78,12 @@ export async function checkWebGpuSupport(): Promise<{ supported: boolean; reason
  * with fallback to the public MLC repository.
  */
 function buildAppConfig(): AppConfig {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : typeof self !== "undefined" && self.location
+      ? self.location.origin
+      : "";
   const localModelUrl = `${origin}/models/${LOCAL_MODEL_ID}/`;
   const localWasmUrl = `${origin}/models/${LOCAL_MODEL_ID}/Llama-3.2-1B-Instruct-q4f16_1_cs1k-webgpu.wasm`;
 
@@ -91,9 +96,48 @@ function buildAppConfig(): AppConfig {
         vram_required_MB: 880,
         low_resource_required: true,
         required_features: ["shader-f16"],
+        overrides: {
+          context_window_size: 4096,
+        },
       },
     ],
   };
+}
+
+/**
+ * Purges any corrupted HTML-poisoned responses stored in the browser's CacheStorage.
+ * If Vite or another server returned index.html for unmapped model routes previously,
+ * CacheStorage saved that HTML with HTTP 200, causing subsequent JSON.parse calls to crash.
+ */
+export async function purgeCorruptedWebLLMCache(forceAll = false): Promise<void> {
+  if (typeof caches === "undefined") return;
+  try {
+    const cacheNames = await caches.keys();
+    for (const name of cacheNames) {
+      if (name.startsWith("webllm/")) {
+        if (forceAll) {
+          await caches.delete(name);
+          console.warn(`[WebLLM] Purged complete cache: ${name}`);
+          continue;
+        }
+        const cache = await caches.open(name);
+        const requests = await cache.keys();
+        for (const req of requests) {
+          const res = await cache.match(req);
+          if (res) {
+            const contentType = res.headers.get("content-type") || "";
+            // If the response is text/html, it's an erroneous SPA fallback rather than valid JSON/WASM/weights
+            if (contentType.includes("text/html")) {
+              await cache.delete(req);
+              console.warn(`[WebLLM] Evicted corrupted HTML response for ${req.url} from ${name}`);
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[WebLLM] Error while purging caches:", err);
+  }
 }
 
 /**
@@ -117,6 +161,9 @@ export async function initLocalModel(
     if (!gpuCheck.supported) {
       throw new Error(gpuCheck.reason || "WebGPU not supported.");
     }
+
+    // Automatically evict any HTML-poisoned responses from browser CacheStorage first
+    await purgeCorruptedWebLLMCache();
 
     const appConfig = buildAppConfig();
 
@@ -154,6 +201,12 @@ export async function initLocalModel(
         currentWorker = null;
       }
 
+      const errStr = workerErr instanceof Error ? workerErr.message : String(workerErr);
+      if (errStr.includes("<!doctype") || errStr.includes("Unexpected token '<'")) {
+        console.warn("[WebLLM] Detected corrupted HTML cache in worker. Purging webllm/ caches...");
+        await purgeCorruptedWebLLMCache(true);
+      }
+
       // Attempt 2: Fallback to direct MLCEngine on main thread
       engineInstance = await CreateMLCEngine(LOCAL_MODEL_ID, {
         appConfig,
@@ -162,6 +215,13 @@ export async function initLocalModel(
     }
 
     return engineInstance;
+  } catch (err) {
+    const errStr = err instanceof Error ? err.message : String(err);
+    if (errStr.includes("<!doctype") || errStr.includes("Unexpected token '<'")) {
+      console.warn("[WebLLM] Detected corrupted HTML cache on main thread. Purging all webllm caches...");
+      await purgeCorruptedWebLLMCache(true);
+    }
+    throw err;
   } finally {
     isInitializing = false;
   }

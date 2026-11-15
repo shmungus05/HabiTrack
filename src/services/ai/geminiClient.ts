@@ -1,12 +1,70 @@
 /**
- * Client-side Gemini 2.5 Flash RAG generative engine.
+ * Client-side Gemini Flash-Lite / Flash RAG generative engine.
  * Direct browser execution with zero backend server dependencies.
  */
 
 import type { CitedEvidence } from "../../types/api";
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+export const GEMINI_MODELS = [
+  {
+    id: "gemini-2.5-flash-lite",
+    name: "Gemini 2.5 Flash-Lite",
+    label: "Gemini 2.5 Flash-Lite (Fastest · High Quota)",
+    description: "Optimized for high-throughput, lowest latency, and generous rate limits",
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    name: "Gemini 2.0 Flash-Lite",
+    label: "Gemini 2.0 Flash-Lite (High Quota)",
+    description: "High-volume lightweight model",
+  },
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    label: "Gemini 2.5 Flash (Standard)",
+    description: "Standard multimodal frontier model",
+  },
+] as const;
+
+export type GeminiModelId = (typeof GEMINI_MODELS)[number]["id"];
+
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = "gemini-2.5-flash-lite";
+
+export function getGeminiModel(): string {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("habitrack_gemini_model") || DEFAULT_GEMINI_MODEL;
+  }
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env.VITE_GEMINI_MODEL as string | undefined)
+      : undefined) || DEFAULT_GEMINI_MODEL
+  );
+}
+
+export function setGeminiModel(model: string): void {
+  if (typeof window !== "undefined") {
+    const trimmed = model.trim();
+    if (trimmed) {
+      localStorage.setItem("habitrack_gemini_model", trimmed);
+    } else {
+      localStorage.removeItem("habitrack_gemini_model");
+    }
+    window.dispatchEvent(
+      new CustomEvent("habitrack_api_key_updated", { detail: { model: trimmed } })
+    );
+  }
+}
+
+export function getGeminiModelLabel(modelId?: string): string {
+  const id = modelId || getGeminiModel();
+  const match = GEMINI_MODELS.find((m) => m.id === id);
+  return match ? match.name : "Gemini 2.5 Flash-Lite";
+}
+
+export function getGeminiApiUrl(modelId?: string): string {
+  const model = modelId || getGeminiModel();
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 const SYSTEM_INSTRUCTION = `
 You are HabiTrack Flight Co-Pilot, an advanced onboard clinical decision-support and crew health intelligence AI for ISS Expedition 71.
@@ -52,14 +110,20 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
-export async function testGeminiApiKey(testKey?: string): Promise<{ success: boolean; message: string }> {
+export async function testGeminiApiKey(
+  testKey?: string,
+  modelId?: string
+): Promise<{ success: boolean; message: string }> {
   const key = testKey?.trim() || getGeminiApiKey();
   if (!key) {
     return { success: false, message: "No Gemini API key provided." };
   }
 
+  const model = modelId || getGeminiModel();
+  const endpoint = getGeminiApiUrl(model);
+
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${key}`, {
+    const response = await fetch(`${endpoint}?key=${key}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -76,7 +140,8 @@ export async function testGeminiApiKey(testKey?: string): Promise<{ success: boo
       };
     }
 
-    return { success: true, message: "Gemini 2.5 Flash connection verified successfully!" };
+    const label = getGeminiModelLabel(model);
+    return { success: true, message: `${label} connection verified successfully!` };
   } catch (err) {
     return {
       success: false,
@@ -139,7 +204,8 @@ export async function generateGeminiRagResponse(
     },
   ];
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+  const endpoint = getGeminiApiUrl();
+  const response = await fetch(`${endpoint}?key=${apiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -168,9 +234,10 @@ export async function generateGeminiRagResponse(
     data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
     "No response generated.";
 
+  const label = getGeminiModelLabel();
   return {
     answer: rawAnswer,
-    provider: "Gemini 2.5 Flash (Direct Browser Execution)",
+    provider: `${label} (Direct Browser Execution)`,
   };
 }
 
@@ -247,7 +314,8 @@ Live 5-Factor Telemetry in Compartment:
 Generate the 3 immediate physical stabilization countermeasures and clinical rationale in JSON format.
 `.trim();
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+  const endpoint = getGeminiApiUrl();
+  const response = await fetch(`${endpoint}?key=${apiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -67,7 +67,7 @@ async function downloadFile(fileInfo, index, total) {
         const remoteSize = Number(headRes.headers.get("content-length"));
         if (remoteSize && stats.size === remoteSize) {
           console.log(
-            `[${index + 1}/${total}] ✔ ${fileInfo.name} already exists (${formatBytes(stats.size)}), skipping.`
+            `[${index + 1}/${total}] [OK] ${fileInfo.name} already exists (${formatBytes(stats.size)}), skipping.`
           );
           return;
         }
@@ -77,7 +77,7 @@ async function downloadFile(fileInfo, index, total) {
     }
   }
 
-  console.log(`[${index + 1}/${total}] ⬇ Downloading ${fileInfo.name}...`);
+  console.log(`[${index + 1}/${total}] Downloading ${fileInfo.name}...`);
   const response = await fetch(fileInfo.url);
   if (!response.ok) {
     throw new Error(
@@ -114,7 +114,7 @@ async function downloadFile(fileInfo, index, total) {
   });
 
   fs.renameSync(tempPath, destPath);
-  console.log(`\n   ✔ Done: ${fileInfo.name} (${formatBytes(downloaded)})`);
+  console.log(`\n   [OK] Done: ${fileInfo.name} (${formatBytes(downloaded)})`);
 }
 
 async function main() {
@@ -137,13 +137,13 @@ async function main() {
       await downloadFile(file, i, total);
       successCount++;
     } catch (err) {
-      console.error(`\n✖ Failed downloading ${file.name}:`, err.message);
+      console.error(`\n[ERROR] Failed downloading ${file.name}:`, err.message);
       process.exit(1);
     }
   }
 
   console.log("\n==========================================================");
-  console.log(`✔ All ${successCount}/${total} model assets downloaded successfully!`);
+  console.log(`[OK] All ${successCount}/${total} model assets downloaded successfully!`);
   console.log("Local model is ready for 100% offline in-browser execution.");
   console.log("==========================================================");
 }

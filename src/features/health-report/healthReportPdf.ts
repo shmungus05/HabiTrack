@@ -153,7 +153,7 @@ export function buildHealthReportPdfModel(report: HealthReport): PdfSection[] {
       { text: step.stepNumber > 0 ? String(step.stepNumber) : "—", align: "center" as const },
       { text: step.instruction },
       {
-        text: step.verified ? "✓" : "☐",
+        text: step.verified ? "[X]" : "[ ]",
         align: "center" as const,
         color: (step.verified ? STATUS_COLORS.NOMINAL : [100, 116, 139]) as PdfColor,
       },

@@ -1,9 +1,9 @@
 /**
  * web/src/components/SymptomsView.tsx
  * Complete Symptom Reporting & Diary Suite:
- * - 📋 Symptom History Diary (search, severity filter, 1-click JSON export, NASA sample loader)
- * - ⚡ Manual Fast-Log Entry (preserving API submission to /api/symptoms)
- * - 🩺 Direct Launch to Unified HabiTrack 5-Factor Clinical Triage Assistant
+ * - Symptom History Diary (search, severity filter, 1-click JSON export, NASA sample loader)
+ * - Manual Fast-Log Entry (preserving API submission to /api/symptoms)
+ * - Direct Launch to Unified HabiTrack 5-Factor Clinical Triage Assistant
  * Styled in the minimalist Perplexity design aesthetic: rounded-2xl, font-semibold headings.
  */
 
@@ -286,7 +286,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
       setLocalDiary((prev) => [newDiaryEntry, ...prev]);
       setNotes("");
       setNotice(
-        `✓ Recorded to Station Log (${titleCase(symptomCode)} for ${targetCallsign})`,
+        `Recorded to Station Log (${titleCase(symptomCode)} for ${targetCallsign})`,
       );
       await load();
       setViewMode("history");
@@ -317,7 +317,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
     } catch (err) {
       console.warn("Error acknowledging symptom via API service", err);
     }
-    setNotice(`✓ Acknowledged by Flight Surgeon · ${now} (Operational consults occur via S/G Voice Loops / PMC)`);
+    setNotice(`Acknowledged by Flight Surgeon · ${now} (Operational consults occur via S/G Voice Loops / PMC)`);
     setTimeout(() => setNotice(null), 5000);
   };
 
@@ -674,7 +674,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                         <div className="leading-relaxed">
                           <div className="flex flex-wrap items-center gap-2 mb-0.5">
                             <span className="text-emerald-900 font-semibold font-mono text-[11px]">
-                              ✓ ACKNOWLEDGED BY FLIGHT SURGEON
+                              ACKNOWLEDGED BY FLIGHT SURGEON
                             </span>
                             <span className="text-emerald-700 font-mono text-[10px]">
                               {item.acknowledgedAt ?? item.time} · {item.acknowledgedBy ?? "Surgeon Console"}

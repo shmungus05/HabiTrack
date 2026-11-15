@@ -147,7 +147,7 @@ In compliance with the project UI standards:
 - **Typography**: Headings styled with `font-black uppercase tracking-wider text-xs`.
 - **Interim Action Cards**: Interactive checkboxes allowing astronauts to mark off each stabilization action in real time.
 - **Corroborated Telemetry HUD**: Displays real-time compartment $ppCO_2$, temp, and pressure indicators directly alongside recommendations.
-- **Loss of Signal Badge**: Displays `🛰️ QUEUED FOR AOS (Loss of Signal Active)` showing that clinical telemetry is packaged and awaiting ground downlink.
+- **Loss of Signal Badge**: Displays `QUEUED FOR AOS (Loss of Signal Active)` showing that clinical telemetry is packaged and awaiting ground downlink.
 
 ---
 

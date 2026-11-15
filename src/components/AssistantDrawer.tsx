@@ -63,7 +63,7 @@ import { Badge, MessageFormatter } from "./ui";
 import { WatchableResourceCard } from "./WatchableResourceCard";
 import { GuideDetailModal } from "../features/library/GuideDetailModal";
 import { fetchLibraryGuideById } from "../services/api";
-import { getGeminiApiKey } from "../services/ai/geminiClient";
+import { getGeminiApiKey, getGeminiModelLabel } from "../services/ai/geminiClient";
 import { GeminiApiKeyModal } from "./GeminiApiKeyModal";
 import type { LibraryGuide } from "../types/library";
 import type { SpaceCareResourceReference } from "../types/api";
@@ -79,7 +79,7 @@ const CABIN_MODULES = [
 ] as const;
 
 const CLINICAL_SUGGESTIONS = [
-  "🩺 Run full 5-factor triage",
+  "Run full 5-factor triage",
   "Headache & throbbing in Node 2",
   "I have muscle soreness after workout",
   "Sleep airflow in Node 2 crew quarters",
@@ -323,10 +323,10 @@ export function AssistantDrawer() {
                     />
                     <span>
                       {aiModelMode === "frontier"
-                        ? "✨ Frontier (Gemini)"
+                        ? "Frontier (Gemini)"
                         : localModelStatus === "ready"
-                        ? "⚡ Local (Llama 3.2)"
-                        : "⚡ Local (Init Required)"}
+                        ? "Local (Llama 3.2)"
+                        : "Local (Init Required)"}
                     </span>
                   </button>
                 </div>
@@ -420,12 +420,12 @@ export function AssistantDrawer() {
                     ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
                     : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
                 }`}
-                title="Configure Gemini 2.5 Flash API Key and connection"
+                title="Configure Gemini API Key and Model"
               >
                 {hasApiKey ? (
                   <>
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                    <span className="hidden sm:inline">Gemini 2.5 Flash</span>
+                    <span className="hidden sm:inline">{getGeminiModelLabel()}</span>
                     <span className="sm:hidden">Gemini</span>
                   </>
                 ) : (
@@ -536,7 +536,7 @@ export function AssistantDrawer() {
                                     {(msg.provider || response?.provider_used)?.includes("Gemini") ? (
                                       <>
                                         <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                                        Gemini 2.5 Flash
+                                        {msg.provider?.replace(" (Direct Browser Execution)", "") || getGeminiModelLabel()}
                                       </>
                                     ) : (
                                       <>
@@ -613,7 +613,7 @@ export function AssistantDrawer() {
                                   Suggested Inquiries
                                 </span>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                  {(isFlightSurgeon ? ["📋 Brief me on the last 12 hours", ...CLINICAL_SUGGESTIONS] : CLINICAL_SUGGESTIONS).map((sug) => (
+                                  {(isFlightSurgeon ? ["Brief me on the last 12 hours", ...CLINICAL_SUGGESTIONS] : CLINICAL_SUGGESTIONS).map((sug) => (
                                     <button
                                       key={sug}
                                       type="button"
@@ -985,7 +985,7 @@ export function AssistantDrawer() {
                         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-[11px] font-mono font-semibold transition-all cursor-pointer shadow-2xs group"
                       >
                         <FileCheck2 className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
-                        <span>📋 Brief me on the last 12 hours</span>
+                        <span>Brief me on the last 12 hours</span>
                       </button>
                     </div>
                   )}

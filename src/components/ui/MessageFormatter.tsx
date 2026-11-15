@@ -1,4 +1,5 @@
 import React from "react";
+import { Info } from "lucide-react";
 
 export interface MessageFormatterProps {
   text: string;
@@ -210,7 +211,7 @@ export function MessageFormatter({
           key={`quote-${i}`}
           className="my-3 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs sm:text-[13px] leading-relaxed shadow-2xs italic flex items-start gap-2"
         >
-          <span className="not-italic text-amber-600 font-bold shrink-0">ℹ️</span>
+          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 not-italic" />
           <div className="flex-1 not-italic">
             {renderInlineContent(quoteContent, isUser)}
           </div>

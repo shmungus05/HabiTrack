@@ -334,7 +334,7 @@ export const generateInterimActionsStep = createStep({
 
     let headline = `First-Response Interim Protocol: ${context.compartmentName}`;
     if (context.primarySymptomCategory === "CRITICAL_EMERGENCY") {
-      headline = `⚠️ EMERGENCY MEDICAL ESCALATION: ${context.compartmentName}`;
+      headline = `EMERGENCY MEDICAL ESCALATION: ${context.compartmentName}`;
     } else if (context.primarySymptomCategory === "MUSCLE_SORENESS") {
       headline = `Exercise Recovery & Musculoskeletal Protocol`;
     } else if (context.primarySymptomCategory === "SLEEP_DISTURBANCE") {

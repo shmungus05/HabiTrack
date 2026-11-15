@@ -48,7 +48,7 @@ async function runTests(): Promise<void> {
     localFallbackResult.provider.includes("Mastra Onboard First-Response Engine"),
     "Should identify Mastra engine as provider"
   );
-  console.log("✔ Test 1 passed: Local mode graceful fallback");
+  console.log("[PASS] Test 1 passed: Local mode graceful fallback");
 
   // Test 2: Frontier mode when API key is missing falls back gracefully
   const frontierFallbackResult = await generateUnifiedRagResponse({
@@ -62,7 +62,7 @@ async function runTests(): Promise<void> {
     frontierFallbackResult.answer.includes("HabiTrack"),
     "Should provide standard welcome greeting"
   );
-  console.log("✔ Test 2 passed: Frontier mode graceful fallback");
+  console.log("[PASS] Test 2 passed: Frontier mode graceful fallback");
 
   console.log(`\nPASS · ${assertions} assertions · aiProvider unified dispatcher (Frontier vs Local)`);
 }

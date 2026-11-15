@@ -13,6 +13,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  AudioLines,
   BookOpen,
   CheckCircle2,
   ChevronDown,
@@ -27,6 +28,7 @@ import {
   FileText,
   Film,
   Flame,
+  KeyRound,
   Lock,
   MessageSquare,
   Mic,
@@ -35,15 +37,12 @@ import {
   Radio,
   Send,
   ShieldCheck,
-  Sparkles,
   Square,
   Trash2,
   TriangleAlert,
   Volume2,
-  VolumeX,
   Wind,
   X,
-  Zap,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -67,7 +66,7 @@ import { Badge, MessageFormatter } from "./ui";
 import { WatchableResourceCard } from "./WatchableResourceCard";
 import { GuideDetailModal } from "../features/library/GuideDetailModal";
 import { fetchLibraryGuideById } from "../services/api";
-import { getGeminiApiKey } from "../services/ai/geminiClient";
+import { getGeminiApiKey, getGeminiModelLabel } from "../services/ai/geminiClient";
 import { GeminiApiKeyModal } from "./GeminiApiKeyModal";
 import type { LibraryGuide } from "../types/library";
 import type { SpaceCareResourceReference } from "../types/api";
@@ -83,7 +82,7 @@ const CABIN_MODULES = [
 ] as const;
 
 const CLINICAL_SUGGESTIONS = [
-  "🩺 Run full 5-factor triage",
+  "Run full 5-factor triage",
   "Headache & throbbing in Node 2",
   "I have muscle soreness after workout",
   "Sleep airflow in Node 2 crew quarters",
@@ -124,10 +123,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const openVoiceModal = useAssistantStore((state) => state.openVoiceModal);
   const isSpeaking = useAssistantStore((state) => state.isSpeaking);
   const speakingMessageId = useAssistantStore((state) => state.speakingMessageId);
-  const autoSpeakEnabled = useAssistantStore((state) => state.autoSpeakEnabled);
-  const toggleAutoSpeak = useAssistantStore((state) => state.toggleAutoSpeak);
   const speakMessage = useAssistantStore((state) => state.speakMessage);
-  const stopSpeaking = useAssistantStore((state) => state.stopSpeaking);
 
   // AI Model Selection & Local WebGPU status
   const aiModelMode = useAssistantStore((state) => state.aiModelMode);
@@ -238,6 +234,36 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
     }
   };
 
+  const handleModelModeToggle = () => {
+    const nextMode = aiModelMode === "frontier" ? "local" : "frontier";
+    setAiModelMode(nextMode);
+    if (nextMode === "local" && localModelStatus !== "ready") {
+      loadLocalModel();
+    }
+  };
+
+  const modelLabel =
+    aiModelMode === "frontier"
+      ? "Frontier (Gemini)"
+      : localModelStatus === "ready"
+        ? "Local (Llama 3.2)"
+        : localModelStatus === "loading"
+          ? "Local (loading)"
+          : localModelStatus === "error"
+            ? "Local (failed)"
+            : "Local (not loaded)";
+
+  const modelDotClass =
+    aiModelMode === "frontier"
+      ? "bg-sky-500"
+      : localModelStatus === "ready"
+        ? "bg-emerald-500"
+        : localModelStatus === "loading"
+          ? "bg-amber-500"
+          : localModelStatus === "error"
+            ? "bg-red-500"
+            : "bg-slate-400";
+
   // Web Speech API Voice Recognition
   const toggleListening = () => {
     const SpeechRecognition =
@@ -298,104 +324,69 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col h-screen w-screen bg-[#f8fafc] text-slate-800 font-sans selection:bg-sky-200/60 overflow-hidden animate-in fade-in-50 duration-150">
       {/* Top Header / Navigation Strip */}
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-8 py-3 z-20">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          {/* Back to Mission Control Button */}
-          <button
-            type="button"
-            onClick={onBackToDashboard}
-            className="group flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 hover:text-slate-950 transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
-            title="Return to Mission Control flight deck (or press Esc)"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-600 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold tracking-tight">Back to {previousViewLabel}</span>
-            <kbd className="hidden sm:inline-flex items-center rounded-md bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-400">
-              Esc
-            </kbd>
-          </button>
-
-          <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-
-          {/* Logo & Product Identity */}
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white overflow-hidden p-0.5 shadow-2xs">
-              <img
-                src="/Logo.png"
-                alt="HabiTrack Logo"
-                className="h-full w-full object-contain rounded-lg"
-              />
-            </span>
-            <div className="hidden sm:block">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-black tracking-tight text-slate-900">
-                  HABITRACK AI
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextMode = aiModelMode === "frontier" ? "local" : "frontier";
-                    setAiModelMode(nextMode);
-                    if (nextMode === "local" && localModelStatus !== "ready") {
-                      loadLocalModel();
-                    }
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
-                    aiModelMode === "local"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                      : "bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100"
-                  }`}
-                  title="Click to toggle between Frontier Cloud and Local WebGPU"
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      aiModelMode === "local"
-                        ? localModelStatus === "ready"
-                          ? "bg-emerald-500 animate-pulse"
-                          : "bg-amber-500"
-                        : "bg-sky-500 animate-pulse"
-                    }`}
-                  />
-                  <span>
-                    {aiModelMode === "frontier"
-                      ? "✨ Frontier (Gemini)"
-                      : localModelStatus === "ready"
-                      ? "⚡ Local (Llama 3.2)"
-                      : "⚡ Local (Init Required)"}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <header className="z-20 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-slate-200/80 bg-white px-4 py-2.5 sm:px-8">
+        {/* Back to Mission Control Button */}
+        <button
+          type="button"
+          onClick={onBackToDashboard}
+          className="group flex h-9 min-w-0 items-center justify-self-start gap-2 rounded-lg px-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
+          title={`Return to ${previousViewLabel} (or press Esc)`}
+          aria-label={`Back to ${previousViewLabel}`}
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-hover:-translate-x-0.5" />
+          <span className="hidden truncate text-xs font-semibold md:inline">
+            Back to {previousViewLabel}
+          </span>
+          <span className="truncate text-xs font-semibold md:hidden">Back</span>
+          <kbd className="hidden items-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] text-slate-400 lg:inline-flex">
+            Esc
+          </kbd>
+        </button>
 
         {/* Center / Navigation Tabs */}
-        <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-slate-100 border border-slate-200/80">
+        <div
+          role="tablist"
+          aria-label="Assistant sections"
+          className="inline-flex items-center gap-1 justify-self-center rounded-2xl border border-slate-200/80 bg-slate-100 p-1"
+        >
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "chat"}
+            aria-label="Triage and chat"
+            title="Triage & Chat"
             onClick={() => setActiveTab("chat")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-tight transition-all duration-200 cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl p-2 text-xs font-semibold tracking-tight transition-colors duration-150 sm:px-3.5 sm:py-1.5 ${
               activeTab === "chat"
                 ? "bg-white text-slate-900 shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
             }`}
           >
-            <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
-            <span>Triage &amp; Chat</span>
+            <MessageSquare
+              className={`h-3.5 w-3.5 ${activeTab === "chat" ? "text-slate-700" : "text-slate-400"}`}
+            />
+            <span className="hidden sm:inline">Triage &amp; Chat</span>
           </button>
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "checklists"}
+            aria-label="Flight checklists"
+            title="Flight Checklists"
             onClick={() => setActiveTab("checklists")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-tight transition-all duration-200 cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl p-2 text-xs font-semibold tracking-tight transition-colors duration-150 sm:px-3.5 sm:py-1.5 ${
               activeTab === "checklists"
                 ? "bg-white text-slate-900 shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
             }`}
           >
-            <FileCheck2 className="w-3.5 h-3.5 text-amber-600" />
-            <span>Flight Checklists</span>
+            <FileCheck2
+              className={`h-3.5 w-3.5 ${activeTab === "checklists" ? "text-slate-700" : "text-slate-400"}`}
+            />
+            <span className="hidden sm:inline">Flight Checklists</span>
             {checklistSteps.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-mono font-bold">
+              <span className="rounded-md bg-slate-200/70 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">
                 {checklistSteps.length}
               </span>
             )}
@@ -403,17 +394,23 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "evidence"}
+            aria-label="Research evidence"
+            title="Research RAG"
             onClick={() => setActiveTab("evidence")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold tracking-tight transition-all duration-200 cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl p-2 text-xs font-semibold tracking-tight transition-colors duration-150 sm:px-3.5 sm:py-1.5 ${
               activeTab === "evidence"
                 ? "bg-white text-slate-900 shadow-xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
             }`}
           >
-            <Microscope className="w-3.5 h-3.5 text-sky-600" />
-            <span>Research RAG</span>
+            <Microscope
+              className={`h-3.5 w-3.5 ${activeTab === "evidence" ? "text-slate-700" : "text-slate-400"}`}
+            />
+            <span className="hidden sm:inline">Research RAG</span>
             {activeExplanation?.cited_evidence.length ? (
-              <span className="px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[10px] font-mono font-bold">
+              <span className="rounded-md bg-slate-200/70 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600">
                 {activeExplanation.cited_evidence.length}
               </span>
             ) : null}
@@ -421,80 +418,16 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2">
-          {/* AI Engine Status & Key Modal Trigger */}
-          <button
-            type="button"
-            onClick={() => setShowApiKeyModal(true)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer shadow-2xs ${
-              hasApiKey
-                ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
-            }`}
-            title="Configure Gemini 2.5 Flash API Key and connection"
-          >
-            {hasApiKey ? (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                <span className="hidden sm:inline">Gemini 2.5 Flash</span>
-                <span className="sm:hidden">Gemini</span>
-              </>
-            ) : (
-              <>
-                <Radio className="w-3.5 h-3.5 text-amber-500" />
-                <span className="hidden sm:inline">Mastra Standby</span>
-                <span className="sm:hidden">Mastra</span>
-              </>
-            )}
-          </button>
-
-          {/* Interactive Live Voice Mode Button */}
-          <button
-            type="button"
-            onClick={openVoiceModal}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-sky-300/80 bg-gradient-to-r from-sky-50 to-indigo-50/50 text-sky-800 hover:text-sky-950 hover:border-sky-400 transition-all cursor-pointer text-xs font-bold shadow-2xs group"
-            title="Launch Live Voice Mode"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <Radio className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
-            <span>Live</span>
-          </button>
-
-          {/* Auto Speak Toggle */}
-          <button
-            type="button"
-            onClick={toggleAutoSpeak}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              autoSpeakEnabled
-                ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-2xs"
-                : "bg-white border-slate-200 text-slate-500 hover:text-slate-800"
-            }`}
-            title={
-              autoSpeakEnabled
-                ? "Auto-speak active (Assistant responses will be read aloud)"
-                : "Auto-speak disabled (Text responses only)"
-            }
-          >
-            {autoSpeakEnabled ? (
-              <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            ) : (
-              <VolumeX className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden md:inline">{autoSpeakEnabled ? "Voice On" : "Muted"}</span>
-          </button>
-
+        <div className="flex items-center justify-self-end gap-2">
           {activeTab === "chat" && messages.length > 1 && (
             <button
               type="button"
               onClick={clearChat}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-red-700 hover:border-red-200 hover:bg-red-50/50 transition-colors cursor-pointer text-xs font-semibold shadow-2xs"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-400/30 focus-visible:outline-none"
               title="Clear conversation history"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Clear Chat</span>
+              <span className="hidden sm:inline">Clear chat</span>
             </button>
           )}
         </div>
@@ -546,24 +479,10 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                               {isUser ? "Astronaut (Crew)" : "HabiTrack Flight Co-Pilot"}
                             </span>
                             {!isUser && (
-                              <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium ${
-                                  (msg.provider || response?.provider_used)?.includes("Gemini")
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                    : "bg-slate-100 text-slate-600 border border-slate-200"
-                                }`}
-                              >
-                                {(msg.provider || response?.provider_used)?.includes("Gemini") ? (
-                                  <>
-                                    <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
-                                    Gemini 2.5 Flash
-                                  </>
-                                ) : (
-                                  <>
-                                    <Radio className="w-2.5 h-2.5 text-slate-500" />
-                                    Mastra Standby
-                                  </>
-                                )}
+                              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-medium text-slate-500">
+                                {(msg.provider || response?.provider_used)?.includes("Gemini")
+                                  ? msg.provider?.replace(" (Direct Browser Execution)", "") || getGeminiModelLabel()
+                                  : "Mastra Standby"}
                               </span>
                             )}
                             {msg.location && (
@@ -598,7 +517,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                                 {speakingMessageId === msg.id && isSpeaking ? (
                                   <>
                                     <Square className="w-3 h-3 fill-current text-emerald-600" />
-                                    <span className="text-emerald-700 animate-pulse">Stop</span>
+                                    <span className="text-emerald-700">Stop</span>
                                   </>
                                 ) : (
                                   <>
@@ -632,7 +551,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                               Suggested Inquiries
                             </span>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                              {(isFlightSurgeon ? ["📋 Brief me on the last 12 hours", ...CLINICAL_SUGGESTIONS] : CLINICAL_SUGGESTIONS).map((sug) => (
+                              {(isFlightSurgeon ? ["Brief me on the last 12 hours", ...CLINICAL_SUGGESTIONS] : CLINICAL_SUGGESTIONS).map((sug) => (
                                 <button
                                   key={sug}
                                   type="button"
@@ -791,9 +710,8 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                         {/* Contextual Follow-Up Suggestions */}
                         {!isUser && msg.followupQuestions && msg.followupQuestions.length > 0 && (
                           <div className="pt-3 border-t border-slate-100/80">
-                            <div className="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-                              Suggested Follow-Up Clarifications:
+                            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                              Follow-up questions
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {msg.followupQuestions.map((q, idx) => (
@@ -992,7 +910,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
             </div>
 
             {/* Persistent Chat Input Bar (Perplexity Command Dock) */}
-            <div className="p-4 sm:p-5 border-t border-slate-200/80 bg-white/95 backdrop-blur-md space-y-2 shrink-0">
+            <div className="shrink-0 space-y-2 border-t border-slate-200/80 bg-white p-4 sm:p-5">
               {/* Flight Surgeon Shift Handover Quick Action Chip */}
               {isFlightSurgeon && (
                 <div className="max-w-4xl mx-auto flex items-center gap-2 pb-1">
@@ -1001,8 +919,8 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                     onClick={() => submitQuery("Brief me on the last 12 hours")}
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-[11px] font-mono font-semibold transition-all cursor-pointer shadow-2xs group"
                   >
-                    <FileCheck2 className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
-                    <span>📋 Brief me on the last 12 hours</span>
+                    <FileCheck2 className="w-3.5 h-3.5 text-sky-600 transition-transform group-hover:scale-110" />
+                    <span>Brief me on the last 12 hours</span>
                   </button>
                 </div>
               )}
@@ -1025,64 +943,94 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                 </div>
 
                 {/* Input field container */}
-                <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-1.5 focus-within:border-sky-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/20 transition-all shadow-xs">
+                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5 shadow-xs transition-all focus-within:border-sky-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/20">
                   <input
                     ref={inputRef}
                     type="text"
                     value={inputQuery}
                     onChange={(e) => setInputQuery(e.target.value)}
                     placeholder="Ask or report symptoms (e.g., 'Throbbing headache in Node 2')..."
-                    className="flex-1 px-3 py-2 bg-transparent text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-sans"
+                    className="min-w-0 flex-1 bg-transparent px-3 py-2 font-sans text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none sm:text-sm"
                   />
 
                   {/* Microphone Dictation Button */}
                   <button
                     type="button"
                     onClick={toggleListening}
-                    className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                    className={`shrink-0 rounded-xl border p-2 transition-colors cursor-pointer ${
                       isListening
-                        ? "bg-red-500 border-red-600 text-white animate-pulse shadow-xs"
-                        : "bg-white border-slate-200 text-slate-500 hover:text-sky-700 hover:border-sky-200"
+                        ? "border-red-600 bg-red-500 text-white animate-pulse shadow-xs"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-700"
                     }`}
                     title={isListening ? "Listening... click to stop" : "Voice dictation (Speech API)"}
                   >
                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
 
-                  {/* Quick Launch Live Voice Mode */}
+                  {/* Live voice mode */}
                   <button
                     type="button"
                     onClick={openVoiceModal}
-                    className="p-2 px-2.5 rounded-xl border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-700 hover:text-sky-900 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
-                    title="Launch Live Voice Mode"
+                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:border-sky-200 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
+                    title="Live voice mode (Alt+V)"
+                    aria-label="Open live voice mode"
                   >
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <Radio className="w-3.5 h-3.5 text-sky-600" />
-                    <span className="text-xs font-bold text-sky-800 hidden sm:inline">Live</span>
+                    <AudioLines className="h-4 w-4" />
+                    <span className="hidden text-xs font-semibold sm:inline">Voice</span>
                   </button>
 
                   {/* Send Button */}
                   <button
                     type="submit"
                     disabled={!inputQuery.trim() || isLoading}
-                    className="flex items-center justify-center px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 cursor-pointer sm:px-4"
                     title="Send message"
                   >
-                    <Send className="w-3.5 h-3.5 mr-1" />
-                    <span>Send</span>
+                    <Send className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Send</span>
                   </button>
                 </div>
               </form>
 
-              <div className="max-w-4xl mx-auto flex items-center justify-between px-2 text-[11px] text-slate-400 font-mono">
-                <span>Press Enter to send · Esc to return · Alt+V for Voice PTT</span>
-                <span className="hidden sm:flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Telemetry Corroboration Active
+              <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-1 font-mono text-[11px] text-slate-500">
+                <span className="hidden sm:inline">
+                  Enter to send · Esc to return · Alt+V for voice
                 </span>
+                <span className="sm:hidden">Enter to send</span>
+
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <button
+                    type="button"
+                    onClick={handleModelModeToggle}
+                    className="group inline-flex items-center gap-1.5 rounded-md py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
+                    title="Inference engine — click to switch between Frontier (Gemini) and local WebGPU"
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${modelDotClass}`}
+                      aria-hidden="true"
+                    />
+                    <span>Model</span>
+                    <span className="font-semibold text-slate-700 transition-colors group-hover:text-slate-900">
+                      {modelLabel}
+                    </span>
+                  </button>
+
+                  <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKeyModal(true)}
+                    className="inline-flex items-center gap-1 rounded-md py-0.5 transition-colors hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
+                    title={
+                      hasApiKey
+                        ? "Gemini API key configured — manage key"
+                        : "Add a Gemini API key for frontier inference"
+                    }
+                  >
+                    <KeyRound className="h-3 w-3" aria-hidden="true" />
+                    <span>{hasApiKey ? "Key connected" : "Connect key"}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

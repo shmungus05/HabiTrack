@@ -380,16 +380,6 @@ export default function App() {
             <Button
               size="sm"
               variant="default"
-              onClick={navigateToAssistant}
-              leftIcon={<Sparkles className="h-3.5 w-3.5 text-sky-600" />}
-              title="Open Dedicated HabiTrack AI Workstation"
-            >
-              <span className="hidden sm:inline">HabiTrack AI</span>
-            </Button>
-
-            <Button
-              size="sm"
-              variant="default"
               onClick={() => setIsHealthImportOpen(true)}
               leftIcon={<Upload className="h-3.5 w-3.5 text-sky-600" />}
               title="Import historical Huawei Health data from Apple Health ZIP export"

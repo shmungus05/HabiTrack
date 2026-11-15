@@ -5,7 +5,6 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { Mic, Radio } from "lucide-react";
 import {
   PushToTalkController,
   startAudioEnergyMeter,
@@ -191,26 +190,6 @@ export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
           <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">
             Ctrl K
           </kbd>
-
-          {/* Quick Voice Mode Orb Trigger */}
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation();
-              openVoiceModal();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.stopPropagation();
-                openVoiceModal();
-              }
-            }}
-            className="flex items-center justify-center w-7 h-7 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs transition-transform hover:scale-110 cursor-pointer"
-            title="Launch Interactive Voice Mode (Alt+V)"
-          >
-            <Radio className="w-3.5 h-3.5 text-sky-600 animate-pulse" />
-          </span>
         </div>
 
       </button>

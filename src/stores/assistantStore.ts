@@ -414,7 +414,15 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         localModelProgress: 100,
         localModelStatusText: "Model loaded in VRAM (Offline Ready)",
         localModelError: null,
+        aiModelMode: "local",
       });
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(AI_MODEL_MODE_STORAGE_KEY, "local");
+        } catch {
+          // ignore
+        }
+      }
     } catch (err) {
       console.error("[assistantStore] Local model load failed:", err);
       set({
@@ -835,20 +843,20 @@ ${JSON.stringify(briefing, null, 2)}`;
           responseContent = assistantResp.answer;
         } else if (category === "MUSCLE_SORENESS") {
           responseContent = `I understand you are experiencing soreness or musculoskeletal stiffness. Based on your mission profile, this is temporally associated with microgravity resistance training (ARED) or aerobic countermeasures.\n\n` +
-            `💡 **Physiological Context**: ${triageResult.physiologicalRationale}\n\n` +
-            `⏱️ **Recovery Latency**: Peak soreness resolves within **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
+            `**Physiological Context**: ${triageResult.physiologicalRationale}\n\n` +
+            `**Recovery Latency**: Peak soreness resolves within **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
             `Below are recommended recovery actions and verified instructional guides from the SpaceLife Library:`;
         } else if (category === "SLEEP_DISTURBANCE") {
           responseContent = `Evaluated sleep habitability and rest-cycle environment in **${triageResult.compartmentName}**.\n\n` +
-            `💡 **Habitability Assessment**: ${triageResult.physiologicalRationale}\n\n` +
-            `⏱️ **Rest Window Dynamics**: **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
+            `**Habitability Assessment**: ${triageResult.physiologicalRationale}\n\n` +
+            `**Rest Window Dynamics**: **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
             `Below are sleep station rigging procedures and verified guides:`;
         } else if (category === "CRITICAL_EMERGENCY") {
-          responseContent = `🚨 **CRITICAL MEDICAL ESCALATION**\n\n${triageResult.physiologicalRationale}\n\nImmediate operational protocol latched: **${triageResult.flightRuleTitle}** (${triageResult.latchedRuleId}).`;
+          responseContent = `**CRITICAL MEDICAL ESCALATION**\n\n${triageResult.physiologicalRationale}\n\nImmediate operational protocol latched: **${triageResult.flightRuleTitle}** (${triageResult.latchedRuleId}).`;
         } else {
           responseContent = `Evaluated report against current environmental telemetry in **${triageResult.compartmentName}**.\n\n` +
-            `⚠️ **Physiological Excursion**: ${triageResult.physiologicalRationale}\n\n` +
-            `⏱️ **Biological Latency Lag**: Expected onset peak is **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).`;
+            `**Physiological Excursion**: ${triageResult.physiologicalRationale}\n\n` +
+            `**Biological Latency Lag**: Expected onset peak is **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).`;
         }
 
         const effectiveSnapshot: TelemetrySnapshot = triageResult.telemetryReadings

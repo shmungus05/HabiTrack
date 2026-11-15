@@ -1,9 +1,36 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+
+/**
+ * WebLLM expects Hugging Face URL structure and automatically appends `/resolve/main/`
+ * to model base paths. This middleware seamlessly routes those requests
+ * to local static model assets without needing duplicated directories or symlinks.
+ */
+function webllmResolvePlugin(): Plugin {
+  return {
+    name: "webllm-resolve-middleware",
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (req.url && req.url.includes("/resolve/main/")) {
+          req.url = req.url.replace("/resolve/main/", "/");
+        }
+        next();
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (req.url && req.url.includes("/resolve/main/")) {
+          req.url = req.url.replace("/resolve/main/", "/");
+        }
+        next();
+      });
+    },
+  };
+}
 
 // Minimalist light telemetry UI config — pure TypeScript SPA.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), webllmResolvePlugin()],
   css: {
     devSourcemap: false,
   },
@@ -21,3 +48,4 @@ export default defineConfig({
     chunkSizeWarningLimit: 6000,
   },
 });
+
