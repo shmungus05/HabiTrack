@@ -763,7 +763,7 @@ export function TimelineView({
           </span>
         </div>
 
-        {/* Quick Range Selectors: 1h, 6h, 24h, 7d, 30d, all */}
+        {/* Quick Range Selectors: 1h, 6h, 24h, 7d, 30d */}
         <div className="flex items-center gap-1 bg-surface-subtle border border-border rounded-lg p-1">
           {([
             { id: "1h", label: "1H" },
@@ -771,7 +771,6 @@ export function TimelineView({
             { id: "24h", label: "24H" },
             { id: "7d", label: "7D" },
             { id: "30d", label: "30D" },
-            { id: "all", label: "ALL (180D)" },
           ] as const).map(({ id, label }) => (
             <button
               key={id}
