@@ -67,7 +67,7 @@ export function getGeminiApiUrl(modelId?: string): string {
 }
 
 const SYSTEM_INSTRUCTION = `
-You are HabiTrack Flight Co-Pilot, an advanced onboard clinical decision-support and crew health intelligence AI for ISS Expedition 71.
+You are HabiTrack Flight SI, an advanced onboard clinical decision-support and crew health synthetic intelligence system for ISS Expedition 71.
 You assist astronauts, flight surgeons, and mission specialists in monitoring environmental factors, vital signs, NASA Flight Rules, and crew wellbeing.
 
 Core Operating Directives:
@@ -241,7 +241,7 @@ export async function generateGeminiRagResponse(
   };
 }
 
-export interface DynamicTriageAIResponse {
+export interface DynamicTriageSIResponse {
   headline: string;
   conversationalOverview?: string;
   physiologicalRationale: string;
@@ -259,8 +259,10 @@ export interface DynamicTriageAIResponse {
   }>;
 }
 
+export type DynamicTriageAIResponse = DynamicTriageSIResponse;
+
 const CLINICAL_TRIAGE_SYSTEM_PROMPT = `
-You are the Onboard Clinical First-Response AI for ISS Expedition 71.
+You are the Onboard Clinical First-Response SI for ISS Expedition 71.
 Your role is rapid triage and immediate physical stabilization countermeasures during Loss of Signal (LOS) or when Earth flight surgeons are unavailable.
 
 Operating Directives:
@@ -279,7 +281,7 @@ Operating Directives:
 6. Return JSON ONLY matching the requested schema.
 `.trim();
 
-export async function generateClinicalTriageAI(params: {
+export async function generateClinicalTriageSI(params: {
   symptomText: string;
   compartmentName: string;
   snapshot: {
@@ -291,7 +293,7 @@ export async function generateClinicalTriageAI(params: {
     airflowProfile?: string;
   };
   astronautId?: string;
-}): Promise<DynamicTriageAIResponse> {
+}): Promise<DynamicTriageSIResponse> {
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
@@ -351,11 +353,11 @@ Generate the 3 immediate physical stabilization countermeasures and clinical rat
     throw new Error("Empty response from Gemini clinical triage engine");
   }
 
-  const parsed = JSON.parse(rawText) as DynamicTriageAIResponse;
+  const parsed = JSON.parse(rawText) as DynamicTriageSIResponse;
 
   // Validate structure
   if (!parsed.interimActions || !Array.isArray(parsed.interimActions)) {
-    throw new Error("Invalid interim actions structure returned by AI");
+    throw new Error("Invalid interim actions structure returned by SI");
   }
 
   return {
@@ -379,3 +381,6 @@ Generate the 3 immediate physical stabilization countermeasures and clinical rat
     })),
   };
 }
+
+// Backward-compatible alias
+export const generateClinicalTriageAI = generateClinicalTriageSI;

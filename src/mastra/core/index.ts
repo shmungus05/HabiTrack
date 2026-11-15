@@ -219,7 +219,7 @@ export class MastraAgent {
             .map((s: any) => `• **Step ${s.step_number} (${s.target_subsystem})**: ${s.action}`)
             .join("\n");
       } else {
-        answerText = `Greetings. I am ${this.name}, your onboard clinical decision-support co-pilot. Telemetry parameters are within monitored operational thresholds.`;
+        answerText = `Greetings. I am ${this.name}, your onboard clinical decision-support synthetic intelligence system. Telemetry parameters are within monitored operational thresholds.`;
       }
     }
 

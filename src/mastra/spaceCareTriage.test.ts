@@ -1,5 +1,5 @@
 /**
- * Unit & Integration Tests: SpaceCare AI Context Differencing & Watchable References
+ * Unit & Integration Tests: SpaceCare SI Context Differencing & Watchable References
  *
  * Verifies that:
  * 1. "I have a headache" triggers HEADACHE_HYPERCAPNIA, latches FR-ECLSS-001, and issues immediate ventilation steps with ZERO video clutter.
@@ -198,7 +198,7 @@ async function testConversationalSynthesizerIntegrity(): Promise<void> {
   const greetingResp = await queryAssistant("Hi");
   check(
     Boolean(greetingResp.answer && greetingResp.answer.includes("Hello!")),
-    "Greeting must return a friendly co-pilot answer"
+    "Greeting must return a friendly SI answer"
   );
   equal(greetingResp.cited_evidence.length, 0, "Greeting must not dump research literature");
   equal((greetingResp.resources ?? []).length, 0, "Greeting must not attach videos");
@@ -222,7 +222,7 @@ async function runAllTests(): Promise<void> {
   await testFullClinicalTriageWorkflowExecution();
   await testConversationalSynthesizerIntegrity();
 
-  console.log(`PASS · ${assertions} assertions · SpaceCare AI context differencing & watchable references`);
+  console.log(`PASS · ${assertions} assertions · SpaceCare SI context differencing & watchable references`);
 }
 
 runAllTests().catch((err) => {

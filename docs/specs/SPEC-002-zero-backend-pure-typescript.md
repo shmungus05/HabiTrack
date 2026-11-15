@@ -113,7 +113,7 @@ During spaceflight operations, ground communications experience periodic **Loss 
 D:\HabiTrack\src\mastra\
 ├── index.ts                         # Singleton Mastra container (export const mastra)
 ├── agents\
-│   └── firstResponderAgent.ts       # Mastra Agent: Onboard First-Response Co-Pilot
+│   └── firstResponderAgent.ts       # Mastra Agent: Onboard First-Response SI
 ├── workflows\
 │   └── clinicalTriageWorkflow.ts   # Mastra Workflow: 5-step deterministic DAG
 ├── steps\
@@ -135,7 +135,7 @@ D:\HabiTrack\src\mastra\
 | **`createTool`** | `src/mastra/tools/*.ts` | Exposes telemetry and NASA flight rule catalog entries to the conversational agent. |
 | **`createStep`** | `src/mastra/steps/*.ts` | Type-safe Zod-validated pipeline steps for symptom classification, environmental correlation, interim physical countermeasure generation, and epistemic guardrails. |
 | **`createWorkflow`** | `src/mastra/workflows/*.ts` | Chains the steps into a deterministic DAG (`.step().then().commit()`), guaranteeing immediate stabilization actions are calculated before ground contact. |
-| **`createAgent`** | `src/mastra/agents/*.ts` | Conversational assistant configured with the "First-Response Interim Co-Pilot" persona. |
+| **`createAgent`** | `src/mastra/agents/*.ts` | Conversational assistant configured with the "First-Response Interim SI" persona. |
 | **`Mastra`** | `src/mastra/index.ts` | The singleton application instance invoked by [SymptomChatbotModule.tsx](file:///D:/HabiTrack/src/features/symptoms/SymptomChatbotModule.tsx) and [AssistantDrawer.tsx](file:///D:/HabiTrack/src/components/AssistantDrawer.tsx). |
 
 ---

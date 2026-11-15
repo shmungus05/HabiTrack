@@ -525,7 +525,7 @@ Display:
 - SQLite for the initial offline prototype.
 - A future migration to PostgreSQL may be considered if multi-user deployment requires it.
 
-**Local AI — later release**
+**Local SI (Synthetic Intelligence) — later release**
 - Ollama or another suitable local model runtime.
 - A small quantized instruction model selected after hardware testing.
 - Local embedding model.
@@ -571,7 +571,7 @@ The local model is optional for the first working release. Do not allow the mode
 - Reports.
 - Offline event history.
 
-## 9.3 Critical AI design rule
+## 9.3 Critical SI design rule
 
 The analytics engine determines what changed.
 
@@ -685,7 +685,7 @@ The interface should prioritize:
 - Color-independent status indicators.
 
 ## Performance
-The first release should prioritize responsive local data loading and chart rendering over complex AI features.
+The first release should prioritize responsive local data loading and chart rendering over complex SI features.
 
 ## Privacy
 Use local storage for the prototype and avoid collecting unnecessary personal information.
@@ -741,7 +741,7 @@ The demonstration should make clear that temporal overlap does not establish cau
 | False alerts | Use transparent rules, persistence checks, and quality filters |
 | Correlation interpreted as causation | Use careful wording and explicit limitations |
 | LLM generates unsupported medical advice | Restrict it to evidence retrieval and explanation |
-| Local model is too slow | Keep AI optional and benchmark on target hardware |
+| Local model is too slow | Keep SI optional and benchmark on target hardware |
 | Scope becomes too large | Use phased releases and acceptance criteria |
 | Missing or unreliable measurements | Show quality status and uncertainty |
 
@@ -784,7 +784,7 @@ HabiTrack will be developed in progressive releases.
 - Trend analysis.
 - Multi-signal health context.
 
-**Version 3 — Evidence-Grounded Local AI (Delivered)**
+**Version 3 — Evidence-Grounded Local SI (Delivered)**
 - Curated NASA research corpus (OSDR & Life Sciences).
 - In-process SQLite hybrid retrieval (Dense float32 BLOB vector embeddings + FTS5 BM25 with RRF).
 - Citation-grounded explanations with explicit evidence limitations.
@@ -800,7 +800,7 @@ HabiTrack will be developed in progressive releases.
 - **Multi-Factor Comparison Matrix**: Side-by-side environmental and physiological baseline comparison table with nominal operational envelopes.
 
 **Version 5 — Autonomous Standby Health Station & Deep Space Operations (Current / Baselined)**
-- **Omnipresent Standby AI Assistant**: Floating trigger pill and non-blocking 500 px slide-out drawer accessible across all console routes (`Overview`, `Timeline`, `Symptoms`, `Research`, `Alerts`, `Settings`).
+- **Omnipresent Standby SI Assistant**: Floating trigger pill and non-blocking 500 px slide-out drawer accessible across all console routes (`Overview`, `Timeline`, `Symptoms`, `Research`, `Alerts`, `Settings`).
 - **Dual-Modality Interface**: Client-side Push-to-Talk (PTT) voice interaction with Web Speech API audio states alongside global keyboard hotkeys (`Ctrl+K`).
 - **Certified Operational Flight Rules Ingestion**: Markdown-based flight rule corpus with YAML frontmatter indexed via SQLite vector and FTS5 search (`FR_ECLSS_001`, `FR_CDRA_002`, `FR_EVA_003`).
 - **Sub-50ms Deterministic Latching**: Immediate threshold-to-rule latching presenting verified, SHA-256 hash-checked operational checklists prior to stochastic LLM generation.
@@ -819,7 +819,7 @@ Each version must preserve the safety and data-integrity requirements establishe
 
 # 18. Final Product Positioning
 
-HabiTrack is not simply a vital-sign dashboard or an AI medical chatbot.
+HabiTrack is not simply a vital-sign dashboard or an SI medical chatbot.
 
 It is an integrated astronaut health investigation system that connects:
 

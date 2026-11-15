@@ -67,7 +67,7 @@ export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
   // Global Keybindings: Ctrl+K (open assistant & focus) and Alt+V (toggle voice PTT)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+K: Navigate to Dedicated AI Assistant
+      // Ctrl+K: Navigate to Dedicated SI Assistant
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         if (onNavigateToAssistant) {
@@ -143,10 +143,10 @@ export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
 
   return (
     <aside
-      aria-label="Standby AI Assistant"
+      aria-label="Standby SI Assistant"
       className="fixed bottom-5 right-5 z-40 flex items-center select-none"
     >
-      {/* Single Unified HabiTrack AI Floating Action Trigger */}
+      {/* Single Unified HabiTrack SI Floating Action Trigger */}
       <button
         type="button"
         onClick={() => {
@@ -159,7 +159,7 @@ export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
         className={`group relative flex items-center gap-2.5 p-2 pr-3.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 hover:border-slate-300 transition-all duration-200 cursor-pointer shadow-elevated hover:shadow-lg active:scale-95 ${
           isRecording ? "ring-2 ring-red-500/50 border-red-500" : ""
         }`}
-        title="Open Dedicated HabiTrack AI Workstation (Ctrl+K · Alt+V Voice)"
+        title="Open Dedicated HabiTrack SI Workstation (Ctrl+K · Alt+V Voice)"
       >
         {/* Dynamic Waveform Energy Aura during Voice Dictation */}
         {isRecording && (
@@ -184,7 +184,7 @@ export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
         {/* Label and Status */}
         <div className="flex items-center gap-2">
           <span className={`text-xs font-bold tracking-tight whitespace-nowrap ${isRecording ? "text-red-600 animate-pulse" : "text-slate-900"}`}>
-            {isRecording ? "Listening..." : "HabiTrack AI"}
+            {isRecording ? "Listening..." : "HabiTrack SI"}
           </span>
 
           <kbd className="hidden sm:inline-flex items-center rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">

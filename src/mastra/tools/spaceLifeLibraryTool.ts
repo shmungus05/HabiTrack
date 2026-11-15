@@ -1,5 +1,5 @@
 /**
- * SpaceLife Library Tool for SpaceCare AI.
+ * SpaceLife Library Tool for SpaceCare SI.
  *
  * Retrieves verified NASA Human Research Program guides, official video streams,
  * and instructional procedures from officialNasaGuides.json.

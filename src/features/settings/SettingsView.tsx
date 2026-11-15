@@ -524,13 +524,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* AI Intelligence & Execution Engine (Frontier vs Local WebGPU) */}
+          {/* SI Intelligence & Execution Engine (Frontier vs Local WebGPU) */}
           <div className="p-5 sm:p-6 glass-panel rounded-xl space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-semibold text-sky-700 uppercase tracking-[0.14em] flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-sky-600" />
-                  <span>AI Intelligence &amp; Execution Engine</span>
+                  <span>SI Intelligence &amp; Execution Engine</span>
                 </h3>
                 <p className="text-xs text-muted mt-1">
                   Select your primary clinical intelligence provider. Choose Frontier for cloud reasoning or Local for 100% offline flight.
@@ -580,7 +580,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </span>
                       </h4>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Deep biomedical RAG synthesis via Google AI
+                        Deep biomedical RAG synthesis via Google Gemini (Frontier SI)
                       </p>
                     </div>
                   </div>
@@ -817,7 +817,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold text-sky-700 uppercase tracking-[0.14em] flex items-center gap-2">
                 <Volume2 className="w-4 h-4 text-sky-600" />
-                <span>AI Voice &amp; Spaceflight Comms Audio</span>
+                <span>SI Voice &amp; Spaceflight Comms Audio</span>
               </h3>
               <button
                 type="button"
@@ -862,7 +862,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </button>
                 </div>
                 <span className="text-[11px] text-muted block mt-1.5">
-                  Automatically read aloud AI triage responses
+                  Automatically read aloud SI triage responses
                 </span>
               </div>
 
@@ -937,7 +937,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               {/* Voice Persona Preset */}
               <div>
-                <label className="block text-secondary font-semibold mb-2">AI Voice Persona</label>
+                <label className="block text-secondary font-semibold mb-2">SI Voice Persona</label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
                     { id: "nova", label: "Nova (Female)", hint: "Warm & Clear" },

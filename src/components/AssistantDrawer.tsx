@@ -277,7 +277,7 @@ export function AssistantDrawer() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Standby AI assistant workstation"
+        aria-label="Standby SI assistant workstation"
         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-8 bg-slate-950/45 backdrop-blur-xl animate-in fade-in duration-200"
         onClick={closeDrawer}
       >
@@ -294,7 +294,7 @@ export function AssistantDrawer() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
-                    HABITRACK CLINICAL CO-PILOT
+                    HABITRACK CLINICAL SI
                   </h2>
                   <button
                     type="button"
@@ -523,7 +523,7 @@ export function AssistantDrawer() {
                                     isUser ? "text-sky-300 text-xs" : "text-sky-700 uppercase tracking-wider text-[11px]"
                                   }`}
                                 >
-                                  {isUser ? "Astronaut (Crew)" : "HabiTrack Flight Co-Pilot"}
+                                  {isUser ? "Astronaut (Crew)" : "HabiTrack Flight SI"}
                                 </span>
                                 {!isUser && (
                                   <span
@@ -622,7 +622,7 @@ export function AssistantDrawer() {
                                     >
                                       <span className="leading-snug">{sug}</span>
                                       <span className="text-[10px] font-mono text-slate-400 group-hover:text-sky-600 mt-2.5 flex items-center gap-1">
-                                        Ask Co-Pilot →
+                                        Ask SI →
                                       </span>
                                     </button>
                                   ))}

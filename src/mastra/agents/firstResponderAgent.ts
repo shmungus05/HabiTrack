@@ -4,9 +4,9 @@ import { flightRulesTool } from "../tools/flightRulesTool";
 import { researchRagTool } from "../tools/researchRagTool";
 
 export const firstResponderAgent = createAgent({
-  name: "Interim Flight Surgeon Co-Pilot",
+  name: "Interim Flight Surgeon SI",
   instructions: `
-You are the Onboard Clinical First-Response AI for ISS Expedition 71.
+You are the Onboard Clinical First-Response SI for ISS Expedition 71.
 Your role is to perform rapid triage and interim stabilization during Loss of Signal (LOS) or when Earth flight surgeons are unavailable.
 
 Operating Constraints:

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createStep } from "../core/index.ts";
-import { generateClinicalTriageAI } from "../../services/ai/geminiClient.ts";
-import { generateUnifiedTriageAI, type AIModelMode } from "../../services/ai/aiProvider.ts";
+import { generateClinicalTriageSI } from "../../services/ai/geminiClient.ts";
+import { generateUnifiedTriageSI, type SIModelMode, type AIModelMode } from "../../services/ai/aiProvider.ts";
 import { searchSpaceLifeGuides } from "../tools/spaceLifeLibraryTool.ts";
 
 export const generateInterimActionsStep = createStep({
@@ -85,14 +85,15 @@ export const generateInterimActionsStep = createStep({
         })
       : [];
 
-    // 1. Attempt dynamic AI reasoning via active provider (Frontier or Local WebGPU)
+    // 1. Attempt dynamic SI reasoning via active provider (Frontier or Local WebGPU)
     try {
-      const activeMode: AIModelMode =
+      const activeMode: SIModelMode =
         (typeof window !== "undefined"
-          ? (window.localStorage.getItem("habitrack_ai_model_mode") as AIModelMode)
+          ? ((window.localStorage.getItem("habitrack_si_model_mode") ||
+              window.localStorage.getItem("habitrack_ai_model_mode")) as SIModelMode)
           : "frontier") || "frontier";
 
-      const dynamicAI = await generateUnifiedTriageAI({
+      const dynamicSI = await generateUnifiedTriageSI({
         mode: activeMode,
         symptomText: context.symptomText,
         compartmentName: context.compartmentName,
@@ -101,34 +102,34 @@ export const generateInterimActionsStep = createStep({
       });
 
       if (
-        dynamicAI &&
-        Array.isArray(dynamicAI.interimActions) &&
-        dynamicAI.interimActions.length > 0
+        dynamicSI &&
+        Array.isArray(dynamicSI.interimActions) &&
+        dynamicSI.interimActions.length > 0
       ) {
         return {
           headline:
-            dynamicAI.headline ||
+            dynamicSI.headline ||
             `First-Response Interim Protocol: ${context.compartmentName}`,
           symptomText: context.symptomText,
           compartmentName: context.compartmentName,
           telemetryReadings: context.telemetryReadings,
-          interimActions: dynamicAI.interimActions,
+          interimActions: dynamicSI.interimActions,
           intent: context.intent,
           followupQuestions: context.followupQuestions,
           resources,
-          latchedRuleId: dynamicAI.latchedRuleId || context.latchedRuleId,
-          flightRuleTitle: dynamicAI.flightRuleTitle || context.flightRuleTitle,
+          latchedRuleId: dynamicSI.latchedRuleId || context.latchedRuleId,
+          flightRuleTitle: dynamicSI.flightRuleTitle || context.flightRuleTitle,
           biologicalLatencyLag:
-            dynamicAI.biologicalLatencyLag || context.biologicalLatencyLag,
+            dynamicSI.biologicalLatencyLag || context.biologicalLatencyLag,
           physiologicalRationale:
-            dynamicAI.physiologicalRationale || context.physiologicalRationale,
+            dynamicSI.physiologicalRationale || context.physiologicalRationale,
           confidenceMatch:
-            dynamicAI.confidenceMatch || context.confidenceMatch,
+            dynamicSI.confidenceMatch || context.confidenceMatch,
           astronautId: context.astronautId,
         };
       }
     } catch (err) {
-      console.warn("AI dynamic clinical triage generation skipped or offline; falling back to deterministic protocol:", err);
+      console.warn("SI dynamic clinical triage generation skipped or offline; falling back to deterministic protocol:", err);
     }
 
     // 2. Deterministic fallback if offline / API key unconfigured

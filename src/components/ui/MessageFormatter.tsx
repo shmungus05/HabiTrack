@@ -92,7 +92,7 @@ function renderInlineContent(content: string, isUser: boolean): React.ReactNode[
 }
 
 /**
- * MessageFormatter renders conversational AI messages with clean typography,
+ * MessageFormatter renders conversational SI messages with clean typography,
  * properly formatted bold headers (#, ##, ###, ####), blockquotes (>), lists,
  * and reference badges with zero raw syntax leakage.
  */

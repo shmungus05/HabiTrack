@@ -15,7 +15,7 @@ import {
 } from "@mlc-ai/web-llm";
 
 import type { CitedEvidence } from "../../types/api.ts";
-import type { DynamicTriageAIResponse } from "./geminiClient.ts";
+import type { DynamicTriageSIResponse, DynamicTriageAIResponse } from "./geminiClient.ts";
 
 export const LOCAL_MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 export const LOCAL_MODEL_DISPLAY_NAME = "Llama-3.2-1B-Instruct (WebGPU Local)";
@@ -32,13 +32,13 @@ let currentWorker: Worker | null = null;
 let isInitializing = false;
 
 const SYSTEM_INSTRUCTION = `
-You are HabiTrack, an onboard clinical decision-support co-pilot for ISS Expedition 71.
+You are HabiTrack, an onboard clinical decision-support synthetic intelligence system for ISS Expedition 71.
 You assist astronauts, flight surgeons, and mission specialists in monitoring environmental factors, vital signs, and NASA Flight Rules.
 
 Guidelines:
 1. Be helpful, concise, professional, and clear.
 2. If NASA research context is provided, ground your answer in it and reference findings.
-3. If greeting or general conversation (e.g. "hi", "hello", "how are you"), respond naturally and warmly as the onboard AI assistant.
+3. If greeting or general conversation (e.g. "hi", "hello", "how are you"), respond naturally and warmly as the onboard SI assistant.
 4. Non-Causal Epistemic Guardrail: Never claim single-variable clinical causation (avoid asserting that X "caused" or "cured" Y). Use correlation terminology ("temporally associated with", "correlated with").
 5. Keep responses concise (typically 2-4 sentences unless detailed analysis is requested).
 `.trim();
@@ -343,13 +343,13 @@ export async function generateLocalClinicalTriage(params: {
     airflowProfile?: string;
   };
   astronautId?: string;
-}): Promise<DynamicTriageAIResponse> {
+}): Promise<DynamicTriageSIResponse> {
   if (!engineInstance) {
     throw new Error("Local model is not initialized. Please load the model first.");
   }
 
   const prompt = `
-You are the Onboard Clinical First-Response AI for ISS Expedition 71.
+You are the Onboard Clinical First-Response SI for ISS Expedition 71.
 Perform rapid triage and generate stabilization countermeasures for:
 Astronaut: ${params.astronautId || "ASTRO-01"}
 Location: ${params.compartmentName}
@@ -377,7 +377,7 @@ Return JSON ONLY formatted as:
       {
         role: "system",
         content:
-          "You are a clinical decision support co-pilot. Output pure JSON only without markdown code blocks.",
+          "You are a clinical decision-support synthetic intelligence system. Output pure JSON only without markdown code blocks.",
       },
       { role: "user", content: prompt },
     ],
@@ -391,7 +391,7 @@ Return JSON ONLY formatted as:
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     try {
-      const parsed = JSON.parse(jsonMatch[0]) as DynamicTriageAIResponse;
+      const parsed = JSON.parse(jsonMatch[0]) as DynamicTriageSIResponse;
       if (parsed && Array.isArray(parsed.interimActions) && parsed.interimActions.length > 0) {
         return parsed;
       }
