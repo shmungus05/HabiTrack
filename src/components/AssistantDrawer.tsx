@@ -28,6 +28,8 @@ import {
   MicOff,
   Microscope,
   Radio,
+  RotateCcw,
+  Search,
   Send,
   ShieldCheck,
   Sparkles,
@@ -62,11 +64,11 @@ import { parseEventRationale } from "./EventRationaleDisplay";
 import { Badge, MessageFormatter } from "./ui";
 import { WatchableResourceCard } from "./WatchableResourceCard";
 import { GuideDetailModal } from "../features/library/GuideDetailModal";
-import { fetchLibraryGuideById } from "../services/api";
+import { fetchFlightRules, fetchLibraryGuideById, searchResearchChunks } from "../services/api";
 import { getGeminiApiKey, getGeminiModelLabel } from "../services/ai/geminiClient";
 import { GeminiApiKeyModal } from "./GeminiApiKeyModal";
 import type { LibraryGuide } from "../types/library";
-import type { SpaceCareResourceReference } from "../types/api";
+import type { CitedEvidence, FlightRule, SpaceCareResourceReference } from "../types/api";
 
 const CABIN_MODULES = [
   "Auto-Detect",
@@ -131,6 +133,35 @@ export function AssistantDrawer() {
   const [selectedGuideForModal, setSelectedGuideForModal] = useState<LibraryGuide | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(Boolean(getGeminiApiKey()));
+
+  // NASA Flight Rules operational catalog
+  const [availableRules, setAvailableRules] = useState<FlightRule[]>([]);
+  useEffect(() => {
+    void fetchFlightRules().then((rules) => {
+      setAvailableRules(rules);
+      if (!useAssistantStore.getState().latchedRule && rules.length > 0) {
+        useAssistantStore.getState().latchRule(rules[0]);
+      }
+    });
+  }, []);
+
+  // NASA Biomedical Research RAG Workspace state
+  const [ragQuery, setRagQuery] = useState("");
+  const [ragEvidence, setRagEvidence] = useState<CitedEvidence[]>(() => searchResearchChunks("", 13));
+  const [ragViewMode, setRagViewMode] = useState<"event" | "corpus">(
+    activeExplanation || activeEvent ? "event" : "corpus"
+  );
+
+  useEffect(() => {
+    if (activeExplanation || activeEvent) {
+      setRagViewMode("event");
+    }
+  }, [activeExplanation, activeEvent]);
+
+  useEffect(() => {
+    const results = searchResearchChunks(ragQuery, 13);
+    setRagEvidence(results);
+  }, [ragQuery]);
 
   useEffect(() => {
     const checkKey = () => setHasApiKey(Boolean(getGeminiApiKey()));
@@ -402,11 +433,9 @@ export function AssistantDrawer() {
               >
                 <Microscope className="w-3.5 h-3.5 text-sky-600" />
                 <span>Research RAG</span>
-                {activeExplanation?.cited_evidence.length ? (
-                  <span className="px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[10px] font-mono font-bold">
-                    {activeExplanation.cited_evidence.length}
-                  </span>
-                ) : null}
+                <span className="px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[10px] font-mono font-bold">
+                  {activeExplanation?.cited_evidence.length || ragEvidence.length}
+                </span>
               </button>
             </div>
 
@@ -1060,11 +1089,71 @@ export function AssistantDrawer() {
             {activeTab === "checklists" && (
               <div className="drawer-scroll flex-1 overflow-y-auto px-6 sm:px-8 py-6">
                 <div className="max-w-4xl mx-auto w-full space-y-6">
-                  {latchedRule ? (
+                  {/* NASA Certified Flight Rules Selector & Catalog */}
+                  <div className="rounded-[28px] bg-white border border-slate-200 p-5 shadow-xs space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+                          <FileCheck2 className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
+                            NASA Flight Rules Operational Catalog
+                          </h3>
+                          <p className="text-[11px] text-slate-500">
+                            Certified Flight Decision Rules with verified contingency checklist procedures.
+                          </p>
+                        </div>
+                      </div>
+                      {checklistSteps.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCompletedSteps({})}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                          title="Reset step verification"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-slate-400" />
+                          <span>Reset Progress</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Rule Pills Selector */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {availableRules.map((r) => {
+                        const isSelected = latchedRule?.rule_id === r.rule_id;
+                        return (
+                          <button
+                            key={r.rule_id}
+                            type="button"
+                            onClick={() => useAssistantStore.getState().latchRule(r)}
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-slate-900 border-slate-900 text-white shadow-xs"
+                                : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300"
+                            }`}
+                          >
+                            <span className={`font-mono font-bold text-[11px] ${isSelected ? "text-sky-300" : "text-sky-700"}`}>
+                              {r.rule_id}
+                            </span>
+                            <span>{r.title.split("&")[0].split("Mitigation")[0].trim()}</span>
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md ${
+                              isSelected ? "bg-slate-800 text-slate-300" : "bg-slate-200/80 text-slate-600"
+                            }`}>
+                              {r.checklist_steps?.length ?? 0} steps
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Latched Flight Rule Details */}
+                  {latchedRule && (
                     <div className="rounded-[28px] bg-slate-50 border border-slate-200 p-6 space-y-4 shadow-xs">
                       <div className="flex items-center justify-between">
                         <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-800 text-xs font-mono font-bold tracking-tight border border-sky-200">
-                          {latchedRule.rule_id}
+                          {latchedRule.rule_id} · {latchedRule.subsystem}
                         </span>
                         <span className="text-xs font-mono text-slate-400">
                           Revision: {latchedRule.revision_date}
@@ -1084,8 +1173,9 @@ export function AssistantDrawer() {
                         <span>SHA-256: {latchedRule.sha256_hash ? latchedRule.sha256_hash.slice(0, 16) : "VERIFIED"}... (Verified NASA Certified Flight Rule)</span>
                       </div>
                     </div>
-                  ) : null}
+                  )}
 
+                  {/* Operational Checklist Steps */}
                   {checklistSteps.length > 0 ? (
                     <section className="space-y-4">
                       <div className="flex items-center justify-between">
@@ -1095,6 +1185,20 @@ export function AssistantDrawer() {
                         <span className="text-xs font-mono text-slate-500 font-semibold">
                           {Object.values(completedSteps).filter(Boolean).length} / {checklistSteps.length} Verified
                         </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-emerald-500 h-2 transition-all duration-300 rounded-full"
+                          style={{
+                            width: `${Math.round(
+                              (Object.values(completedSteps).filter(Boolean).length /
+                                Math.max(checklistSteps.length, 1)) *
+                                100
+                            )}%`,
+                          }}
+                        />
                       </div>
 
                       <div className="space-y-3">
@@ -1155,118 +1259,258 @@ export function AssistantDrawer() {
                     </section>
                   ) : (
                     <div className="p-12 text-center rounded-[28px] border border-dashed border-slate-300 text-slate-500 text-xs sm:text-sm bg-white">
-                      No active flight rule latched. Report a symptom or ask a question to latch a flight rule checklist.
+                      No active flight rule latched. Select a flight rule from the catalog above to view and execute its operational checklist.
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Tab 3: Detailed Scientific Evidence */}
+            {/* Tab 3: Detailed Scientific Evidence & RAG Workspace */}
             {activeTab === "evidence" && (
               <div className="drawer-scroll flex-1 overflow-y-auto px-6 sm:px-8 py-6">
                 <div className="max-w-5xl mx-auto w-full space-y-6">
-                  {activeEvent && (
-                    <div className="rounded-[28px] bg-white border border-slate-200 p-6 shadow-card space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`badge border ${uncertaintyTheme(
-                            activeEvent.uncertainty_level,
-                          )}`}
+                  {/* Optional Segmented Switcher if active event or explanation exists */}
+                  {(activeEvent || activeExplanation) && (
+                    <div className="flex items-center justify-center">
+                      <div className="inline-flex rounded-2xl bg-slate-200/80 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setRagViewMode("event")}
+                          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            ragViewMode === "event"
+                              ? "bg-white text-slate-900 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
                         >
-                          {activeEvent.severity_level} · {activeEvent.uncertainty_level} uncertainty
-                        </span>
-                        <Badge variant="default">{activeEvent.event_id}</Badge>
-                      </div>
-                      <h3 className="text-base sm:text-lg font-black text-slate-900">
-                        {titleCase(activeEvent.event_type)}
-                      </h3>
-                      <p className="text-xs sm:text-[13px] leading-relaxed text-slate-700 font-medium">
-                        {parseEventRationale(activeEvent.rationale, activeEvent.event_type).summary}
-                      </p>
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
-                          <span
-                            key={stream}
-                            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-600"
-                          >
-                            {prettyStream(stream)}
-                          </span>
-                        ))}
-                        {activeEvent.peak_deviation_sigma !== null ? (
-                          <span className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 font-mono text-[11px] text-sky-700 font-bold">
-                            peak {formatSigned(activeEvent.peak_deviation_sigma, 2)} σ
-                          </span>
-                        ) : null}
+                          Active Event Citations ({activeExplanation?.cited_evidence.length ?? 0})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRagViewMode("corpus")}
+                          className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            ragViewMode === "corpus"
+                              ? "bg-white text-slate-900 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          Explore Research Corpus ({ragEvidence.length})
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  {activeExplanation ? (
-                    <div className="space-y-6">
-                      <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
-                        <h3 className="text-sm sm:text-base font-black leading-snug text-slate-900">
-                          {activeExplanation.headline}
-                        </h3>
-                      </section>
-
-                      <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs space-y-2">
-                        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 font-mono">
-                          Observed dynamics
-                        </h3>
-                        <p className="text-xs sm:text-[13px] leading-relaxed text-slate-700">
-                          {activeExplanation.observed_dynamics}
-                        </p>
-                      </section>
-
-                      <section className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 font-mono">
-                            Scientific Context &amp; Evidence
-                          </h3>
-                          <span className="text-xs text-sky-700 font-mono font-bold">
-                            {activeExplanation.cited_evidence.length} cited
-                          </span>
-                        </div>
-                        <p className="text-xs sm:text-[13px] leading-relaxed text-slate-500">
-                          {activeExplanation.scientific_context}
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
-                          {activeExplanation.cited_evidence.map((evidence) => (
-                            <EvidenceCard key={evidence.chunk_id} evidence={evidence} compact />
-                          ))}
-                        </div>
-                      </section>
-
-                      {activeExplanation.study_caveats.length > 0 && (
-                        <section className="rounded-2xl bg-amber-50/70 border border-amber-200 p-5">
-                          <div className="flex items-center gap-2 text-amber-800 font-bold">
-                            <TriangleAlert className="h-4 w-4 text-amber-600" />
-                            <h3 className="text-xs sm:text-[13px]">Study caveats</h3>
+                  {/* View Mode 1: Active Event & Explanation Citations */}
+                  {ragViewMode === "event" && (activeEvent || activeExplanation) ? (
+                    <>
+                      {activeEvent && (
+                        <div className="rounded-[28px] bg-white border border-slate-200 p-6 shadow-card space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`badge border ${uncertaintyTheme(
+                                activeEvent.uncertainty_level,
+                              )}`}
+                            >
+                              {activeEvent.severity_level} · {activeEvent.uncertainty_level} uncertainty
+                            </span>
+                            <Badge variant="default">{activeEvent.event_id}</Badge>
                           </div>
-                          <ul className="mt-2.5 space-y-2">
-                            {activeExplanation.study_caveats.map((caveat) => (
-                              <li
-                                key={caveat}
-                                className="flex items-start gap-2 text-xs leading-relaxed text-slate-700"
+                          <h3 className="text-base sm:text-lg font-black text-slate-900">
+                            {titleCase(activeEvent.event_type)}
+                          </h3>
+                          <p className="text-xs sm:text-[13px] leading-relaxed text-slate-700 font-medium">
+                            {parseEventRationale(activeEvent.rationale, activeEvent.event_type).summary}
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
+                              <span
+                                key={stream}
+                                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] text-slate-600"
                               >
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-                                {caveat}
-                              </li>
+                                {prettyStream(stream)}
+                              </span>
                             ))}
-                          </ul>
-                        </section>
+                            {activeEvent.peak_deviation_sigma !== null ? (
+                              <span className="rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 font-mono text-[11px] text-sky-700 font-bold">
+                                peak {formatSigned(activeEvent.peak_deviation_sigma, 2)} σ
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       )}
 
-                      <div className="flex items-center justify-between text-xs text-slate-400 pt-1 font-mono">
-                        <span className="inline-flex items-center gap-1 text-sky-700">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          {activeExplanation.latency_ms.toFixed(1)} ms
-                        </span>
-                        <span>{activeExplanation.interaction_id.slice(0, 8)}</span>
+                      {activeExplanation ? (
+                        <div className="space-y-6">
+                          <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs">
+                            <h3 className="text-sm sm:text-base font-black leading-snug text-slate-900">
+                              {activeExplanation.headline}
+                            </h3>
+                          </section>
+
+                          <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs space-y-2">
+                            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 font-mono">
+                              Observed dynamics
+                            </h3>
+                            <p className="text-xs sm:text-[13px] leading-relaxed text-slate-700">
+                              {activeExplanation.observed_dynamics}
+                            </p>
+                          </section>
+
+                          <section className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 font-mono">
+                                Scientific Context &amp; Evidence
+                              </h3>
+                              <span className="text-xs text-sky-700 font-mono font-bold">
+                                {activeExplanation.cited_evidence?.length ?? 0} cited
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-[13px] leading-relaxed text-slate-500">
+                              {activeExplanation.scientific_context}
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+                              {(activeExplanation.cited_evidence ?? []).map((evidence) => (
+                                <EvidenceCard key={evidence.chunk_id} evidence={evidence} compact />
+                              ))}
+                            </div>
+                          </section>
+
+                          {activeExplanation.study_caveats.length > 0 && (
+                            <section className="rounded-2xl bg-amber-50/70 border border-amber-200 p-5">
+                              <div className="flex items-center gap-2 text-amber-800 font-bold">
+                                <TriangleAlert className="h-4 w-4 text-amber-600" />
+                                <h3 className="text-xs sm:text-[13px]">Study caveats</h3>
+                              </div>
+                              <ul className="mt-2.5 space-y-2">
+                                {activeExplanation.study_caveats.map((caveat) => (
+                                  <li
+                                    key={caveat}
+                                    className="flex items-start gap-2 text-xs leading-relaxed text-slate-700"
+                                  >
+                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                                    {caveat}
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-slate-400 pt-1 font-mono">
+                            <span className="inline-flex items-center gap-1 text-sky-700">
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {activeExplanation.latency_ms.toFixed(1)} ms
+                            </span>
+                            <span>{activeExplanation.interaction_id.slice(0, 8)}</span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    /* View Mode 2: NASA Biomedical Research RAG Workspace (Corpus Explorer) */
+                    <div className="space-y-6">
+                      {/* Search Header Card */}
+                      <div className="rounded-[28px] bg-white border border-slate-200 p-6 shadow-xs space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100">
+                              <Microscope className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                                NASA Biomedical Research RAG Workspace
+                              </h3>
+                              <p className="text-xs text-slate-500">
+                                Hybrid BM25 + dense retrieval over NASA Human Research Roadmap (HRR) and Open Science Data Repository (OSDR).
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="accent">
+                            {ragEvidence.length} Evidence Passages
+                          </Badge>
+                        </div>
+
+                        {/* Search Input Bar */}
+                        <div className="relative">
+                          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <input
+                            type="text"
+                            value={ragQuery}
+                            onChange={(e) => setRagQuery(e.target.value)}
+                            placeholder="Search NASA research corpus (e.g., CO2 hypercapnia, space radiation, cardiovascular remodeling, circadian)..."
+                            className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+                          />
+                          {ragQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setRagQuery("")}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Quick Query Suggestion Pills */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold mr-1">
+                            Suggested:
+                          </span>
+                          {[
+                            "Elevated Cabin CO₂ & Hypercapnia",
+                            "Space Radiation Cardiovascular Biomarkers",
+                            "Microgravity Hemodynamic Redistribution",
+                            "Circadian Misalignment & Sleep Debt",
+                          ].map((chip) => (
+                            <button
+                              key={chip}
+                              type="button"
+                              onClick={() => setRagQuery(chip)}
+                              className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
+                            >
+                              {chip}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Evidence Cards Grid */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold uppercase tracking-[0.14em] text-sky-800 font-mono">
+                            {ragQuery ? `Search Results for "${ragQuery}"` : "Authoritative Research Passages"}
+                          </h4>
+                          <span className="text-xs font-mono text-slate-500">
+                            {ragEvidence.length} matching passages
+                          </span>
+                        </div>
+
+                        {ragEvidence.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {ragEvidence.map((evidence) => (
+                              <EvidenceCard key={evidence.chunk_id} evidence={evidence} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-12 text-center rounded-[28px] border border-dashed border-slate-300 bg-white space-y-2">
+                            <Microscope className="h-8 w-8 text-slate-300 mx-auto" />
+                            <p className="text-xs sm:text-sm font-semibold text-slate-700">
+                              No research passages matched &ldquo;{ragQuery}&rdquo;
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              Try searching for keywords like &ldquo;CO2&rdquo;, &ldquo;radiation&rdquo;, &ldquo;sleep&rdquo;, or &ldquo;cardiovascular&rdquo;.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setRagQuery("")}
+                              className="mt-2 px-3 py-1.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
+                            >
+                              Reset Filter
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             )}
