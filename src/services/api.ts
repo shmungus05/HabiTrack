@@ -480,34 +480,84 @@ export async function acknowledgeSymptom(
   return all.find((s) => s.report_id === reportId) ?? null;
 }
 
-function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
-  const tokens = queryText
-    .toLowerCase()
+const DOMAIN_SYNONYMS: Record<string, string[]> = {
+  co2: ["co2", "carbon", "dioxide", "hypercapnia", "eclss", "cdra"],
+  carbon: ["co2", "carbon", "dioxide", "hypercapnia"],
+  dioxide: ["co2", "carbon", "dioxide", "hypercapnia"],
+  hypercapnia: ["hypercapnia", "co2", "carbon", "dioxide", "headache"],
+  headache: ["headache", "hypercapnia", "co2", "cephalad", "intracranial", "fluid"],
+  radiation: ["radiation", "cosmic", "gcr", "spe", "ionizing", "biomarkers"],
+  rad: ["radiation", "cosmic", "gcr", "spe", "ionizing"],
+  sleep: ["sleep", "circadian", "desynchrony", "fatigue", "insomnia"],
+  circadian: ["circadian", "sleep", "desynchrony", "misalignment"],
+  heart: ["heart", "cardio", "cardiovascular", "hemodynamic", "baroreceptor", "tachycardia"],
+  cardio: ["cardio", "cardiovascular", "heart", "hemodynamic", "remodeling"],
+  cardiovascular: ["cardiovascular", "cardio", "heart", "hemodynamic", "remodeling"],
+  eva: ["eva", "extravehicular", "suit", "cooling", "tachycardia"],
+  eclss: ["eclss", "cdra", "ventilation", "co2", "carbon"],
+  cdra: ["cdra", "desiccant", "zeolite", "thermal", "bed"],
+};
+
+function formatChunkToEvidence(chunk: RawChunk, idx: number, relevancePct = 90): CitedEvidence {
+  return {
+    chunk_id: chunk.chunk_id,
+    doc_id: chunk.doc_id,
+    title: chunk.title,
+    authors: chunk.authors,
+    report_identifier: chunk.report_identifier,
+    section_heading: chunk.section_heading,
+    doi_citation: chunk.doi_citation,
+    source_repository: chunk.source_repository,
+    excerpt: chunk.content.slice(0, 320) + (chunk.content.length > 320 ? "..." : ""),
+    rrf_score: parseFloat(Math.max(0.4, 0.88 - idx * 0.04).toFixed(3)),
+    relevance_pct: Math.min(99, Math.max(68, relevancePct)),
+  };
+}
+
+export function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
+  const trimmed = queryText.trim().toLowerCase();
+  if (!trimmed) {
+    return researchChunks.slice(0, topK).map((c, i) => formatChunkToEvidence(c, i, 95 - i * 2));
+  }
+
+  const rawTokens = trimmed
     .replace(/[^\w\s]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length > 2);
+    .filter((t) => t.length >= 2);
 
-  if (tokens.length === 0) {
-    return [];
+  if (rawTokens.length === 0) {
+    return researchChunks.slice(0, topK).map((c, i) => formatChunkToEvidence(c, i, 90));
+  }
+
+  const expandedTokens = new Set<string>();
+  for (const token of rawTokens) {
+    expandedTokens.add(token);
+    const syns = DOMAIN_SYNONYMS[token];
+    if (syns) {
+      syns.forEach((s) => expandedTokens.add(s));
+    }
   }
 
   const scored = researchChunks.map((chunk) => {
     let score = 0;
+    const docIdLower = (chunk.doc_id || "").toLowerCase();
+    const reportLower = (chunk.report_identifier || "").toLowerCase();
     const titleLower = chunk.title.toLowerCase();
     const secLower = chunk.section_heading.toLowerCase();
     const contentLower = chunk.content.toLowerCase();
 
-    for (const token of tokens) {
+    for (const token of expandedTokens) {
+      if (docIdLower.includes(token)) score += 5;
+      if (reportLower.includes(token)) score += 5;
       if (titleLower.includes(token)) score += 5;
       if (secLower.includes(token)) score += 3;
-      if (contentLower.includes(token)) score += 1;
+      if (contentLower.includes(token)) score += 2;
     }
 
     return { chunk, score };
   });
 
-  // Only consider items with an actual significant match score (prevents incidental stopwords like "astronaut")
-  const matched = scored.filter((s) => s.score >= 3);
+  const matched = scored.filter((s) => s.score >= 1);
   if (matched.length === 0) {
     return [];
   }
@@ -516,21 +566,10 @@ function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
   const selected = matched.slice(0, topK);
 
   return selected.map(({ chunk, score }, idx) => {
-    const maxPossible = Math.max(tokens.length * 5, 5);
-    const relevancePct = Math.min(99, Math.max(68, Math.round((score / maxPossible) * 100)));
-    return {
-      chunk_id: chunk.chunk_id,
-      doc_id: chunk.doc_id,
-      title: chunk.title,
-      authors: chunk.authors,
-      report_identifier: chunk.report_identifier,
-      section_heading: chunk.section_heading,
-      doi_citation: chunk.doi_citation,
-      source_repository: chunk.source_repository,
-      excerpt: chunk.content.slice(0, 320) + (chunk.content.length > 320 ? "..." : ""),
-      rrf_score: parseFloat((0.85 - idx * 0.08).toFixed(3)),
-      relevance_pct: relevancePct,
-    };
+    const maxPossible = Math.max(rawTokens.length * 5, 5);
+    const rawPct = Math.round((score / maxPossible) * 100);
+    const relevancePct = Math.min(99, Math.max(68, rawPct));
+    return formatChunkToEvidence(chunk, idx, relevancePct);
   });
 }
 
