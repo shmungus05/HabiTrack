@@ -450,7 +450,7 @@ function MultiFactorHealthGauge({
   );
 }
 
-export type OverviewSubSection = "vitals" | "risk" | "all";
+export type OverviewSubSection = "all" | "vitals" | "eclss" | "concordance" | "symptoms" | "wearables" | "risk";
 
 const QUICK_SYMPTOMS = [
   { code: "HEADACHE", label: "Frontal Headache" },
@@ -821,18 +821,7 @@ export function OverviewView({
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
 
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({
-    vitals: false,
-    eclss: false,
-    concordance: false,
-    symptoms: false,
-    wearables: false,
-    risk: false,
-  });
 
-  const toggleCard = (cardKey: string) => {
-    setExpandedCards((prev) => ({ ...prev, [cardKey]: !prev[cardKey] }));
-  };
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -941,14 +930,14 @@ export function OverviewView({
   }, [data, hasCo2, hasThermal, hasSaa, astronautId, isMetric]);
 
   useEffect(() => {
-    if (activeEvent) {
-      setExpandedCards((prev) => ({ ...prev, concordance: true }));
+    if (activeEvent && activeEvent.severity_level === "INVESTIGATE") {
+      setActiveSection("concordance");
     }
   }, [activeEvent]);
 
   useEffect(() => {
     if (hasCo2 || hasThermal || hasSaa) {
-      setExpandedCards((prev) => ({ ...prev, eclss: true }));
+      setActiveSection("eclss");
     }
   }, [hasCo2, hasThermal, hasSaa]);
 
@@ -1251,328 +1240,308 @@ export function OverviewView({
             </div>
           </section>
 
-          {/* Quick Expand/Collapse All */}
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Telemetry &amp; Clinical Subsystems
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const allExpanded = Object.values(expandedCards).every(Boolean);
-                  setExpandedCards({
-                    vitals: !allExpanded,
-                    eclss: !allExpanded,
-                    concordance: !allExpanded,
-                    symptoms: !allExpanded,
-                    wearables: !allExpanded,
-                    risk: !allExpanded,
-                  });
-                }}
-                className="text-[11px] font-medium text-sky-700 hover:text-sky-900 hover:underline cursor-pointer"
-              >
-                {Object.values(expandedCards).every(Boolean) ? "Collapse All Cards" : "Expand All Cards"}
-              </button>
+          {/* Subsystem Navigation Buttons (Settings functions pattern) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Operational Subsystems &amp; Clinical Modules
+              </span>
+              <span className="text-[11px] font-mono text-slate-500">
+                Active View: <strong className="text-sky-700">{
+                  activeSection === "all" ? "Command View (All)" :
+                  activeSection === "vitals" ? "Physiological Vitals" :
+                  activeSection === "eclss" ? "Cabin Environmental (ECLSS)" :
+                  activeSection === "concordance" ? "Clinical Concordance" :
+                  activeSection === "symptoms" ? "Crew Symptoms & Diary" :
+                  activeSection === "wearables" ? "Huawei Watch 4 Pro" : "Risk & Triage"
+                }</strong>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {[
+                {
+                  id: "all" as const,
+                  label: "Command View",
+                  icon: Layers,
+                  metric: "Panoramic View",
+                  badge: null,
+                  badgeClass: "",
+                  hasAlert: false,
+                },
+                {
+                  id: "vitals" as const,
+                  label: "Physiological",
+                  icon: Activity,
+                  metric: `${latestHr.toFixed(0)} bpm · ${latestRmssd.toFixed(0)} ms`,
+                  badge: latestHr > 85 ? "ELEVATED" : null,
+                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse",
+                  hasAlert: latestHr > 85,
+                },
+                {
+                  id: "eclss" as const,
+                  label: "Cabin ECLSS",
+                  icon: Wind,
+                  metric: isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`,
+                  badge: hasCo2 ? "CO₂ SPIKE" : hasThermal ? "OVERHEAT" : hasSaa ? "SAA RAD" : null,
+                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse",
+                  hasAlert: !isNominal,
+                },
+                {
+                  id: "concordance" as const,
+                  label: "Concordance",
+                  icon: activeEvent ? ShieldAlert : CheckCircle2,
+                  metric: activeEvent ? titleCase(activeEvent.event_type) : "Nominal (0 active)",
+                  badge: activeEvent ? activeEvent.severity_level : null,
+                  badgeClass: eventTheme ? `${eventTheme.background} ${eventTheme.text} border ${eventTheme.border}` : "",
+                  hasAlert: Boolean(activeEvent),
+                },
+                {
+                  id: "symptoms" as const,
+                  label: "Crew Symptoms",
+                  icon: Stethoscope,
+                  metric: `${counts} logged reports`,
+                  badge: recentSymptoms.length > 0 ? `${recentSymptoms.length} recent` : null,
+                  badgeClass: "bg-slate-100 text-slate-700 border border-slate-200",
+                  hasAlert: false,
+                },
+                {
+                  id: "wearables" as const,
+                  label: "Huawei Watch",
+                  icon: Watch,
+                  metric: `${measurements.length} biometrics`,
+                  badge: "TruSeen 5.5+",
+                  badgeClass: "bg-teal-50 text-teal-800 border border-teal-200",
+                  hasAlert: false,
+                },
+                {
+                  id: "risk" as const,
+                  label: "Risk & Triage",
+                  icon: AlertTriangle,
+                  metric: gaugeAutonomicFlag ? "Autonomic strain" : "5-Factor nominal",
+                  badge: gaugeAutonomicFlag ? "STRAIN" : null,
+                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300",
+                  hasAlert: gaugeAutonomicFlag,
+                },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const active = activeSection === tab.id;
+                const isAlert = tab.hasAlert;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveSection(tab.id)}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2 text-left ${
+                      active
+                        ? isAlert
+                          ? "bg-amber-50 border-amber-400 text-amber-950 shadow-xs ring-2 ring-amber-400/40 font-bold"
+                          : "bg-sky-50 border-sky-400 text-sky-950 shadow-xs ring-2 ring-sky-400/30 font-bold"
+                        : isAlert
+                        ? "bg-amber-50/50 hover:bg-amber-50 border-amber-300 text-amber-800"
+                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <Icon className={`w-4 h-4 shrink-0 ${
+                        active
+                          ? isAlert ? "text-amber-700" : "text-sky-700"
+                          : isAlert ? "text-amber-600" : "text-slate-500"
+                      }`} />
+                      {tab.badge && (
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${tab.badgeClass}`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold leading-tight truncate">{tab.label}</div>
+                      <div className="text-[10px] font-mono text-slate-500 truncate mt-0.5">{tab.metric}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Progressive Disclosure Subsystem Cards */}
-          <div className="space-y-3">
-            {/* CARD 1: Physiological Telemetry */}
-            <article className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all duration-200 hover:border-slate-300">
-              <header
-                onClick={() => toggleCard("vitals")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("vitals"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
-                    <Activity className="w-4 h-4 shrink-0" />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Physiological Telemetry</h3>
-                    <p className="text-[11px] text-slate-500">Circadian baseline comparisons &amp; vital envelopes</p>
+          {/* FUNCTION 1: Physiological Telemetry */}
+          {(activeSection === "vitals" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-rose-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Synchronized Physiological Telemetry</h3>
                   </div>
-                </div>
-
-                {/* Key Glanceable Metrics Always Visible */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
-                    <span className="text-slate-500 text-[11px]">HR:</span>
-                    <span className={`font-mono font-bold ${latestHr > 85 ? "text-amber-700" : "text-slate-900"}`}>
-                      {latestHr.toFixed(0)} bpm
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <Brain className="w-3.5 h-3.5 text-indigo-500" />
-                    <span className="text-slate-500 text-[11px]">RMSSD:</span>
-                    <span className={`font-mono font-bold ${latestRmssd < 30 ? "text-amber-700" : "text-slate-900"}`}>
-                      {latestRmssd.toFixed(0)} ms
-                    </span>
-                  </div>
-
-                  <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <Droplets className="w-3.5 h-3.5 text-sky-500" />
-                    <span className="text-slate-500 text-[11px]">SpO₂:</span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {astronaut?.resting_spo2 ?? 98}%
-                    </span>
-                  </div>
-
-                  <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <Thermometer className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-slate-500 text-[11px]">Temp:</span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {isMetric
-                        ? `${(astronaut?.resting_temp ?? 36.8).toFixed(1)} °C`
-                        : `${(((astronaut?.resting_temp ?? 36.8) * 1.8) + 32).toFixed(1)} °F`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 pl-2">
-                    <span className="text-[11px] hidden sm:inline">{expandedCards.vitals ? "Hide Details" : "Show Details"}</span>
-                    {expandedCards.vitals ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                  </div>
-                </div>
-              </header>
-
-              {expandedCards.vitals && (
-                <div className="p-4 sm:p-6 border-t border-slate-100 space-y-6">
-                  <PhysiologicalCards astronautId={astronautId} />
-
-                  <article className="rounded-xl glass-panel p-4 sm:p-5">
-                    <h3 className="text-sm font-semibold text-slate-900">Cohort Baseline Targets</h3>
-                    <dl className="mt-3 divide-y divide-slate-100 text-xs">
-                      {[
-                        { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
-                        { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
-                        { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
-                        {
-                          label: "Core temp",
-                          value: isMetric
-                            ? `${astronaut?.resting_temp ?? 0} °C`
-                            : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
-                          icon: Thermometer,
-                        },
-                        {
-                          label: "Circadian shift",
-                          value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
-                          icon: Clock3,
-                        },
-                      ].map((row) => {
-                        const Icon = row.icon;
-                        return (
-                          <div
-                            key={row.label}
-                            className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
-                          >
-                            <dt className="flex items-center gap-2 text-slate-600">
-                              <Icon className="h-3.5 w-3.5 text-slate-400" />
-                              {row.label}
-                            </dt>
-                            <dd className="font-semibold font-mono text-slate-900 tabular-nums">{row.value}</dd>
-                          </div>
-                        );
-                      })}
-                    </dl>
-                  </article>
+                  <span className="text-xs font-mono text-slate-500">Resting HR: {astronaut?.resting_hr ?? 65} bpm · SpO₂: {astronaut?.resting_spo2 ?? 98}%</span>
                 </div>
               )}
-            </article>
+              <PhysiologicalCards astronautId={astronautId} />
 
-            {/* CARD 2: Cabin Environmental Telemetry (ECLSS) */}
-            <article className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all duration-200 hover:border-slate-300">
-              <header
-                onClick={() => toggleCard("eclss")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("eclss"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="p-2 rounded-xl bg-sky-50 text-sky-600 border border-sky-100">
-                    <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Cabin Environmental Telemetry (ECLSS)</h3>
-                      {hasCo2 && (
-                        <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[9px] font-bold text-amber-800 animate-pulse">
-                          CO₂ SPIKE
-                        </span>
-                      )}
-                      {hasThermal && (
-                        <span className="rounded-full bg-orange-100 border border-orange-300 px-2 py-0.5 text-[9px] font-bold text-orange-800 animate-pulse">
-                          HEAT SURGE
-                        </span>
-                      )}
-                      {hasSaa && (
-                        <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[9px] font-bold text-amber-800 animate-pulse">
-                          SAA RADIATION
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      Module: <strong className="text-slate-700">{envTelemetry.module.shortName}</strong> [{envTelemetry.location}]
-                    </p>
+              <article className="rounded-xl glass-panel p-4 sm:p-5">
+                <h3 className="text-sm font-semibold text-slate-900">Cohort Baseline Targets</h3>
+                <dl className="mt-3 divide-y divide-slate-100 text-xs">
+                  {[
+                    { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
+                    { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
+                    { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
+                    {
+                      label: "Core temp",
+                      value: isMetric
+                        ? `${astronaut?.resting_temp ?? 0} °C`
+                        : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
+                      icon: Thermometer,
+                    },
+                    {
+                      label: "Circadian shift",
+                      value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
+                      icon: Clock3,
+                    },
+                  ].map((row) => {
+                    const Icon = row.icon;
+                    return (
+                      <div
+                        key={row.label}
+                        className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
+                      >
+                        <dt className="flex items-center gap-2 text-slate-600">
+                          <Icon className="h-3.5 w-3.5 text-slate-400" />
+                          {row.label}
+                        </dt>
+                        <dd className="font-semibold font-mono text-slate-900 tabular-nums">{row.value}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </article>
+            </div>
+          )}
+
+          {/* FUNCTION 2: Cabin Environmental Telemetry (ECLSS) */}
+          {(activeSection === "eclss" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Wind className="w-4 h-4 text-sky-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Cabin Environmental Telemetry (ECLSS)</h3>
                   </div>
+                  <span className="text-xs font-mono text-slate-500">Module: {envTelemetry.module.shortName} [{envTelemetry.location}]</span>
                 </div>
-
-                {/* Key Atmospheric Metrics Always Visible */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <span className="text-slate-500 text-[11px]">CO₂:</span>
-                    <span className={`font-mono font-bold ${latestCo2 > 3500 ? "text-amber-700 font-extrabold" : "text-slate-900"}`}>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block">
+                    Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`font-mono text-xl font-bold tabular-nums ${latestCo2 > 3500 ? "text-amber-700" : "text-slate-900"}`}>
                       {isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`}
                     </span>
                   </div>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
+                  </span>
+                </div>
 
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <span className="text-slate-500 text-[11px]">Temp:</span>
-                    <span className={`font-mono font-bold ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
+                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block">
+                    Cabin Temp ({isMetric ? "°C" : "°F"})
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`font-mono text-xl font-bold tabular-nums ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
                       {isMetric ? `${latestCabinTemp.toFixed(1)} °C` : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
                     </span>
                   </div>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    Envelope 20.0–24.0 °C
+                  </span>
+                </div>
 
-                  <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <span className="text-slate-500 text-[11px]">Pressure:</span>
-                    <span className="font-mono font-bold text-slate-900">
+                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block">
+                    Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-mono text-xl font-bold tabular-nums text-slate-900">
                       {isMetric ? `${(latestPressure * 0.133322).toFixed(1)} kPa` : `${latestPressure.toFixed(1)} mmHg`}
                     </span>
                   </div>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
+                  </span>
+                </div>
 
-                  <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 text-xs shadow-2xs">
-                    <span className="text-slate-500 text-[11px]">Radiation:</span>
-                    <span className={`font-mono font-bold ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
+                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 block">
+                    Radiation Flux
+                  </span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`font-mono text-xl font-bold tabular-nums ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
                       {radValue.toFixed(2)} mGy/d
                     </span>
                   </div>
-
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 pl-2">
-                    <span className="text-[11px] hidden sm:inline">{expandedCards.eclss ? "Hide Details" : "Show Details"}</span>
-                    {expandedCards.eclss ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    Baseline 0.19 mGy/d
+                  </span>
                 </div>
-              </header>
+              </div>
 
-              {expandedCards.eclss && (
-                <div className="p-4 sm:p-6 border-t border-slate-100 space-y-6">
-                  {/* Detailed 4-Metric Grid */}
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500 block">
-                        Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
-                      </span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className={`font-mono text-xl font-bold tabular-nums ${latestCo2 > 3500 ? "text-amber-700" : "text-slate-900"}`}>
-                          {isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono block">
-                        {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
-                      </span>
-                    </div>
+              {/* 14-Module ISS Location & Sensor Selector */}
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs space-y-3">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Interactive ISS Module &amp; Compartment Sensor Map
+                </h4>
+                <SpacecraftModuleSelector />
+              </div>
+            </div>
+          )}
 
-                    <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500 block">
-                        Cabin Temp ({isMetric ? "°C" : "°F"})
-                      </span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className={`font-mono text-xl font-bold tabular-nums ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
-                          {isMetric ? `${latestCabinTemp.toFixed(1)} °C` : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono block">
-                        Envelope 20.0–24.0 °C
-                      </span>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500 block">
-                        Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
-                      </span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-mono text-xl font-bold tabular-nums text-slate-900">
-                          {isMetric ? `${(latestPressure * 0.133322).toFixed(1)} kPa` : `${latestPressure.toFixed(1)} mmHg`}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono block">
-                        {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
-                      </span>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500 block">
-                        Radiation Flux
-                      </span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className={`font-mono text-xl font-bold tabular-nums ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
-                          {radValue.toFixed(2)} mGy/d
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono block">
-                        Baseline 0.19 mGy/d
-                      </span>
-                    </div>
+          {/* FUNCTION 3: Clinical Concordance */}
+          {(activeSection === "concordance" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Clinical Concordance Engine</h3>
                   </div>
-
-                  {/* 14-Module ISS Location & Sensor Selector */}
-                  <div className="pt-2">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                      Interactive Station Sensor &amp; Module Map
-                    </h4>
-                    <SpacecraftModuleSelector />
-                  </div>
+                  <span className="text-xs font-mono text-slate-500">{activeEvent ? "Active Clinical Discordance" : "Circadian Envelopes Nominal"}</span>
                 </div>
               )}
-            </article>
 
-            {/* CARD 3: Clinical Concordance */}
-            <article className={`rounded-2xl border shadow-2xs overflow-hidden transition-all duration-200 ${activeEvent ? "border-amber-300/80 bg-amber-50/10 hover:border-amber-400" : "border-slate-200/90 bg-white hover:border-slate-300"}`}>
-              <header
-                onClick={() => toggleCard("concordance")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("concordance"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className={`p-2 rounded-xl border ${activeEvent && eventTheme ? `${eventTheme.background} ${eventTheme.border} ${eventTheme.text}` : "bg-emerald-50 text-emerald-600 border-emerald-100"}`}>
-                    {activeEvent ? <ShieldAlert className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Clinical Concordance</h3>
-                      {activeEvent && eventTheme && (
-                        <span className={`badge border ${eventTheme.border} ${eventTheme.text} ${eventTheme.background} text-[10px]`}>
+              {activeEvent && eventTheme ? (
+                <article className="rounded-2xl border border-amber-300/80 bg-white shadow-2xs p-5 sm:p-6 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`badge border ${eventTheme.border} ${eventTheme.text} ${eventTheme.background}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${eventTheme.dot}`} />
-                          {eventTheme.label}
+                          {eventTheme.label} · Active Concordance
                         </span>
-                      )}
+                        <Badge variant="default">{activeEvent.review_status}</Badge>
+                        <span className={`badge border ${uncertaintyTheme(activeEvent.uncertainty_level)}`}>
+                          Uncertainty {activeEvent.uncertainty_level}
+                        </span>
+                      </div>
+                      <h3 className="mt-2 text-lg font-bold tracking-tight text-slate-900">
+                        {titleCase(activeEvent.event_type)}
+                      </h3>
+                      <EventRationaleDisplay
+                        rationale={activeEvent.rationale}
+                        eventType={activeEvent.event_type}
+                      />
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate max-w-md">
-                      {activeEvent
-                        ? `${titleCase(activeEvent.event_type)} · ${activeEvent.review_status}`
-                        : "All evaluated multi-signal windows remain within calibrated envelopes"}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Inline Action & Toggle */}
-                <div className="flex items-center gap-2.5">
-                  {activeEvent && (
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         variant="default"
                         size="sm"
                         onClick={() => void acknowledge(activeEvent)}
                         disabled={reviewing === activeEvent.event_id}
-                        leftIcon={<CheckCircle2 className="h-3 w-3" />}
+                        leftIcon={<CheckCircle2 className="h-3.5 w-3.5 text-slate-600" />}
                       >
                         {activeEvent.review_status === "PENDING" ? "Acknowledge" : "Resolve"}
                       </Button>
@@ -1583,360 +1552,292 @@ export function OverviewView({
                           void openForEvent(activeEvent);
                           onNavigateToAssistant?.();
                         }}
-                        leftIcon={<Sparkles className="h-3 w-3" />}
+                        leftIcon={<Sparkles className="h-3.5 w-3.5" />}
                       >
-                        Explain
+                        Explain with Evidence
                       </Button>
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 pl-2">
-                    <span className="text-[11px] hidden sm:inline">{expandedCards.concordance ? "Hide Details" : "Show Details"}</span>
-                    {expandedCards.concordance ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                  </div>
-                </div>
-              </header>
-
-              {expandedCards.concordance && (
-                <div className="p-4 sm:p-6 border-t border-slate-100 space-y-6">
-                  {activeEvent && eventTheme ? (
-                    <div className="space-y-4">
-                      <EventRationaleDisplay
-                        rationale={activeEvent.rationale}
-                        eventType={activeEvent.event_type}
-                      />
-
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
-                          <p className="field-label">Window</p>
-                          <p className="mt-1 text-xs text-slate-900 font-mono">
-                            {formatDateTime(activeEvent.start_time)} →{" "}
-                            {formatDateTime(activeEvent.end_time)}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
-                          <p className="field-label">Peak deviation</p>
-                          <p className="mt-1 text-xs text-slate-900 font-mono">
-                            {activeEvent.peak_deviation_sigma !== null
-                              ? `${formatSigned(activeEvent.peak_deviation_sigma, 2)} σ`
-                              : "Not quantified"}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
-                          <p className="field-label">Contributing streams</p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
-                              <span
-                                key={stream}
-                                className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-mono text-slate-700"
-                              >
-                                {prettyStream(stream)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Immediate Clinical Action & Flight Countermeasures */}
-                      <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 p-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <ShieldAlert className="h-4 w-4 text-sky-700" />
-                          <span className="font-semibold text-xs text-sky-950 uppercase tracking-wider">
-                            Immediate Clinical Action Plan &amp; Protocol Guidelines
-                          </span>
-                        </div>
-                        <ul className="space-y-1.5 text-xs text-slate-700">
-                          <li className="flex items-start gap-2">
-                            <span className="font-mono text-sky-700 font-bold shrink-0">01</span>
-                            <span>Switch CDRA atmospheric carbon scrubbers to dual-bed high-flow cycle.</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="font-mono text-sky-700 font-bold shrink-0">02</span>
-                            <span>Verify Node 2 cabin air diffuser fan velocity (≥55 CFM) and direct crew hydration (500 mL).</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <span className="font-mono text-sky-700 font-bold shrink-0">03</span>
-                            <span>Cross-reference Concordance Timeline for synchronized 4-lane autonomic lag latency.</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {/* Recent Concordance History */}
-                  {orderedEvents.length > 0 && (
-                    <article className="rounded-xl glass-panel p-4 sm:p-5">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                          Concordance Event History &amp; Audit Trail
-                        </h4>
-                        <span className="text-xs text-slate-500 font-mono">
-                          {orderedEvents.length} events
-                        </span>
-                      </div>
-                      <ul className="divide-y divide-slate-100">
-                        {orderedEvents.slice(0, 6).map((event) => {
-                          const theme = severityTheme(event.severity_level);
-                          return (
-                            <li
-                              key={event.event_id}
-                              className="flex flex-wrap items-center justify-between gap-2 py-2.5"
-                            >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <span className={`h-2 w-2 rounded-full ${theme.dot}`} />
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-semibold text-slate-900">
-                                    {titleCase(event.event_type)}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500 font-mono">
-                                    {formatDateTime(event.start_time)} · {event.review_status}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`badge border ${theme.border} ${theme.text} ${theme.background}`}
-                                >
-                                  {theme.label}
-                                </span>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => void openForEvent(event)}
-                                >
-                                  Explain
-                                </Button>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </article>
-                  )}
-                </div>
-              )}
-            </article>
-
-            {/* CARD 4: Crew Symptoms & Self-Reports */}
-            <article className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all duration-200 hover:border-slate-300">
-              <header
-                onClick={() => toggleCard("symptoms")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("symptoms"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
-                    <Stethoscope className="w-4 h-4 shrink-0" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Crew Symptoms &amp; Self-Reports</h3>
-                      <Badge variant="default">{counts} reports</Badge>
-                    </div>
-                    <p className="text-[11px] text-slate-500 truncate">
-                      {recentSymptoms.length > 0
-                        ? `Latest: ${recentSymptoms[0].symptom_code.replace(/_/g, " ")} (${formatDateTime(recentSymptoms[0].occurred_at)})`
-                        : "No recent symptoms reported"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Inline Fast Log Buttons & Chevron */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="hidden lg:flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[11px] text-slate-500 mr-1">Fast Log:</span>
-                    {["HEADACHE", "FATIGUE", "NAUSEA"].map((symptomCode) => (
-                      <button
-                        key={symptomCode}
-                        type="button"
-                        onClick={() => void quickLogSymptom(symptomCode)}
-                        disabled={quickLogging === symptomCode}
-                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 cursor-pointer transition-colors"
-                      >
-                        {quickLogging === symptomCode ? "Logging..." : titleCase(symptomCode)}
-                      </button>
-                    ))}
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 pl-2">
-                    <span className="text-[11px] hidden sm:inline">{expandedCards.symptoms ? "Hide Reports" : "View Reports"}</span>
-                    {expandedCards.symptoms ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                  </div>
-                </div>
-              </header>
-
-              {expandedCards.symptoms && (
-                <div className="p-4 sm:p-6 border-t border-slate-100 space-y-4">
-                  {quickNotice && (
-                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 font-medium">
-                      {quickNotice}
-                    </div>
-                  )}
-
-                  {recentSymptoms.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-slate-200 p-4 text-xs text-slate-500">
-                      No symptom reports logged for this crew member.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {recentSymptoms.map((symptom) => (
-                        <li
-                          key={symptom.report_id}
-                          className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-slate-900">
-                              {symptom.symptom_code.replace(/_/g, " ")}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, index) => (
-                                <span
-                                  key={index}
-                                  className={`h-1.5 w-1.5 rounded-full ${
-                                    index < symptom.severity ? "bg-slate-800" : "bg-slate-200"
-                                  }`}
-                                />
-                              ))}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 font-mono">
-                            {formatDateTime(symptom.occurred_at)}
-                            {symptom.cabin_module ? ` · ${symptom.cabin_module}` : ""}
-                          </p>
-                          {symptom.notes ? (
-                            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-600">
-                              {symptom.notes}
-                            </p>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </article>
-
-            {/* CARD 5: Huawei Smart Watch Telemetry */}
-            <article className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all duration-200 hover:border-slate-300">
-              <header
-                onClick={() => toggleCard("wearables")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("wearables"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="p-2 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
-                    <Watch className="w-4 h-4 shrink-0" />
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Huawei Watch 4 Pro Telemetry</h3>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-teal-50 text-teal-800 border border-teal-200">
-                        TruSeen 5.5+
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      {measurements.length} continuous synchronized biometric records
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      onClick={() => onOpenHealthImport?.()}
-                    >
-                      Sync / Import
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 pl-2">
-                    <span className="text-[11px] hidden sm:inline">{expandedCards.wearables ? "Hide Panel" : "View Panel"}</span>
-                    {expandedCards.wearables ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                  </div>
-                </div>
-              </header>
-
-              {expandedCards.wearables && (
-                <div className="p-4 sm:p-6 border-t border-slate-100">
-                  <HuaweiHealthPanel
-                    measurements={measurements}
-                    onOpenImport={() => onOpenHealthImport?.()}
-                  />
-                </div>
-              )}
-            </article>
-
-            {/* CARD 6: Multi-Factor Risk & Triage */}
-            <article className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden transition-all duration-200 hover:border-slate-300">
-              <header
-                onClick={() => toggleCard("risk")}
-                className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer select-none bg-slate-50/40 hover:bg-slate-50 transition-colors"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCard("risk"); } }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
-                    <ShieldAlert className="w-4 h-4 shrink-0" />
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-slate-900">Multi-Factor Risk &amp; Triage</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gaugeAutonomicFlag ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
-                        {gaugeAutonomicFlag ? "AUTONOMIC STRAIN" : "5-FACTOR NOMINAL"}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500">
-                      Autonomous clinical risk matrix &amp; Bayesian triage matrix
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 text-xs font-semibold text-slate-600">
-                  <span className="text-[11px] hidden sm:inline">{expandedCards.risk ? "Hide Matrix" : "View Matrix & Gauge"}</span>
-                  {expandedCards.risk ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                </div>
-              </header>
-
-              {expandedCards.risk && (
-                <div className="p-4 sm:p-6 border-t border-slate-100 space-y-6">
-                  <ClinicalRiskMatrix />
-                  <ContextualTriageBanner />
-
-                  <div className="pt-2">
-                    <MultiFactorHealthGauge
-                      co2Ppm={latestCo2}
-                      radiationMGy={radValue}
-                      cabinTempC={latestCabinTemp}
-                      humidityPct={envTelemetry.humidity}
-                      pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
-                      autonomicFlagged={gaugeAutonomicFlag}
-                      hrLabel={gaugeHrLabel}
-                      isMetric={isMetric}
-                    />
-                  </div>
-
-                  <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
-                      <Radio className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-900">Decision support</h4>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                        Events are ranked by operational severity. Explanations are
-                        grounded in the bundled NASA HRR/OSDR corpus with non-causal verification.
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                      <p className="field-label">Window</p>
+                      <p className="mt-1 text-xs text-slate-900 font-mono">
+                        {formatDateTime(activeEvent.start_time)} →{" "}
+                        {formatDateTime(activeEvent.end_time)}
                       </p>
                     </div>
-                  </article>
+                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                      <p className="field-label">Peak deviation</p>
+                      <p className="mt-1 text-xs text-slate-900 font-mono">
+                        {activeEvent.peak_deviation_sigma !== null
+                          ? `${formatSigned(activeEvent.peak_deviation_sigma, 2)} σ`
+                          : "Not quantified"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                      <p className="field-label">Contributing streams</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
+                          <span
+                            key={stream}
+                            className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-mono text-slate-700"
+                          >
+                            {prettyStream(stream)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Immediate Clinical Action & Flight Countermeasures */}
+                  <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-sky-700" />
+                      <span className="font-semibold text-xs text-sky-950 uppercase tracking-wider">
+                        Immediate Clinical Action Plan &amp; Protocol Guidelines
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5 text-xs text-slate-700">
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-sky-700 font-bold shrink-0">01</span>
+                        <span>Switch CDRA atmospheric carbon scrubbers to dual-bed high-flow cycle.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-sky-700 font-bold shrink-0">02</span>
+                        <span>Verify Node 2 cabin air diffuser fan velocity (≥55 CFM) and direct crew hydration (500 mL).</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-mono text-sky-700 font-bold shrink-0">03</span>
+                        <span>Cross-reference Concordance Timeline for synchronized 4-lane autonomic lag latency.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </article>
+              ) : (
+                <article className="rounded-xl glass-panel flex items-center gap-4 p-5">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      No active concordance events
+                    </h3>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      All evaluated multi-signal windows remain within calibrated circadian envelopes for {astronaut?.callsign ?? astronautId}.
+                    </p>
+                  </div>
+                </article>
+              )}
+
+              {/* Concordance History Log */}
+              {orderedEvents.length > 0 && (
+                <article className="rounded-xl glass-panel p-4 sm:p-5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Concordance Event History &amp; Audit Trail
+                    </h4>
+                    <span className="text-xs text-slate-500 font-mono">
+                      {orderedEvents.length} events
+                    </span>
+                  </div>
+                  <ul className="divide-y divide-slate-100">
+                    {orderedEvents.slice(0, 6).map((event) => {
+                      const theme = severityTheme(event.severity_level);
+                      return (
+                        <li
+                          key={event.event_id}
+                          className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className={`h-2 w-2 rounded-full ${theme.dot}`} />
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-slate-900">
+                                {titleCase(event.event_type)}
+                              </p>
+                              <p className="text-[11px] text-slate-500 font-mono">
+                                {formatDateTime(event.start_time)} · {event.review_status}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`badge border ${theme.border} ${theme.text} ${theme.background}`}>
+                              {theme.label}
+                            </span>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => void openForEvent(event)}
+                            >
+                              Explain
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </article>
+              )}
+            </div>
+          )}
+
+          {/* FUNCTION 4: Crew Symptoms & Self-Reports */}
+          {(activeSection === "symptoms" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Crew Symptoms &amp; Clinical Diary</h3>
+                  </div>
+                  <Badge variant="default">{counts} reports total</Badge>
                 </div>
               )}
-            </article>
-          </div>
+
+              {/* Fast Log Strip */}
+              <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Quick Clinical Symptom Log
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-mono">Record directly to station diary</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {["HEADACHE", "FATIGUE", "NAUSEA", "DIZZINESS"].map((symptomCode) => (
+                    <button
+                      key={symptomCode}
+                      type="button"
+                      onClick={() => void quickLogSymptom(symptomCode)}
+                      disabled={quickLogging === symptomCode}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer transition-colors shadow-2xs"
+                    >
+                      {quickLogging === symptomCode ? "Logging..." : titleCase(symptomCode)}
+                    </button>
+                  ))}
+                </div>
+
+                {quickNotice && (
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 font-medium">
+                    {quickNotice}
+                  </div>
+                )}
+              </div>
+
+              {/* Symptom Log */}
+              <article className="rounded-xl glass-panel p-4 sm:p-5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Recent Crew Symptom Reports
+                  </h4>
+                  <span className="text-xs text-slate-500 font-mono">{recentSymptoms.length} displayed</span>
+                </div>
+                {recentSymptoms.length === 0 ? (
+                  <p className="mt-3 rounded-lg border border-dashed border-slate-200 p-4 text-xs text-slate-500">
+                    No symptom reports logged for this crew member.
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {recentSymptoms.map((symptom) => (
+                      <li
+                        key={symptom.report_id}
+                        className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-slate-900">
+                            {symptom.symptom_code.replace(/_/g, " ")}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <span
+                                key={index}
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  index < symptom.severity ? "bg-slate-800" : "bg-slate-200"
+                                }`}
+                              />
+                            ))}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500 font-mono">
+                          {formatDateTime(symptom.occurred_at)}
+                          {symptom.cabin_module ? ` · ${symptom.cabin_module}` : ""}
+                        </p>
+                        {symptom.notes ? (
+                          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-600">
+                            {symptom.notes}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </div>
+          )}
+
+          {/* FUNCTION 5: Huawei Smart Watch Telemetry */}
+          {(activeSection === "wearables" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Watch className="w-4 h-4 text-teal-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Huawei Watch 4 Pro Telemetry</h3>
+                  </div>
+                  <span className="text-xs font-mono text-slate-500">{measurements.length} biometrics synchronized</span>
+                </div>
+              )}
+              <HuaweiHealthPanel
+                measurements={measurements}
+                onOpenImport={() => onOpenHealthImport?.()}
+              />
+            </div>
+          )}
+
+          {/* FUNCTION 6: Multi-Factor Risk & Triage */}
+          {(activeSection === "risk" || activeSection === "all") && (
+            <div className="space-y-4">
+              {activeSection !== "all" && (
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-purple-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Multi-Factor Risk &amp; Clinical Triage</h3>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gaugeAutonomicFlag ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
+                    {gaugeAutonomicFlag ? "AUTONOMIC STRAIN" : "5-FACTOR NOMINAL"}
+                  </span>
+                </div>
+              )}
+
+              <ClinicalRiskMatrix />
+              <ContextualTriageBanner />
+
+              <div className="pt-2">
+                <MultiFactorHealthGauge
+                  co2Ppm={latestCo2}
+                  radiationMGy={radValue}
+                  cabinTempC={latestCabinTemp}
+                  humidityPct={envTelemetry.humidity}
+                  pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
+                  autonomicFlagged={gaugeAutonomicFlag}
+                  hrLabel={gaugeHrLabel}
+                  isMetric={isMetric}
+                />
+              </div>
+
+              <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
+                  <Radio className="h-4 w-4" />
+                </span>
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-900">Decision support</h4>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    Events are ranked by operational severity. Explanations are
+                    grounded in the bundled NASA HRR/OSDR corpus with non-causal verification.
+                  </p>
+                </div>
+              </article>
+            </div>
+          )}
         </div>
       </SurgeonOnly>
 
