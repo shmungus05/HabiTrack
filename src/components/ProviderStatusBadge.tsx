@@ -1,6 +1,6 @@
 /**
  * web/src/components/ProviderStatusBadge.tsx: Displays active decision support
- * engine status and live AI model telemetry with Perplexity minimalist aesthetics.
+ * engine status and live SI model telemetry with Perplexity minimalist aesthetics.
  */
 
 import React, { useEffect } from "react";

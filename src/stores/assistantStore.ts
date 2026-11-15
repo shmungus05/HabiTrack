@@ -1,5 +1,5 @@
 /**
- * web/src/stores/assistantStore.ts: Unified Standby AI chatbot conversation thread,
+ * web/src/stores/assistantStore.ts: Unified Standby SI chatbot conversation thread,
  * Mastra 5-factor clinical triage engine, push-to-talk voice state,
  * flight rule latching, and cross-crew context isolation.
  */
@@ -34,9 +34,10 @@ import {
   renderDeterministicBriefingProse,
   type ShiftHandoverBriefing,
 } from "../features/handover";
+import { flightSI } from "../services/ai/core/FlightSI";
 import { containsProhibitedCausalTerms } from "../features/health-report/healthReportCompiler";
 import { generateGeminiRagResponse } from "../services/ai/geminiClient";
-import type { AIModelMode } from "../services/ai/aiProvider";
+import type { SIModelMode, AIModelMode } from "../services/ai/aiProvider";
 import {
   checkWebGpuSupport,
   initLocalModel,
@@ -130,7 +131,7 @@ interface AssistantState {
   selectedCompartment: string;
   error: string | null;
 
-  // AI Voice Mode State
+  // SI Voice Mode State
   isVoiceModalOpen: boolean;
   isSpeaking: boolean;
   speakingMessageId: string | null;
@@ -141,8 +142,9 @@ interface AssistantState {
   selectedVoiceName: string | null;
   voicePitch: number;
 
-  // AI Model Selection & Local WebGPU Lifecycle
-  aiModelMode: AIModelMode;
+  // SI Model Selection & Local WebGPU Lifecycle
+  aiModelMode: SIModelMode;
+  siModelMode?: SIModelMode;
   localModelStatus: LocalModelStatus;
   localModelProgress: number; // 0 to 100
   localModelStatusText: string;
@@ -154,7 +156,8 @@ interface AssistantState {
   closeDrawer: () => void;
   openVoiceModal: () => void;
   closeVoiceModal: () => void;
-  setAiModelMode: (mode: AIModelMode) => void;
+  setAiModelMode: (mode: SIModelMode) => void;
+  setSiModelMode?: (mode: SIModelMode) => void;
   checkWebGpu: () => Promise<boolean>;
   loadLocalModel: () => Promise<void>;
   unloadLocalModel: () => Promise<void>;
@@ -199,12 +202,15 @@ const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   timestamp: "Ready",
 };
 
-const AI_MODEL_MODE_STORAGE_KEY = "habitrack_ai_model_mode";
+const SI_MODEL_MODE_STORAGE_KEY = "habitrack_si_model_mode";
+const LEGACY_AI_MODEL_MODE_STORAGE_KEY = "habitrack_ai_model_mode";
 
-function readPersistedAiModelMode(): AIModelMode {
+function readPersistedAiModelMode(): SIModelMode {
   if (typeof window === "undefined") return "frontier";
   try {
-    const saved = localStorage.getItem(AI_MODEL_MODE_STORAGE_KEY);
+    const saved =
+      localStorage.getItem(SI_MODEL_MODE_STORAGE_KEY) ||
+      localStorage.getItem(LEGACY_AI_MODEL_MODE_STORAGE_KEY);
     return saved === "local" ? "local" : "frontier";
   } catch {
     return "frontier";
@@ -366,15 +372,19 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
     set({ isVoiceModalOpen: false });
   },
 
-  setAiModelMode: (mode: AIModelMode) => {
-    set({ aiModelMode: mode });
+  setAiModelMode: (mode: SIModelMode) => {
+    set({ aiModelMode: mode, siModelMode: mode });
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(AI_MODEL_MODE_STORAGE_KEY, mode);
+        localStorage.setItem(SI_MODEL_MODE_STORAGE_KEY, mode);
+        localStorage.setItem(LEGACY_AI_MODEL_MODE_STORAGE_KEY, mode);
       } catch {
         // Ignore storage error
       }
     }
+  },
+  setSiModelMode: (mode: SIModelMode) => {
+    get().setAiModelMode(mode);
   },
 
   checkWebGpu: async () => {
@@ -415,10 +425,12 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         localModelStatusText: "Model loaded in VRAM (Offline Ready)",
         localModelError: null,
         aiModelMode: "local",
+        siModelMode: "local",
       });
       if (typeof window !== "undefined") {
         try {
-          localStorage.setItem(AI_MODEL_MODE_STORAGE_KEY, "local");
+          localStorage.setItem(SI_MODEL_MODE_STORAGE_KEY, "local");
+          localStorage.setItem(LEGACY_AI_MODEL_MODE_STORAGE_KEY, "local");
         } catch {
           // ignore
         }
@@ -723,40 +735,19 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
         const briefing = await fetchAndBuildShiftHandover(windowHours);
         if (sequence !== requestSequence) return;
 
-        let narrativeText = renderDeterministicBriefingProse(briefing);
-        let generatedBy: "deterministic" | "llm" = "deterministic";
-
-        // Attempt LLM prose synthesis if Gemini key is available
-        try {
-          const prompt = `You are HabiTrack Flight Surgeon Co-Pilot. You are summarizing a pre-computed structured shift handover briefing across the ISS cohort for the last ${briefing.window.hours} hours.
-Do not add facts not present in the JSON.
-Do not compute or estimate new numbers.
-Use non-causal language; describe co-occurrence or temporal association, never single-variable causation.
-Cite source IDs inline for every claim (e.g. [evt-001], [FR-ECLSS-001]).
-If a section has no data, say so explicitly rather than omitting it.
-
-Structured Briefing Data:
-${JSON.stringify(briefing, null, 2)}`;
-
-          const llmRes = await generateGeminiRagResponse(prompt, [], "ISS Expedition 71 Flight Surgeon");
-          if (llmRes.answer && !containsProhibitedCausalTerms(llmRes.answer)) {
-            narrativeText = llmRes.answer;
-            generatedBy = "llm";
-          }
-        } catch {
-          // Fall back gracefully to deterministic narrative template
-        }
-
-        briefing.generatedBy = generatedBy;
+        const briefingRes = await flightSI.generateShiftBriefing({
+          windowHours,
+          briefingData: briefing,
+        });
 
         const botMsg: ChatMessage = {
           id: `asst-${Date.now()}`,
           sender: "assistant",
-          text: narrativeText,
+          text: briefingRes.narrativeText,
           timestamp: formatNow(),
-          provider: generatedBy === "llm" ? "Gemini 2.5 Flash" : "Deterministic Shift Compiler",
-          shiftHandover: briefing,
-          disclaimer: briefing.disclaimer,
+          provider: briefingRes.provider,
+          shiftHandover: briefingRes.briefing,
+          disclaimer: briefingRes.disclaimer,
         };
 
         set((state) => ({
@@ -781,132 +772,58 @@ ${JSON.stringify(briefing, null, 2)}`;
     // Check if query is a clinical symptom evaluation or 5-factor triage
     if (isSymptomTriageQuery(trimmed, currentCompartment)) {
       try {
-        const workflow =
-          mastra.getWorkflow("clinicalTriage") ||
-          mastra.getWorkflow("clinical-triage-workflow");
-
-        const triageResult = await workflow.execute({
+        const triageResult = await flightSI.triageSymptom({
           symptomText: trimmed,
           compartmentOverride: currentCompartment !== "Auto-Detect" ? currentCompartment : undefined,
-          currentSnapshot: DEFAULT_SNAPSHOT,
+          snapshot: DEFAULT_SNAPSHOT,
           astronautId: astronautId ?? "ASTRO-01",
         });
 
         if (sequence !== requestSequence) return;
 
-        // Fetch flight rule if latched
-        let latchedRule: FlightRule | null = null;
-        if (triageResult.latchedRuleId) {
-          try {
-            latchedRule = await fetchFlightRule(triageResult.latchedRuleId);
-          } catch {
-            // Best effort
+        let responseContent = triageResult.conversationalOverview;
+        if (!responseContent) {
+          if (triageResult.primarySymptomCategory === "MUSCLE_SORENESS") {
+            responseContent = `I understand you are experiencing soreness or musculoskeletal stiffness. Based on your mission profile, this is temporally associated with microgravity resistance training (ARED) or aerobic countermeasures.\n\n` +
+              `**Physiological Context**: ${triageResult.physiologicalRationale}\n\n` +
+              `**Recovery Latency**: Peak soreness resolves within **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
+              `Below are recommended recovery actions and verified instructional guides from the SpaceLife Library:`;
+          } else if (triageResult.primarySymptomCategory === "SLEEP_DISTURBANCE") {
+            responseContent = `Evaluated sleep habitability and rest-cycle environment in **${triageResult.compartmentName}**.\n\n` +
+              `**Habitability Assessment**: ${triageResult.physiologicalRationale}\n\n` +
+              `**Rest Window Dynamics**: **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
+              `Below are sleep station rigging procedures and verified guides:`;
+          } else if (triageResult.primarySymptomCategory === "CRITICAL_EMERGENCY") {
+            responseContent = `**CRITICAL MEDICAL ESCALATION**\n\n${triageResult.physiologicalRationale}\n\nImmediate operational protocol latched: **${triageResult.flightRuleTitle}** (${triageResult.latchedRuleId}).`;
+          } else {
+            responseContent = `Evaluated report against current environmental telemetry in **${triageResult.compartmentName}**.\n\n` +
+              `**Physiological Excursion**: ${triageResult.physiologicalRationale}\n\n` +
+              `**Biological Latency Lag**: Expected onset peak is **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).`;
           }
         }
 
-        // Extract conversation history to inform the query
-        const chatHistory = get().messages
-          .slice(-6)
-          .filter((m) => m.text && m.id !== "welcome-msg")
-          .map((m) => ({
-            role: (m.sender === "user" ? "user" : "model") as "user" | "model",
-            text: m.text,
-          }));
-
-        const telemetryContext = {
-          ...DEFAULT_SNAPSHOT,
-          compartment: triageResult.compartmentName,
-        };
-
-        // Query research citations & conversational synthesis in background
-        let assistantResp: AssistantResponse | undefined;
-        try {
-          assistantResp = await queryAssistant(
-            trimmed,
-            3,
-            astronautId,
-            eventId,
-            chatHistory,
-            telemetryContext
-          );
-        } catch {
-          // Best effort
-        }
-
-        let responseContent = "";
-        const dynamicOverview = (triageResult as any).conversationalOverview;
-        const category = (triageResult as any).primarySymptomCategory;
-
-        if (dynamicOverview) {
-          responseContent = dynamicOverview;
-        } else if (assistantResp && assistantResp.mode === "GEMINI_GENERATIVE" && assistantResp.answer) {
-          responseContent = assistantResp.answer;
-        } else if (category === "MUSCLE_SORENESS") {
-          responseContent = `I understand you are experiencing soreness or musculoskeletal stiffness. Based on your mission profile, this is temporally associated with microgravity resistance training (ARED) or aerobic countermeasures.\n\n` +
-            `**Physiological Context**: ${triageResult.physiologicalRationale}\n\n` +
-            `**Recovery Latency**: Peak soreness resolves within **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
-            `Below are recommended recovery actions and verified instructional guides from the SpaceLife Library:`;
-        } else if (category === "SLEEP_DISTURBANCE") {
-          responseContent = `Evaluated sleep habitability and rest-cycle environment in **${triageResult.compartmentName}**.\n\n` +
-            `**Habitability Assessment**: ${triageResult.physiologicalRationale}\n\n` +
-            `**Rest Window Dynamics**: **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).\n\n` +
-            `Below are sleep station rigging procedures and verified guides:`;
-        } else if (category === "CRITICAL_EMERGENCY") {
-          responseContent = `**CRITICAL MEDICAL ESCALATION**\n\n${triageResult.physiologicalRationale}\n\nImmediate operational protocol latched: **${triageResult.flightRuleTitle}** (${triageResult.latchedRuleId}).`;
-        } else {
-          responseContent = `Evaluated report against current environmental telemetry in **${triageResult.compartmentName}**.\n\n` +
-            `**Physiological Excursion**: ${triageResult.physiologicalRationale}\n\n` +
-            `**Biological Latency Lag**: Expected onset peak is **${triageResult.biologicalLatencyLag}** (${triageResult.confidenceMatch}).`;
-        }
-
-        const effectiveSnapshot: TelemetrySnapshot = triageResult.telemetryReadings
-          ? {
-              co2Ppm: triageResult.telemetryReadings.co2Ppm,
-              tempC: triageResult.telemetryReadings.tempC,
-              humidityPct: triageResult.telemetryReadings.humidityPct,
-              radiationRateMGy: triageResult.telemetryReadings.radiationRateMGy,
-              pressureMmHg: triageResult.telemetryReadings.pressureMmHg,
-            }
-          : DEFAULT_SNAPSHOT;
-
         const botMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
+          id: `si-${Date.now()}`,
           sender: "assistant",
           timestamp: formatNow(),
           text: responseContent,
-          provider: assistantResp?.provider_used || "Mastra Onboard First-Response Engine",
-          response: assistantResp,
+          provider: triageResult.provider,
           location: triageResult.compartmentName,
-          snapshot: effectiveSnapshot,
+          snapshot: triageResult.telemetryReadings,
           interimActions: triageResult.interimActions,
-          resources: (triageResult as any).resources ?? assistantResp?.resources,
-          followupQuestions: (triageResult as any).followupQuestions,
-          intent: (triageResult as any).intent,
+          resources: triageResult.resources,
+          followupQuestions: triageResult.followupQuestions,
+          intent: triageResult.intent,
           lagWindow: triageResult.biologicalLatencyLag,
           latchedRuleId: triageResult.latchedRuleId,
           flightRuleTitle: triageResult.flightRuleTitle,
           confidenceMatch: triageResult.confidenceMatch,
           disclaimer: triageResult.disclaimer,
           surgeonHandoffPacket: triageResult.surgeonHandoffPacket,
-          symptomConsent: {
-            status: "PENDING",
-            symptomText: trimmed,
-            location: triageResult.compartmentName,
-            snapshot: effectiveSnapshot,
-            astronautId: astronautId ?? "ASTRO-01",
-            callsign:
-              (astronautId ?? "ASTRO-01") === "ASTRO-01"
-                ? "CDR M. Vance"
-                : (astronautId ?? "ASTRO-01") === "ASTRO-02"
-                ? "FE-1 Dr. S. Patel"
-                : "MS-1 K. Lindgren",
-            latchedRuleId: triageResult.latchedRuleId,
-          },
+          symptomConsent: triageResult.symptomConsent,
         };
 
         set((state) => ({
-          activeExplanation: assistantResp || state.activeExplanation,
-          latchedRule: latchedRule || state.latchedRule,
           isLoading: false,
           messages: [...state.messages, botMsg],
         }));
@@ -916,11 +833,11 @@ ${JSON.stringify(briefing, null, 2)}`;
         }
         return;
       } catch (err) {
-        console.warn("[AssistantStore] Mastra triage workflow error, falling back to queryAssistant:", err);
+        console.warn("[AssistantStore] Triage error, falling back to general SI:", err);
       }
     }
 
-    // Default: Standard co-pilot knowledge query (Gemini 2.5 Flash / extractive RAG)
+    // Default: Standard SI knowledge query (Gemini 2.5 Flash / extractive RAG)
     try {
       const chatHistory = get().messages
         .slice(-6)

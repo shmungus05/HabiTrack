@@ -30,7 +30,6 @@ import { acknowledgeSymptom, fetchSymptoms, submitSymptom } from "../services/ap
 import type { SymptomReport } from "../types/api";
 import { titleCase } from "../lib/format";
 import { useAssistantStore } from "../stores/assistantStore";
-import { PhysiologicalCards } from "../features/biometrics";
 import { ISS_14_MODULES, useStationLocationStore } from "../features/topology";
 import { useActiveMissionTime } from "../stores/missionStore";
 import { useRoleStore } from "../stores/roleStore";
@@ -403,7 +402,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
             className="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-white" />
-            <span>Launch AI Symptom Triage</span>
+            <span>Launch SI Symptom Triage</span>
           </button>
 
           <div className="flex items-center glass-panel-subtle rounded-xl p-1 text-xs">
@@ -432,9 +431,6 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </div>
         </div>
       </div>
-
-      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
-      <PhysiologicalCards astronautId={astronautId} />
 
       {notice && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-2">
@@ -608,7 +604,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                       onClick={() => openDrawer("chat")}
                       className="text-sky-700 font-semibold underline underline-offset-2"
                     >
-                      AI Symptom Triage
+                      SI Symptom Triage
                     </button>
                     .
                   </p>

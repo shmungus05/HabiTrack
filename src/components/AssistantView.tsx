@@ -476,7 +476,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                                 isUser ? "text-sky-300 text-xs" : "text-sky-700 uppercase tracking-wider text-[11px]"
                               }`}
                             >
-                              {isUser ? "Astronaut (Crew)" : "HabiTrack Flight Co-Pilot"}
+                              {isUser ? "Astronaut (Crew)" : "HabiTrack Flight SI"}
                             </span>
                             {!isUser && (
                               <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-medium text-slate-500">
@@ -560,7 +560,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                                 >
                                   <span className="leading-snug">{sug}</span>
                                   <span className="text-[10px] font-mono text-slate-400 group-hover:text-sky-600 mt-2.5 flex items-center gap-1">
-                                    Ask Co-Pilot →
+                                    Ask SI →
                                   </span>
                                 </button>
                               ))}

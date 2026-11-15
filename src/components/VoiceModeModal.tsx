@@ -315,7 +315,7 @@ export const VoiceModeModal: React.FC = () => {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Interactive AI Voice Mode"
+      aria-label="Interactive SI Voice Mode"
       className="fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 md:p-14 bg-slate-950/95 backdrop-blur-3xl text-white select-none animate-in fade-in duration-75"
     >
       {/* Top Header Bar */}
@@ -454,7 +454,7 @@ export const VoiceModeModal: React.FC = () => {
         <div
           onClick={handleOrbClick}
           className="relative flex items-center justify-center w-52 h-52 sm:w-64 sm:h-64 cursor-pointer group"
-          title={isSpeaking ? "Tap to interrupt AI speech" : "Tap to mute / resume microphone"}
+          title={isSpeaking ? "Tap to interrupt SI speech" : "Tap to mute / resume microphone"}
         >
           {/* Outer Pulsing Glow Wave 2 */}
           <div
@@ -593,7 +593,7 @@ export const VoiceModeModal: React.FC = () => {
           )}
         </div>
 
-        {/* User Spoken Input Card ("what I taught/talked") — strictly no AI text clutter */}
+        {/* User Spoken Input Card ("what I taught/talked") — strictly no SI text clutter */}
         {displayedUserPrompt ? (
           <div className="mt-4 max-w-lg w-full mx-auto p-5 rounded-[28px] bg-slate-900/90 border border-slate-800/90 backdrop-blur-xl text-left shadow-2xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-150">
             <div className="flex items-center justify-between gap-2 mb-2">

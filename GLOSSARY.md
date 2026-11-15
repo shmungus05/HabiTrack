@@ -94,6 +94,10 @@ _Avoid_: Search result, LLM answer, AI diagnosis, summary
 
 ### Operational Decision Support & Flight Rules
 
+**Synthetic Intelligence (SI)**:
+The onboard deterministic and edge-synthesizing clinical reasoning system providing operational decision support, telemetry concordance differencing, and procedural checklists for human spaceflight expeditions.
+_Avoid_: AI, artificial intelligence, co-pilot, copilot, automated doctor
+
 **Operational Flight Rule**:
 A certified flight-qualified contingency document parsed from primary Markdown, containing structured frontmatter, condition thresholds, and verbatim checklist steps cryptographically verified by SHA-256.
 _Avoid_: Playbook, protocol, SOP, guidelines, runbook

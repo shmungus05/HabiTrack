@@ -1,5 +1,5 @@
 /**
- * Test suite for conversational AI triage filter, multi-turn memory, and API key management.
+ * Test suite for conversational SI triage filter, multi-turn memory, and API key management.
  */
 
 import { getGeminiApiKey } from "../services/ai/geminiClient.ts";
@@ -118,7 +118,7 @@ function testTriageDifferencing(): void {
 async function run(): Promise<void> {
   testTriageDifferencing();
   await testQueryAssistantWithHistory();
-  console.log(`PASS · ${assertions} assertions · Conversational AI multi-turn memory & triage differencing`);
+  console.log(`PASS · ${assertions} assertions · Conversational SI multi-turn memory & triage differencing`);
 }
 
 run().catch((err: unknown) => {

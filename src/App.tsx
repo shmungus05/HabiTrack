@@ -74,7 +74,7 @@ const ALL_VIEWS: readonly ViewDefinition[] = [
   { key: "timeline", label: "Timeline", icon: Activity, path: "/timeline", surgeonOnly: false },
   { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms", surgeonOnly: false },
   { key: "library", label: "Library", icon: LibraryIcon, path: "/library", surgeonOnly: false },
-  { key: "assistant", label: "HabiTrack AI", icon: Sparkles, path: "/assistant", surgeonOnly: false },
+  { key: "assistant", label: "HabiTrack SI", icon: Sparkles, path: "/assistant", surgeonOnly: false },
   { key: "research", label: "Research", icon: BookOpen, path: "/research", surgeonOnly: true },
   { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts", surgeonOnly: false },
   { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: false },
@@ -277,10 +277,10 @@ export default function App() {
     return <IntroPage onSelectRole={() => setActiveView("overview")} />;
   }
 
-  // Dedicated Full-Page Standalone AI Workspace — outside the cockpit shell!
+  // Dedicated Full-Page Standalone SI Workspace — outside the cockpit shell!
   if (activeView === "assistant") {
     return (
-      <ErrorBoundary fallbackTitle="AI Assistant encountered a display issue">
+      <ErrorBoundary fallbackTitle="SI Assistant encountered a display issue">
         <AssistantView
           onBackToDashboard={() => {
             const returnKey = previousView === "assistant" ? "overview" : previousView;

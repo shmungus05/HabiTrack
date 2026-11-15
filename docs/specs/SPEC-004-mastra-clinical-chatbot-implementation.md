@@ -13,7 +13,7 @@
 D:\HabiTrack\src\mastra\
 ├── index.ts                         # Singleton Mastra container (export const mastra)
 ├── agents\
-│   └── firstResponderAgent.ts       # Mastra Agent: Onboard First-Response Co-Pilot
+│   └── firstResponderAgent.ts       # Mastra Agent: Onboard First-Response SI
 ├── workflows\
 │   └── clinicalTriageWorkflow.ts   # Mastra Workflow: 5-step deterministic DAG
 ├── steps\
@@ -35,5 +35,5 @@ D:\HabiTrack\src\mastra\
 - **`createTool`**: Exposes environmental sensor snapshots ($ppCO_2$, temperature, humidity) and NASA flight rule catalog entries to the agent.
 - **`createStep`**: Type-safe Zod-validated pipeline steps for symptom classification, environmental correlation, interim physical countermeasure generation, and epistemic guardrails.
 - **`createWorkflow`**: Chains the steps into a deterministic DAG (`.step().then().commit()`), ensuring the exact 3 stabilization actions are calculated before the surgeon arrives.
-- **`createAgent`**: Natural language conversational assistant configured with the "First-Response Interim Co-Pilot" persona.
+- **`createAgent`**: Natural language conversational assistant configured with the "First-Response Interim SI" persona.
 - **`Mastra`**: Exported application instance bound to [SymptomChatbotModule.tsx](file:///D:/HabiTrack/src/features/symptoms/SymptomChatbotModule.tsx) and [AssistantDrawer.tsx](file:///D:/HabiTrack/src/components/AssistantDrawer.tsx).

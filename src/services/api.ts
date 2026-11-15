@@ -7,8 +7,9 @@
 
 import researchChunksRaw from "../data/researchChunks.json" with { type: "json" };
 import officialNasaGuidesRaw from "../data/officialNasaGuides.json" with { type: "json" };
+import { flightSI } from "./ai/core/FlightSI.ts";
 import { generateGeminiRagResponse } from "./ai/geminiClient.ts";
-import { generateUnifiedRagResponse, type AIModelMode } from "./ai/aiProvider.ts";
+import { generateUnifiedRagResponse, type SIModelMode, type AIModelMode } from "./ai/aiProvider.ts";
 import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator.ts";
 import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore.ts";
 import type { LibraryGuide, GuideCategory, NasaMediaItem } from "../types/library";
@@ -607,154 +608,15 @@ export async function queryAssistant(
     compartment?: string;
   } | null
 ): Promise<AssistantResponse> {
-  const seed = await loadSeedData();
-  const textLower = text.toLowerCase().trim();
+  const result = await flightSI.interact({
+    query: text,
+    astronautId,
+    concordanceEventId,
+    history,
+    telemetryContext,
+  });
 
-  const isGreeting =
-    /^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|thanks|thank\s*you|appreciate|cheers|bye|goodbye|awesome|great|ok|okay|got\s*it)\b/i.test(
-      textLower
-    );
-  const isMoodQuery = /(happy|morale|mood|feeling|mental|stress|psychological|emotion|wellbeing|depress|anxious)/i.test(textLower);
-  const isIdentityQuery = /(who are you|what can you do|help|capabilities|overview)/i.test(textLower);
-  const isCreativeOrCasual = /(poem|story|joke|rhyme|haiku|sing|song|casual|fun|taco|pizza|food|movie|music|humor|laugh|pirate|slang)/i.test(textLower);
-
-  // Only perform research literature chunk lookup for genuine biomedical/technical questions
-  const evidence = (isGreeting || isMoodQuery || isIdentityQuery || isCreativeOrCasual)
-    ? []
-    : searchResearchChunks(text, topK);
-
-  // Check if any flight rule strongly matches
-  let matchedRule: FlightRule | null = null;
-  if (textLower.includes("co2") || textLower.includes("eclss") || textLower.includes("headache")) {
-    matchedRule = seed.flightRules.find((r) => r.rule_id === "FR-ECLSS-001") ?? null;
-  } else if (textLower.includes("cdra") || textLower.includes("thermal") || textLower.includes("bed")) {
-    matchedRule = seed.flightRules.find((r) => r.rule_id === "FR-CDRA-002") ?? null;
-  } else if (textLower.includes("eva") || textLower.includes("heart rate") || textLower.includes("tachycardia")) {
-    matchedRule = seed.flightRules.find((r) => r.rule_id === "FR-EVA-003") ?? null;
-  }
-
-  let answerText: string | null = null;
-  let providerUsed = "Gemini 2.5 Flash (Direct Browser Execution)";
-  let headline = isGreeting
-    ? "HabiTrack Co-Pilot Standby"
-    : isMoodQuery
-    ? "Behavioral Health & Performance (BHP)"
-    : evidence.length > 0
-    ? `Literature Synthesis: ${text.trim().slice(0, 45)}`
-    : "HabiTrack Standby Assistant";
-  let mode: "GEMINI_GENERATIVE" | "EXTRACTIVE_FALLBACK" = "GEMINI_GENERATIVE";
-
-  const activeMode: AIModelMode =
-    (typeof window !== "undefined"
-      ? (window.localStorage.getItem("habitrack_ai_model_mode") as AIModelMode)
-      : "frontier") || "frontier";
-
-  // 1. Attempt generation via active AI provider (Frontier Gemini or Local Llama-3.2-1B WebGPU)
-  try {
-    const unifiedRes = await generateUnifiedRagResponse({
-      mode: activeMode,
-      userQuery: text,
-      evidence,
-      crewContext: astronautId,
-      history,
-      telemetryContext,
-    });
-    answerText = unifiedRes.answer;
-    providerUsed = unifiedRes.provider;
-    if (unifiedRes.isFallback) {
-      mode = "EXTRACTIVE_FALLBACK";
-      if (isGreeting) {
-        if (textLower.includes("thank") || textLower.includes("cheers") || textLower.includes("awesome") || textLower.includes("great") || textLower.includes("appreciate")) {
-          answerText = "You're very welcome! I am always on standby for ISS Expedition 71. Let me know if you need any assistance with station telemetry, flight rules, or crew wellness.";
-        } else {
-          answerText = `Hello! I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor cabin environmental conditions, astronaut biometrics, and NASA Flight Rules. How can I assist you today with station telemetry, crew wellness, or flight rules?`;
-        }
-      } else if (isMoodQuery) {
-        const activeCallsign =
-          astronautId === "ASTRO-02"
-            ? "FE-1 Dr. S. Patel"
-            : astronautId === "ASTRO-03"
-            ? "MS-1 K. Lindgren"
-            : "CDR M. Vance";
-        answerText = `**NASA Behavioral Health & Performance (BHP) Assessment**\n\nActive crewmember **${activeCallsign}** exhibits nominal operational adaptation on Flight Day 142. Circadian sleep efficiency is stable at 7.1 hours/night, with nominal cognitive vigilance and active communication with Mission Control. No acute stress indices or behavioral flags are logged.\n\nWould you like to review rest schedule metrics or behavioral wellness countermeasures?`;
-      } else if (isIdentityQuery) {
-        answerText = `I am HabiTrack, an offline-first spaceflight clinical intelligence workstation. I provide:\n\n• **Environmental Telemetry**: Real-time cabin CO₂, radiation, ambient temperature, humidity, and atmospheric pressure.\n• **NASA Flight Rules**: Operational checklists for hypercapnia (FR-ECLSS-001), desiccant scrubbers (FR-CDRA-002), and autonomic strain (FR-EVA-003).\n• **SpaceLife Library**: Certified instructional video guides for exercise form, sleep habitability, and microgravity adaptation.\n• **Crew Symptom Triage**: Pre-surgeon clinical evaluation with strict non-causal epistemic guardrails.`;
-      }
-    }
-  } catch (err) {
-    mode = "EXTRACTIVE_FALLBACK";
-    providerUsed = "Mastra Onboard First-Response Engine (Pure TypeScript)";
-
-    if (isGreeting) {
-      if (textLower.includes("thank") || textLower.includes("cheers") || textLower.includes("awesome") || textLower.includes("great") || textLower.includes("appreciate")) {
-        answerText = "You're very welcome! I am always on standby for ISS Expedition 71. Let me know if you need any assistance with station telemetry, flight rules, or crew wellness.";
-      } else {
-        answerText = `Hello! I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor cabin environmental conditions, astronaut biometrics, and NASA Flight Rules. How can I assist you today with station telemetry, crew wellness, or flight rules?`;
-      }
-    } else if (isMoodQuery) {
-      const activeCallsign =
-        astronautId === "ASTRO-02"
-          ? "FE-1 Dr. S. Patel"
-          : astronautId === "ASTRO-03"
-          ? "MS-1 K. Lindgren"
-          : "CDR M. Vance";
-      answerText = `**NASA Behavioral Health & Performance (BHP) Assessment**\n\nActive crewmember **${activeCallsign}** exhibits nominal operational adaptation on Flight Day 142. Circadian sleep efficiency is stable at 7.1 hours/night, with nominal cognitive vigilance and active communication with Mission Control. No acute stress indices or behavioral flags are logged.\n\nWould you like to review rest schedule metrics or behavioral wellness countermeasures?`;
-    } else if (isIdentityQuery) {
-      answerText = `I am HabiTrack, an offline-first spaceflight clinical intelligence workstation. I provide:\n\n• **Environmental Telemetry**: Real-time cabin CO₂, radiation, ambient temperature, humidity, and atmospheric pressure.\n• **NASA Flight Rules**: Operational checklists for hypercapnia (FR-ECLSS-001), desiccant scrubbers (FR-CDRA-002), and autonomic strain (FR-EVA-003).\n• **SpaceLife Library**: Certified instructional video guides for exercise form, sleep habitability, and microgravity adaptation.\n• **Crew Symptom Triage**: Pre-surgeon clinical evaluation with strict non-causal epistemic guardrails.`;
-    } else if (evidence.length === 0) {
-      answerText = `I evaluated your query: "${text}". No acute flight rule excursions or anomalous cabin readings are currently flagged for this topic. Please feel free to ask about specific symptoms, cabin telemetry, or mission procedures.`;
-    } else {
-      answerText =
-        `Relevant biomedical evidence from the NASA Human Research Program literature corpus:\n\n` +
-        evidence.map((e) => `• **[${e.doc_id}: ${e.section_heading}]** ${e.excerpt}`).join("\n\n");
-    }
-  }
-
-  const observedDynamics = evidence.length > 0
-    ? `Biomedical research synthesis across NASA GeneLab and Life Sciences corpus for "${text.slice(0, 40)}".`
-    : `Onboard clinical co-pilot standby session for ${astronautId || "Expedition 71 crew"}.`;
-
-  const scientificContext = evidence.length > 0
-    ? evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join(" ")
-    : "No direct research citations required for this query.";
-
-  // Selective video retrieval: only attach instructional guides when query explicitly requests them or involves exercises/sleep
-  const isMediaRequest =
-    textLower.includes("video") ||
-    textLower.includes("guide") ||
-    textLower.includes("watch") ||
-    textLower.includes("exercise") ||
-    textLower.includes("workout") ||
-    textLower.includes("squat") ||
-    textLower.includes("sleep") ||
-    textLower.includes("how to") ||
-    textLower.includes("demonstrat") ||
-    textLower.includes("stretch");
-
-  const resources = isMediaRequest ? searchSpaceLifeGuides({ query: text, limit: 2 }) : [];
-
-  return {
-    interaction_id: generateUuid(),
-    astronaut_id: astronautId ?? null,
-    event_id: concordanceEventId ?? null,
-    mode,
-    headline,
-    observed_dynamics: observedDynamics,
-    scientific_context: scientificContext,
-    cited_evidence: evidence,
-    study_caveats: [
-      "Data primarily reflects terrestrial 6-degree head-down tilt bed-rest analogues or LEO station telemetry.",
-      "Individual astronaut autonomic reactivity varies significantly during high workload and circadian shifts.",
-    ],
-    disclaimer: MANDATORY_DISCLAIMER,
-    tripwire_triggered: false,
-    latency_ms: 12,
-    flight_rule_cited: matchedRule,
-    verbatim_checklist: matchedRule ? matchedRule.checklist_steps : undefined,
-    provider_used: providerUsed,
-    answer: answerText,
-    resources,
-  };
+  return result.rawResponse!;
 }
 
 export async function fetchFlightRules(
@@ -789,7 +651,7 @@ export async function fetchProviderStatus(): Promise<ProviderStatusResponse> {
     gemini_available: true,
     ollama_available: false,
     gemini_audio_testing_enabled: false,
-    active_model_name: "HabiTrack Standby Co-Pilot",
+    active_model_name: "HabiTrack Standby SI",
   };
 }
 

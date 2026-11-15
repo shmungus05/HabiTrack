@@ -64,7 +64,7 @@ async function runTests(): Promise<void> {
   );
   console.log("[PASS] Test 2 passed: Frontier mode graceful fallback");
 
-  console.log(`\nPASS · ${assertions} assertions · aiProvider unified dispatcher (Frontier vs Local)`);
+  console.log(`\nPASS · ${assertions} assertions · SI provider unified dispatcher (Frontier vs Local)`);
 }
 
 runTests().catch((err) => {

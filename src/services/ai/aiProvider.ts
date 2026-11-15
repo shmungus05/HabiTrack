@@ -1,7 +1,7 @@
 /**
- * src/services/ai/aiProvider.ts
+ * src/services/ai/aiProvider.ts (Unified Synthetic Intelligence Provider)
  *
- * Unified AI Provider Dispatcher for HabiTrack.
+ * Unified SI Provider Dispatcher for HabiTrack.
  * Dispatches between:
  * 1. "frontier" -> Google Gemini 2.5 Flash via REST API
  * 2. "local"    -> In-Browser WebGPU Llama-3.2-1B-Instruct
@@ -13,7 +13,8 @@
 import type { CitedEvidence } from "../../types/api.ts";
 import {
   generateGeminiRagResponse,
-  generateClinicalTriageAI,
+  generateClinicalTriageSI,
+  type DynamicTriageSIResponse,
   type DynamicTriageAIResponse,
   type ChatHistoryTurn,
 } from "./geminiClient.ts";
@@ -23,7 +24,8 @@ import {
   isLocalModelReady,
 } from "./localModelService.ts";
 
-export type AIModelMode = "frontier" | "local";
+export type SIModelMode = "frontier" | "local";
+export type AIModelMode = SIModelMode;
 
 export interface UnifiedRagResult {
   answer: string;
@@ -35,7 +37,7 @@ export interface UnifiedRagResult {
  * Dispatches knowledge queries to the selected model mode.
  */
 export async function generateUnifiedRagResponse(params: {
-  mode: AIModelMode;
+  mode: SIModelMode;
   userQuery: string;
   evidence?: CitedEvidence[];
   crewContext?: string | null;
@@ -75,10 +77,10 @@ export async function generateUnifiedRagResponse(params: {
           isFallback: false,
         };
       } catch (localErr) {
-        console.warn("[aiProvider] Local model inference failed:", localErr);
+        console.warn("[siProvider] Local model inference failed:", localErr);
       }
     } else {
-      console.warn("[aiProvider] Local model selected but not yet loaded.");
+      console.warn("[siProvider] Local model selected but not yet loaded.");
     }
   }
 
@@ -98,7 +100,7 @@ export async function generateUnifiedRagResponse(params: {
         isFallback: false,
       };
     } catch (geminiErr) {
-      console.warn("[aiProvider] Frontier Gemini call failed or unconfigured:", geminiErr);
+      console.warn("[siProvider] Frontier Gemini call failed or unconfigured:", geminiErr);
     }
   }
 
@@ -106,7 +108,7 @@ export async function generateUnifiedRagResponse(params: {
   let fallbackText = "";
   if (evidence.length === 0) {
     fallbackText =
-      `Greetings. I am HabiTrack, your onboard clinical decision-support co-pilot for Expedition 71.\n\n` +
+      `Greetings. I am HabiTrack, your onboard clinical decision-support synthetic intelligence system for Expedition 71.\n\n` +
       `I monitor 5 spacecraft environmental factors (ppCO₂, radiation, cabin temp, humidity, atmospheric pressure) ` +
       `alongside crew circadian baselines and NASA Flight Rules.\n\n` +
       `How can I assist you with station telemetry, flight rules, or symptom evaluations?`;
@@ -126,8 +128,8 @@ export async function generateUnifiedRagResponse(params: {
 /**
  * Dispatches clinical triage generation to either Frontier or Local model.
  */
-export async function generateUnifiedTriageAI(params: {
-  mode: AIModelMode;
+export async function generateUnifiedTriageSI(params: {
+  mode: SIModelMode;
   symptomText: string;
   compartmentName: string;
   snapshot: {
@@ -139,17 +141,20 @@ export async function generateUnifiedTriageAI(params: {
     airflowProfile?: string;
   };
   astronautId?: string;
-}): Promise<DynamicTriageAIResponse> {
+}): Promise<DynamicTriageSIResponse> {
   const { mode, ...payload } = params;
 
   if (mode === "local" && isLocalModelReady()) {
     try {
       return await generateLocalClinicalTriage(payload);
     } catch (err) {
-      console.warn("[aiProvider] Local clinical triage inference failed, attempting cloud fallback:", err);
+      console.warn("[siProvider] Local clinical triage inference failed, attempting cloud fallback:", err);
     }
   }
 
   // Default to Gemini (Frontier)
-  return await generateClinicalTriageAI(payload);
+  return await generateClinicalTriageSI(payload);
 }
+
+// Backward-compatible alias
+export const generateUnifiedTriageAI = generateUnifiedTriageSI;
