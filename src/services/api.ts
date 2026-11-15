@@ -481,8 +481,8 @@ function searchResearchChunks(queryText: string, topK = 4): CitedEvidence[] {
     return { chunk, score };
   });
 
-  // Only consider items with an actual positive match score
-  const matched = scored.filter((s) => s.score > 0);
+  // Only consider items with an actual significant match score (prevents incidental stopwords like "astronaut")
+  const matched = scored.filter((s) => s.score >= 3);
   if (matched.length === 0) {
     return [];
   }
@@ -616,9 +616,10 @@ export async function queryAssistant(
     );
   const isMoodQuery = /(happy|morale|mood|feeling|mental|stress|psychological|emotion|wellbeing|depress|anxious)/i.test(textLower);
   const isIdentityQuery = /(who are you|what can you do|help|capabilities|overview)/i.test(textLower);
+  const isCreativeOrCasual = /(poem|story|joke|rhyme|haiku|sing|song|casual|fun|taco|pizza|food|movie|music|humor|laugh|pirate|slang)/i.test(textLower);
 
   // Only perform research literature chunk lookup for genuine biomedical/technical questions
-  const evidence = (isGreeting || isMoodQuery || isIdentityQuery)
+  const evidence = (isGreeting || isMoodQuery || isIdentityQuery || isCreativeOrCasual)
     ? []
     : searchResearchChunks(text, topK);
 

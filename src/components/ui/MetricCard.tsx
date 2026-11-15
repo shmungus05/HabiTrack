@@ -32,10 +32,10 @@ export function MetricCard({
 
   return (
     <div
-      className={`relative flex flex-col justify-between rounded-xl glass-panel glass-card-hover p-4 sm:p-5 ${
+      className={`relative flex flex-col justify-between rounded-2xl glass-panel glass-card-hover shadow-2xs p-4 sm:p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xs ${
         warn
-          ? "border-amber-200 bg-amber-50/40"
-          : ""
+          ? "border-amber-200/90 bg-amber-50/40"
+          : "border-slate-200/90 bg-white"
       }`}
     >
       <div>

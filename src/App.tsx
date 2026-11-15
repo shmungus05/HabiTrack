@@ -670,7 +670,7 @@ export default function App() {
             </div>
           ) : null}
 
-          <main className="w-full flex-1 px-4 py-6 pb-20 sm:px-6 sm:py-7 sm:pb-20">
+          <main className="w-full flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
             <ErrorBoundary>
               {activeView === "overview" ? (
                 <OverviewView

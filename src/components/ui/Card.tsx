@@ -2,7 +2,8 @@ import React from "react";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "surface" | "elevated" | "inset";
-  padding?: "none" | "sm" | "md" | "lg";
+  padding?: "none" | "sm" | "md" | "lg" | "xl";
+  radius?: "section" | "module" | "default" | "sm";
   interactive?: boolean;
 }
 
@@ -11,11 +12,20 @@ const PADDING_MAP = {
   sm: "p-3",
   md: "p-4 sm:p-5",
   lg: "p-6",
+  xl: "p-6 sm:p-8",
+};
+
+const RADIUS_MAP = {
+  section: "rounded-[32px]",
+  module: "rounded-2xl",
+  default: "rounded-2xl",
+  sm: "rounded-xl",
 };
 
 export function Card({
   variant = "surface",
   padding = "md",
+  radius = "default",
   interactive = false,
   className = "",
   children,
@@ -29,12 +39,12 @@ export function Card({
       : "glass-panel";
 
   const hover = interactive
-    ? "glass-card-hover cursor-pointer"
+    ? "glass-card-hover cursor-pointer hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
     : "";
 
   return (
     <div
-      className={`rounded-xl border ${bg} ${PADDING_MAP[padding]} ${hover} ${className}`}
+      className={`${RADIUS_MAP[radius]} border ${bg} ${PADDING_MAP[padding]} ${hover} ${className}`}
       {...props}
     >
       {children}

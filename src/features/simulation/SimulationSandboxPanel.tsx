@@ -95,9 +95,9 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button
             onClick={() => handleToggle("co2_spike")}
-            className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
+            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer glass-card-hover ${
               isCo2Active
-                ? "bg-sky-50 border-sky-400 border-l-4 border-l-sky-600 text-foreground shadow-sm"
+                ? "bg-sky-50/90 border-sky-300 text-foreground shadow-xs ring-1 ring-sky-400/30"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
@@ -119,9 +119,9 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
 
           <button
             onClick={() => handleToggle("saa_transit")}
-            className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
+            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer glass-card-hover ${
               isSaaActive
-                ? "bg-amber-50 border-amber-400 border-l-4 border-l-amber-600 text-foreground shadow-sm"
+                ? "bg-amber-50/90 border-amber-300 text-foreground shadow-xs ring-1 ring-amber-400/30"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
@@ -143,9 +143,9 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
 
           <button
             onClick={() => handleToggle("thermal_overheat")}
-            className={`p-4 rounded-xl border text-left transition-all cursor-pointer glass-card-hover ${
+            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer glass-card-hover ${
               isThermalActive
-                ? "bg-orange-50 border-orange-400 border-l-4 border-l-orange-600 text-foreground shadow-sm"
+                ? "bg-orange-50/90 border-orange-300 text-foreground shadow-xs ring-1 ring-orange-400/30"
                 : "glass-panel-subtle text-secondary hover:text-foreground"
             }`}
           >
@@ -167,7 +167,7 @@ export const SimulationSandboxPanel: React.FC<SimulationSandboxPanelProps> = ({
 
           <button
             onClick={handleReset}
-            className="p-4 rounded-xl glass-panel-subtle glass-card-hover hover:border-emerald-300 hover:bg-emerald-50 text-left transition-all cursor-pointer group"
+            className="p-4 rounded-2xl glass-panel-subtle glass-card-hover hover:border-emerald-300 hover:bg-emerald-50 text-left transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-emerald-700">Restore Nominal</span>

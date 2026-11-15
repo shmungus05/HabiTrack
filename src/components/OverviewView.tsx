@@ -16,7 +16,6 @@ import {
   Clock3,
   Droplets,
   FileText,
-  Gauge,
   HeartPulse,
   Layers,
   MapPin,
@@ -531,7 +530,7 @@ function AstronautOverview({
   return (
     <div className="space-y-6">
       {/* Astronaut Header */}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl glass-panel p-4 sm:p-5">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
         <div className="flex min-w-0 items-center gap-4">
           <AstronautAvatar
             astronautId={astronautId}
@@ -546,17 +545,13 @@ function AstronautOverview({
                 <span className="text-slate-400"> · {astronaut.mission_id}</span>
               ) : null}
             </p>
-            <h2 className="mt-0.5 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            <h2 className="mt-0.5 truncate text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
               {astronaut?.callsign ?? astronautId}
             </h2>
             <p className="mt-0.5 text-xs text-slate-600">
               {astronaut?.crew_role ?? "Crew member"}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge variant="default">
-                <Gauge className="h-3 w-3" />
-                {astronaut?.baseline_window_days ?? 7}-day baseline
-              </Badge>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -573,11 +568,6 @@ function AstronautOverview({
           >
             {eventActive ? "Action required" : "All clear"}
           </Badge>
-          <span className="field-label mt-1">Calibrated Baseline</span>
-          <span className="font-mono text-xs text-slate-600">
-            {formatDateTime(astronaut?.baseline_calibrated_at ?? null)}
-          </span>
-          <span className="text-[11px] text-slate-500">Timestamps in UTC</span>
         </div>
       </section>
 
@@ -585,34 +575,36 @@ function AstronautOverview({
       <SpacecraftModuleSelector />
 
       {/* Cabin Environmental Telemetry Card */}
-      <section className="rounded-xl glass-panel p-4 sm:p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0">
-            <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 truncate">
+      <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+              <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 truncate">
               Cabin Environmental Telemetry · {envTelemetry.module.shortName} [{envTelemetry.location}]
             </span>
           </div>
           {hasCo2 && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
               CO₂ SPIKE ACTIVE
             </span>
           )}
           {hasThermal && (
-            <span className="rounded-full bg-orange-100 border border-orange-300 px-2 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
+            <span className="rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
               HEAT SURGE ACTIVE
             </span>
           )}
           {hasSaa && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
               SAA RADIATION ACTIVE
             </span>
           )}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {/* Cabin CO2 */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -626,8 +618,8 @@ function AstronautOverview({
           </div>
 
           {/* Cabin Temp */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin Temp ({isMetric ? "°C" : "°F"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -641,8 +633,8 @@ function AstronautOverview({
           </div>
 
           {/* Cabin Pressure */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -656,8 +648,8 @@ function AstronautOverview({
           </div>
 
           {/* Radiation */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Radiation Flux
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -770,10 +762,6 @@ function AstronautOverview({
                 );
               })}
             </dl>
-            <p className="mt-3 flex items-start gap-2 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
-              <Wind className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-              Rolling {astronaut?.baseline_window_days ?? 7}-day personal circadian baseline (μ ± 2σ).
-            </p>
           </article>
 
           <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
@@ -1162,7 +1150,7 @@ export function OverviewView({
 
       <SurgeonOnly>
       <div className="space-y-6">
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl glass-panel p-4 sm:p-5">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
         <div className="flex min-w-0 items-center gap-4">
           <AstronautAvatar
             astronautId={astronautId}
@@ -1177,17 +1165,13 @@ export function OverviewView({
                 <span className="text-slate-400"> · {astronaut.mission_id}</span>
               ) : null}
             </p>
-            <h2 className="mt-0.5 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            <h2 className="mt-0.5 truncate text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
               {astronaut?.callsign ?? astronautId}
             </h2>
             <p className="mt-0.5 text-xs text-slate-600">
               {astronaut?.crew_role ?? "Crew member"}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge variant="default">
-                <Gauge className="h-3 w-3" />
-                {astronaut?.baseline_window_days ?? 7}-day baseline
-              </Badge>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -1205,11 +1189,6 @@ export function OverviewView({
           >
             Export Health Report
           </Button>
-          <span className="field-label mt-1">Last calibration</span>
-          <span className="font-mono text-xs text-slate-600">
-            {formatDateTime(astronaut?.baseline_calibrated_at ?? null)}
-          </span>
-          <span className="text-[11px] text-slate-500">Timestamps in UTC</span>
         </div>
       </section>
 
@@ -1217,34 +1196,36 @@ export function OverviewView({
       <SpacecraftModuleSelector />
 
       {/* Cabin Environmental Telemetry Card */}
-      <section className="rounded-xl glass-panel p-4 sm:p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0">
-            <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 truncate">
+      <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+              <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 truncate">
               Cabin Environmental Telemetry · {envTelemetry.module.shortName} [{envTelemetry.location}]
             </span>
           </div>
           {hasCo2 && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
               CO₂ SPIKE ACTIVE
             </span>
           )}
           {hasThermal && (
-            <span className="rounded-full bg-orange-100 border border-orange-300 px-2 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
+            <span className="rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
               HEAT SURGE ACTIVE
             </span>
           )}
           {hasSaa && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
               SAA RADIATION ACTIVE
             </span>
           )}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {/* Cabin CO2 */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -1258,8 +1239,8 @@ export function OverviewView({
           </div>
 
           {/* Cabin Temp */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin Temp ({isMetric ? "°C" : "°F"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -1273,8 +1254,8 @@ export function OverviewView({
           </div>
 
           {/* Cabin Pressure */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -1288,8 +1269,8 @@ export function OverviewView({
           </div>
 
           {/* Radiation */}
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 space-y-1">
-            <span className="text-[11px] font-medium text-slate-500 block">
+          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">
               Radiation Flux
             </span>
             <div className="flex items-baseline gap-1.5">
@@ -1360,7 +1341,7 @@ export function OverviewView({
         <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-6">
           {activeEvent && eventTheme ? (
-            <article className="rounded-xl border border-slate-200 border-l-4 border-l-red-500 bg-white shadow-card p-4 sm:p-6 space-y-4">
+            <article className="rounded-[32px] border border-slate-200/90 bg-white shadow-2xs p-6 sm:p-8 space-y-4 transition-all hover:border-slate-300">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1636,10 +1617,6 @@ export function OverviewView({
                 );
               })}
             </dl>
-            <p className="mt-3 flex items-start gap-2 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
-              <Wind className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-              Rolling {astronaut?.baseline_window_days ?? 7}-day circadian baseline (μ ± 2σ). Decision support only.
-            </p>
           </article>
 
           <article className="rounded-xl glass-panel flex items-start gap-3 p-4">

@@ -137,12 +137,12 @@ export const ContextualTriageBanner: React.FC<ContextualTriageBannerProps> = ({
 
         {/* Causal Rationale */}
         {evaluation.potentialDelayedCausality && (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 border-l-2 border-l-amber-500 space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-800">
+          <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 shadow-2xs space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>Potential Physiological Causality Flag</span>
+              <span>Potential Physiological Concordance Flag</span>
             </div>
-            <p className="text-xs text-foreground leading-relaxed">
+            <p className="text-xs text-slate-800 leading-relaxed">
               {evaluation.potentialDelayedCausality.rationale}
             </p>
           </div>

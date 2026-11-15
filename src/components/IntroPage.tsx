@@ -55,7 +55,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
         </div>
 
         {/* Title & Subtitle */}
-        <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="mt-3 text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
           Select Your Mission Path
         </h1>
         <p className="mt-2 max-w-lg text-sm text-slate-500 leading-normal px-2">
@@ -67,7 +67,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
       <main className="relative z-10 mx-auto flex w-full max-w-3xl lg:max-w-4xl flex-1 items-center justify-center my-auto py-6 sm:py-8">
         <div className="grid w-full grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
           {/* Card 1: Astronaut / Field Mission */}
-          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl">
+          <div className="group relative flex flex-col justify-between rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg">
             <div className="flex flex-col items-center text-center">
               {/* Photo Viewport - Taller Y-axis */}
               <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
@@ -83,13 +83,13 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
 
               {/* Tag / Badge */}
               <div className="mt-5">
-                <span className="inline-block rounded-full bg-[#e0f2fe] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#0284c7]">
+                <span className="inline-block rounded-full bg-sky-50 border border-sky-200 px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#0284c7]">
                   Field Mission
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">
                 Astronaut
               </h2>
               <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed px-2 max-w-[320px]">
@@ -102,7 +102,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
               <button
                 type="button"
                 onClick={() => handleSelectRole("astronaut")}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-sky-500"
               >
                 Initialize Mission
               </button>
@@ -110,7 +110,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
           </div>
 
           {/* Card 2: Flight Surgeon / Medical Ops */}
-          <div className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl">
+          <div className="group relative flex flex-col justify-between rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 md:p-8 shadow-2xs transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg">
             <div className="flex flex-col items-center text-center">
               {/* Photo Viewport - Taller Y-axis */}
               <div className="relative h-48 sm:h-56 md:h-64 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-inner">
@@ -126,13 +126,13 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
 
               {/* Tag / Badge */}
               <div className="mt-5">
-                <span className="inline-block rounded-full bg-[#dcfce7] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#16a34a]">
+                <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#16a34a]">
                   Medical Ops
                 </span>
               </div>
 
               {/* Title & Description */}
-              <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">
                 Flight Surgeon
               </h2>
               <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed px-2 max-w-[320px]">
@@ -145,7 +145,7 @@ export function IntroPage({ onSelectRole }: IntroPageProps) {
               <button
                 type="button"
                 onClick={() => handleSelectRole("flight_surgeon")}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white font-semibold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 px-6 shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-emerald-500"
               >
                 Enter Command Center
               </button>

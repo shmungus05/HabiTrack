@@ -192,14 +192,14 @@ export function EventRationaleDisplay({
       <div className="grid gap-2.5 sm:grid-cols-3">
         {/* Environment Card */}
         {parsed.env && (
-          <div className="flex flex-col justify-between rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/70 to-sky-100/30 p-3.5 shadow-2xs transition-all hover:border-sky-300">
+          <div className="flex flex-col justify-between rounded-2xl border border-sky-200/90 bg-sky-50/40 p-4 shadow-2xs transition-all hover:border-sky-300">
             <div>
               <div className="flex items-center justify-between gap-1.5">
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-sky-950">
                   <Wind className="h-4 w-4 text-sky-600 shrink-0" />
                   {parsed.env.title}
                 </span>
-                <span className="rounded-md bg-sky-100 px-1.5 py-0.5 text-[9px] font-mono font-medium text-sky-800">
+                <span className="rounded-md bg-white border border-sky-200 px-1.5 py-0.5 text-[9px] font-mono font-medium text-sky-800 shadow-2xs">
                   NASA EDA
                 </span>
               </div>
@@ -215,14 +215,14 @@ export function EventRationaleDisplay({
 
         {/* Autonomic Vitals Card */}
         {parsed.vitals && (
-          <div className="flex flex-col justify-between rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-amber-100/30 p-3.5 shadow-2xs transition-all hover:border-amber-300">
+          <div className="flex flex-col justify-between rounded-2xl border border-amber-200/90 bg-amber-50/40 p-4 shadow-2xs transition-all hover:border-amber-300">
             <div>
               <div className="flex items-center justify-between gap-1.5">
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-950">
                   <HeartPulse className="h-4 w-4 text-amber-600 shrink-0" />
                   {parsed.vitals.title}
                 </span>
-                <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-mono font-medium text-amber-800">
+                <span className="rounded-md bg-white border border-amber-200 px-1.5 py-0.5 text-[9px] font-mono font-medium text-amber-800 shadow-2xs">
                   Biosensors
                 </span>
               </div>
@@ -238,14 +238,14 @@ export function EventRationaleDisplay({
 
         {/* Crew Symptoms Card */}
         {parsed.symptom && (
-          <div className="flex flex-col justify-between rounded-xl border border-purple-200/80 bg-gradient-to-br from-purple-50/70 to-purple-100/30 p-3.5 shadow-2xs transition-all hover:border-purple-300">
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-slate-50/60 p-4 shadow-2xs transition-all hover:border-slate-300">
             <div>
               <div className="flex items-center justify-between gap-1.5">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-purple-950">
-                  <Brain className="h-4 w-4 text-purple-600 shrink-0" />
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+                  <Brain className="h-4 w-4 text-slate-700 shrink-0" />
                   {parsed.symptom.title}
                 </span>
-                <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[9px] font-mono font-medium text-purple-800">
+                <span className="rounded-md bg-white border border-slate-200 px-1.5 py-0.5 text-[9px] font-mono font-medium text-slate-800 shadow-2xs">
                   Crew Log
                 </span>
               </div>

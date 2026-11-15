@@ -330,7 +330,7 @@ function deriveTimeWindow(input: HealthReportInput): HealthReport["metadata"]["t
     return {
       start: input.astronaut.baseline_calibrated_at ?? "Unavailable",
       end: input.astronaut.baseline_calibrated_at ?? "Unavailable",
-      missionDayRange: `${input.astronaut.baseline_window_days}-day baseline`,
+      missionDayRange: "No telemetry window available",
     };
   }
   const start = timestamps[0];

@@ -131,17 +131,19 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
       {/* Main Metric Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 py-5">
         {/* CO2 Card */}
-        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#0284c7]">
+        <div className="p-4.5 rounded-2xl border border-slate-200/90 bg-white shadow-2xs glass-card-hover transition-all">
           <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
-            <span className="font-medium flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-[#0284c7]" />
+            <span className="font-semibold flex items-center gap-1.5 text-slate-800">
+              <span className="p-1 rounded-md bg-sky-50 text-sky-600 border border-sky-100">
+                <Activity className="w-3.5 h-3.5" />
+              </span>
               Carbon Dioxide
             </span>
             <MiniSparkline data={sparklines.co2} color="#0284c7" />
           </div>
           <div className="flex items-baseline gap-2">
             <span
-              className={`text-2xl font-semibold font-mono tabular-nums ${
+              className={`text-2xl font-bold font-mono tabular-nums ${
                 currentRecord.co2 >= 4000
                   ? "text-red-700"
                   : isCo2Elevated
@@ -151,12 +153,12 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
             >
               {currentRecord.co2.toLocaleString()}
             </span>
-            <span className="text-[11px] text-muted font-mono">PPM</span>
+            <span className="text-[11px] text-muted font-mono font-medium">PPM</span>
           </div>
           <div className="text-[11px] font-mono text-muted mt-1">
             {co2MmHg} mmHg{" "}
             {isCo2Elevated && (
-              <span className={currentRecord.co2 >= 4000 ? "text-red-700 ml-1" : "text-amber-700 ml-1"}>
+              <span className={currentRecord.co2 >= 4000 ? "text-red-700 ml-1 font-semibold" : "text-amber-700 ml-1 font-semibold"}>
                 · elevated
               </span>
             )}
@@ -164,19 +166,21 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
 
         {/* Temperature Card */}
-        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#ea580c]">
+        <div className="p-4.5 rounded-2xl border border-slate-200/90 bg-white shadow-2xs glass-card-hover transition-all">
           <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
-            <span className="font-medium flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-[#ea580c]" />
+            <span className="font-semibold flex items-center gap-1.5 text-slate-800">
+              <span className="p-1 rounded-md bg-orange-50 text-orange-600 border border-orange-100">
+                <Flame className="w-3.5 h-3.5" />
+              </span>
               Cabin Temperature
             </span>
             <MiniSparkline data={sparklines.temp} color="#ea580c" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
+            <span className="text-2xl font-bold font-mono tabular-nums text-foreground">
               {currentRecord.temp.toFixed(1)}
             </span>
-            <span className="text-[11px] text-muted font-mono">°C</span>
+            <span className="text-[11px] text-muted font-mono font-medium">°C</span>
           </div>
           <div className="text-[11px] font-mono text-muted mt-1">
             {((currentRecord.temp * 9) / 5 + 32).toFixed(1)} °F · nominal THC
@@ -184,19 +188,21 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
 
         {/* Humidity Card */}
-        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#0891b2]">
+        <div className="p-4.5 rounded-2xl border border-slate-200/90 bg-white shadow-2xs glass-card-hover transition-all">
           <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
-            <span className="font-medium flex items-center gap-1.5">
-              <Droplets className="w-3.5 h-3.5 text-[#0891b2]" />
+            <span className="font-semibold flex items-center gap-1.5 text-slate-800">
+              <span className="p-1 rounded-md bg-cyan-50 text-cyan-600 border border-cyan-100">
+                <Droplets className="w-3.5 h-3.5" />
+              </span>
               Relative Humidity
             </span>
             <MiniSparkline data={sparklines.humidity} color="#0891b2" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
+            <span className="text-2xl font-bold font-mono tabular-nums text-foreground">
               {currentRecord.humidity.toFixed(0)}
             </span>
-            <span className="text-[11px] text-muted font-mono">%</span>
+            <span className="text-[11px] text-muted font-mono font-medium">%</span>
           </div>
           <div className="text-[11px] font-mono text-muted mt-1">
             Dew point 11.2 °C · normal band
@@ -204,19 +210,21 @@ export const EdaStreamController: React.FC<{ className?: string }> = ({ classNam
         </div>
 
         {/* Radiation Card */}
-        <div className="p-4 rounded-xl glass-panel-subtle glass-card-hover border-t-2 border-t-[#d97706]">
+        <div className="p-4.5 rounded-2xl border border-slate-200/90 bg-white shadow-2xs glass-card-hover transition-all">
           <div className="flex items-center justify-between text-[11px] text-secondary mb-2">
-            <span className="font-medium flex items-center gap-1.5">
-              <Radio className="w-3.5 h-3.5 text-[#d97706]" />
+            <span className="font-semibold flex items-center gap-1.5 text-slate-800">
+              <span className="p-1 rounded-md bg-amber-50 text-amber-600 border border-amber-100">
+                <Radio className="w-3.5 h-3.5" />
+              </span>
               Radiation Flux
             </span>
             <MiniSparkline data={sparklines.radiation} color="#d97706" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold font-mono tabular-nums text-foreground">
+            <span className="text-2xl font-bold font-mono tabular-nums text-foreground">
               {currentRecord.radiation.toFixed(3)}
             </span>
-            <span className="text-[11px] text-muted font-mono">mGy/d</span>
+            <span className="text-[11px] text-muted font-mono font-medium">mGy/d</span>
           </div>
           <div className="text-[11px] font-mono text-muted mt-1">
             {(currentRecord.radiation * 2.0).toFixed(3)} mSv/d · quiet solar
