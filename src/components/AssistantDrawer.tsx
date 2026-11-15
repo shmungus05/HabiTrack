@@ -1,5 +1,5 @@
 /**
- * web/src/components/AssistantDrawer.tsx: Unified Conversational Standby & Clinical Triage AI Chatbot
+ * web/src/components/AssistantDrawer.tsx: Unified Conversational Standby & Clinical Triage SI Chatbot
  * Combines direct grounded answers, expandable RAG evidence, NASA Flight Rules,
  * Mastra 5-factor environmental triage, interim countermeasure checkboxes,
  * and surgeon handoff packet inspection into an expansive, floating workstation canvas
@@ -117,7 +117,7 @@ export function AssistantDrawer() {
   const toggleAutoSpeak = useAssistantStore((state) => state.toggleAutoSpeak);
   const speakMessage = useAssistantStore((state) => state.speakMessage);
 
-  // AI Model Selection & Local WebGPU status
+  // SI Model Selection & Local WebGPU status
   const aiModelMode = useAssistantStore((state) => state.aiModelMode);
   const setAiModelMode = useAssistantStore((state) => state.setAiModelMode);
   const localModelStatus = useAssistantStore((state) => state.localModelStatus);
@@ -411,7 +411,7 @@ export function AssistantDrawer() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* AI Engine Status & Key Modal Trigger */}
+              {/* SI Engine Status & Key Modal Trigger */}
               <button
                 type="button"
                 onClick={() => setShowApiKeyModal(true)}

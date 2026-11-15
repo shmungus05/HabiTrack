@@ -690,7 +690,7 @@ Core Operating Directives:
       ? searchSpaceLifeGuides({ query: symptomText, category: resourceCategory, symptomCodes, limit: 2 })
       : [];
 
-    // Attempt Dynamic AI Reasoning via Active Adapter
+    // Attempt Dynamic SI Reasoning via Active Adapter
     const activeAdapter = this.resolveAdapter();
     let finalActions = deterministicActions;
     let finalRationale = rationale;

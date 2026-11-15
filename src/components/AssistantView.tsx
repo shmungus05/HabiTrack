@@ -1,5 +1,5 @@
 /**
- * web/src/components/AssistantView.tsx: Dedicated Full-Page HabiTrack AI Workstation
+ * web/src/components/AssistantView.tsx: Dedicated Full-Page HabiTrack SI Workstation
  *
  * Implements a high-end, minimalist Perplexity/ChatGPT conversational workspace
  * for ISS crew and flight surgeons:
@@ -125,7 +125,7 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
   const speakingMessageId = useAssistantStore((state) => state.speakingMessageId);
   const speakMessage = useAssistantStore((state) => state.speakMessage);
 
-  // AI Model Selection & Local WebGPU status
+  // SI Model Selection & Local WebGPU status
   const aiModelMode = useAssistantStore((state) => state.aiModelMode);
   const setAiModelMode = useAssistantStore((state) => state.setAiModelMode);
   const localModelStatus = useAssistantStore((state) => state.localModelStatus);

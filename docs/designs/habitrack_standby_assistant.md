@@ -1,4 +1,4 @@
-﻿# HABITRACK Standby AI Assistant & Operational Flight Rule RAG
+﻿# HABITRACK Standby SI Assistant & Operational Flight Rule RAG
 
 * **Author:** MinnThikeTunn
 * **Status:** Approved Technical Design Document
@@ -33,7 +33,7 @@ In the current console, the assistant drawer is coupled strictly to the Overview
 Standard generative LLM stochastic sampling risks hallucinating checklist steps, dropping crucial verification conditions, or generating speculative medical diagnoses. In life-critical spaceflight operations, operational checklists require verbatim procedural fidelity and strict source provenance (Flight Rule ID, revision date, exact line reference) that cannot be left to probabilistic token prediction.
 
 ### 4. Cloud Lock-in vs. Spaceflight Air-Gapped Autonomy
-Prototyping AI features with cloud-only frontier models introduces architectural dependencies on massive context windows, continuous high-bandwidth internet connectivity, and multi-turn tool loops. Deep-space transit operates under communication delays (4â€“24 minutes each way to Mars) or complete blackout (LOS). An operational assistant must run offline on resource-constrained flight workstations with zero external vector daemons.
+Prototyping SI features with cloud-only frontier models introduces architectural dependencies on massive context windows, continuous high-bandwidth internet connectivity, and multi-turn tool loops. Deep-space transit operates under communication delays (4â€“24 minutes each way to Mars) or complete blackout (LOS). An operational assistant must run offline on resource-constrained flight workstations with zero external vector daemons.
 
 ---
 

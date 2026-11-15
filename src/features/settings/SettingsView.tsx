@@ -279,7 +279,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {[
               { id: "profile", label: "Crew Profile", icon: User },
               { id: "telemetry", label: "Telemetry & Limits", icon: Sliders },
-              { id: "intelligence", label: "AI Engine", icon: Cpu },
+              { id: "intelligence", label: "SI Engine", icon: Cpu },
               { id: "comms", label: "Audio & Comms", icon: Volume2 },
               { id: "simulation", label: "Simulation Sandbox", icon: Zap },
               { id: "all", label: "All Settings", icon: Layers },
@@ -691,7 +691,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {/* 4. AI Engine: Online AI (Sargalay Gateway) vs Local Ollama */}
+      {/* 4. SI Engine: Online SI vs Local SI */}
       {showSection("intelligence") && (
         <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -701,10 +701,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  AI Intelligence &amp; Execution Engine
+                  SI Engine
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Select between Hosted Online AI (Auto-Fallback Gateway) and Local Station Ollama (100% Air-Gapped).
+                  Select between Online SI and Local SI.
                 </p>
               </div>
             </div>
@@ -728,16 +728,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 }`}
               />
               {aiModelMode === "frontier"
-                ? "Online AI Active"
+                ? "Online SI Active"
                 : localModelStatus === "ready"
-                ? "Local Ollama VRAM Ready"
-                : "Local Ollama (Needs Load)"}
+                ? "Local SI Ready"
+                : "Local SI (Needs Load)"}
             </span>
           </div>
 
-          {/* Master 2-Mode Buttons */}
+          {/* Master 2-Mode Buttons: Online SI and Local SI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Button 1: Online AI */}
+            {/* Button 1: Online SI */}
             <button
               type="button"
               onClick={() => setAiModelMode("frontier")}
@@ -754,10 +754,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>Online AI</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">
-                        Auto-Failover
-                      </span>
+                      <span>Online SI</span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       Hosted Gateway · Gemini 2.5 Flash, DeepSeek &amp; GPT-4o-mini
@@ -781,7 +778,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </button>
 
-            {/* Button 2: Local Ollama */}
+            {/* Button 2: Local SI */}
             <button
               type="button"
               onClick={() => setAiModelMode("local")}
@@ -798,10 +795,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>Local Ollama</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                        Station Air-Gapped
-                      </span>
+                      <span>Local SI</span>
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       100% Station Offline · Ollama port 11434 (qwen2.5:7b / tommy)
@@ -826,20 +820,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
 
-          {/* Mode 1 Details: Online AI (Automated Multi-Model Fallback Cascade) */}
+          {/* Mode 1 Details: Online SI */}
           {aiModelMode === "frontier" && (
             <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/70">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Automated Priority Fallback Chain</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Hosted gateway handles all API routing. If a model encounters limits or errors, it cascades automatically.
-                  </p>
-                </div>
-
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
                   disabled={isTestingKey}
@@ -859,45 +843,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   )}
                   <span>{isTestingKey ? "Pinging Gateway..." : "Test Gateway Connection"}</span>
                 </button>
-              </div>
-
-              {/* Priority Cascade Tiles */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-xl bg-white border border-sky-200 shadow-2xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-sky-700 uppercase">Priority 1 (Main)</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-900 truncate">google/gemini-2.5-flash</p>
-                  <p className="text-[10px] text-slate-500">Primary reasoning &amp; RAG</p>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-amber-700 uppercase">Priority 2 (Failover)</span>
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-900 truncate">google/gemini-2.5-flash-lite</p>
-                  <p className="text-[10px] text-slate-500">Rate-limit fast backup</p>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-purple-700 uppercase">Priority 3 (Failover)</span>
-                    <span className="w-2 h-2 rounded-full bg-purple-400" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-900 truncate">deepseek/deepseek-chat</p>
-                  <p className="text-[10px] text-slate-500">Deep clinical fallback</p>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-emerald-700 uppercase">Priority 4 (Failover)</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-900 truncate">openai/gpt-4o-mini</p>
-                  <p className="text-[10px] text-slate-500">Emergency failover</p>
-                </div>
               </div>
 
               {keyTestResult && (
@@ -926,7 +871,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* Mode 2 Details: Local Ollama (Restored Station Bridge & Loading Controls) */}
+          {/* Mode 2 Details: Local SI */}
           {aiModelMode === "local" && (
             <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4 animate-fadeIn">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70">
@@ -934,7 +879,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <HardDrive className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                      <span>Local Ollama Station Bridge</span>
+                      <span>Local SI Station Bridge</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-700">
                         localhost:11434
                       </span>
@@ -992,7 +937,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <span>
                         {localModelStatus === "loading"
                           ? "Loading into VRAM..."
-                          : "Load Ollama Model into VRAM"}
+                          : "Load Local SI into VRAM"}
                       </span>
                     </button>
                   )}
@@ -1002,7 +947,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {/* Status and Diagnostics */}
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                  <span className="text-slate-600 font-medium">Ollama Daemon:</span>
+                  <span className="text-slate-600 font-medium">Local SI Daemon:</span>
                   <span
                     className={`font-mono font-bold flex items-center gap-1.5 ${
                       ollamaStatus?.online
@@ -1027,32 +972,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {localModelStatusText || "Idle / Not loaded"}
                   </span>
                 </div>
-
-                {/* Detected Local Models */}
-                {ollamaStatus && ollamaStatus.models.length > 0 && (
-                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2">
-                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                      Installed Onboard Models ({ollamaStatus.models.length}):
-                    </span>
-                    <div className="space-y-1.5">
-                      {ollamaStatus.models.map((m) => (
-                        <div
-                          key={m.name}
-                          className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80 font-mono text-[11px]"
-                        >
-                          <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            {m.name}
-                          </span>
-                          <span className="text-slate-500">
-                            {m.parameterSize ? `${m.parameterSize} · ` : ""}
-                            {(m.size / (1024 * 1024 * 1024)).toFixed(2)} GB
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Loading Progress Bar */}
                 {localModelStatus === "loading" && (

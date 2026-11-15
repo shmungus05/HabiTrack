@@ -2,7 +2,7 @@
  * src/services/ai/core/adapters/WebGpuLocalAdapter.ts
  *
  * In-browser WebGPU Adapter executing Llama-3.2-1B-Instruct via @mlc-ai/web-llm.
- * Implements the LlmAdapter Seam for 100% offline, serverless client-side AI.
+ * Implements the LlmAdapter Seam for 100% offline, serverless client-side SI.
  */
 
 import {

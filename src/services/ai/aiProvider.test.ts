@@ -65,7 +65,7 @@ async function runTests(): Promise<void> {
     frontierResult.answer.includes("HabiTrack") ||
       frontierResult.provider.includes("Sargalay") ||
       frontierResult.provider.includes("Gemini"),
-    "Should provide standard welcome greeting or AI response"
+    "Should provide standard welcome greeting or SI response"
   );
   console.log(`[PASS] Test 2 passed: Frontier mode dispatch verified (${frontierResult.provider})`);
 

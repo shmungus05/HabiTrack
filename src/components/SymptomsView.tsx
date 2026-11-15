@@ -394,7 +394,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
           </p>
         </div>
 
-        {/* View Mode Switcher + AI Assistant Launcher */}
+        {/* View Mode Switcher + SI Assistant Launcher */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Direct Trigger to Unified Standby Assistant */}
           <button

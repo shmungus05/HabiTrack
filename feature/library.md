@@ -11,7 +11,7 @@ SpaceLife Library is a centralized knowledge platform designed to help astronaut
 
 It provides a structured collection of astronaut-specific life hacks, health education, exercise demonstrations, and daily living guidance.
 
-The library should be independently usable without requiring the AI assistant.
+The library should be independently usable without requiring the SI assistant.
 
 **Core concept:** A specialized knowledge center for astronauts, not just a video gallery.
 
@@ -22,7 +22,7 @@ The library should be independently usable without requiring the AI assistant.
 - Collect educational resources from trusted space agencies.
 - Support multiple content formats, including videos, GIFs, images, and articles.
 - Preserve source attribution and content reliability.
-- Provide a knowledge source that can later be consumed by SpaceCare AI.
+- Provide a knowledge source that can later be consumed by SpaceCare SI.
 
 ## 3. Content Categories
 
@@ -166,7 +166,7 @@ Resources should support approval states:
 - Approved.
 - Rejected.
 
-Only appropriately reviewed and approved resources should be eligible for medical-guidance retrieval by SpaceCare AI.
+Only appropriately reviewed and approved resources should be eligible for medical-guidance retrieval by SpaceCare SI.
 
 ### FR-08: Favorites
 Users should be able to bookmark useful resources if this capability fits the MVP scope.
@@ -217,15 +217,15 @@ These are suggestions, not mandatory replacements for existing technologies.
 - [ ] Resources support approval statuses.
 - [ ] Imported content retains original metadata.
 - [ ] Duplicate resources are handled.
-- [ ] The library works independently without AI integration.
-- [ ] Resource data can be accessed through a backend API for future AI integration.
+- [ ] The library works independently without SI integration.
+- [ ] Resource data can be accessed through a backend API for future SI integration.
 
 ## 11. Out of Scope
 
 Do not implement these unless requested:
 
-- AI conversational assistant.
-- AI-based symptom analysis.
+- SI conversational assistant.
+- SI-based symptom analysis.
 - Autonomous medical recommendations.
 - Real-time biometric monitoring.
 - Complex recommendation algorithms.
@@ -257,6 +257,6 @@ Do not introduce additional infrastructure without justification.
 
 Do not begin implementation before presenting the proposed plan.
 
-**Important:** Keep this feature modular and independently functional. SpaceCare AI will consume its resources through backend APIs in a separate feature implementation.
+**Important:** Keep this feature modular and independently functional. SpaceCare SI will consume its resources through backend APIs in a separate feature implementation.
 
 **Product Vision:** SpaceLife Library is the astronaut's knowledge center for learning how to live, work, and maintain well-being in space.
