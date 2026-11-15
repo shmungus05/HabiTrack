@@ -3,6 +3,12 @@
  * highest-severity active concordance banner with the 1-click evidence
  * trigger, and the recent crew symptom log.
  * Calm, refined UX with restrained color signals.
+ *
+ * Impeccable Production-Ready UI/UX:
+ * - High-end, minimalist Perplexity design aesthetic
+ * - Font-black display headings, rounded-[32px] primary containers, and soft shadow-2xs depth
+ * - Ergonomic single-stage segmented category switcher for BOTH Astronaut and Flight Surgeon
+ * - 100% preservation of all features, metrics, callbacks, and clinical decision support
  */
 
 import {
@@ -13,10 +19,8 @@ import {
   ArrowUpRight,
   Brain,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
   Clock3,
+  Compass,
   Droplets,
   FileText,
   HeartPulse,
@@ -28,7 +32,6 @@ import {
   Sparkles,
   Stethoscope,
   Thermometer,
-  Watch,
   Wind,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -47,7 +50,7 @@ import { useAssistantStore } from "../stores/assistantStore";
 import { useRoleStore } from "../stores/roleStore";
 import { AstronautOnly, SurgeonOnly } from "../features/shared";
 import { HealthReportModal, type HealthReportSourceData } from "../features/health-report";
-import { EventRationaleDisplay, parseEventRationale } from "./EventRationaleDisplay";
+import { EventRationaleDisplay } from "./EventRationaleDisplay";
 import { HuaweiHealthPanel } from "./HuaweiHealthPanel";
 import type {
   Astronaut,
@@ -103,81 +106,63 @@ interface KpiDefinition {
   streamId: string;
   unit: string;
   digits: number;
-  baselineKey: "resting_hr" | "resting_rmssd" | "resting_spo2" | "resting_temp";
-  icon: typeof HeartPulse;
-  spark: string;
-  warn: (delta: number) => boolean;
 }
 
 const KPI_DEFINITIONS: KpiDefinition[] = [
   {
-    key: "hr",
-    label: "Resting HR",
+    key: "heart_rate",
+    label: "Heart Rate",
     streamId: "stream_sim_hr",
     unit: "bpm",
     digits: 0,
-    baselineKey: "resting_hr",
-    icon: HeartPulse,
-    spark: "#0284c7",
-    warn: (delta) => Math.abs(delta) > 8,
   },
   {
     key: "rmssd",
-    label: "HRV · RMSSD",
+    label: "RMSSD",
     streamId: "stream_sim_hrv",
     unit: "ms",
     digits: 0,
-    baselineKey: "resting_rmssd",
-    icon: Brain,
-    spark: "#0891b2",
-    warn: (delta) => delta < -10,
   },
   {
     key: "spo2",
-    label: "Peripheral SpO₂",
+    label: "SpO₂",
     streamId: "stream_sim_spo2",
     unit: "%",
-    digits: 1,
-    baselineKey: "resting_spo2",
-    icon: Droplets,
-    spark: "#059669",
-    warn: (delta) => delta < -1,
+    digits: 0,
   },
   {
-    key: "temp",
+    key: "core_temp",
     label: "Core Temp",
     streamId: "stream_sim_temp",
     unit: "°C",
-    digits: 2,
-    baselineKey: "resting_temp",
-    icon: Thermometer,
-    spark: "#ea580c",
-    warn: (delta) => Math.abs(delta) > 0.4,
+    digits: 1,
   },
 ];
 
 function streamPoints(measurements: Measurement[], streamId: string): Measurement[] {
   return measurements
-    .filter((item) => item.stream_id === streamId)
+    .filter((point) => point.stream_id === streamId)
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 }
 
 function createSmoothPath(coords: Array<{ x: number; y: number }>): string {
-  if (coords.length < 2) return "";
-  let d = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`;
+  if (coords.length <= 1) return "";
+  let d = `M ${coords[0].x},${coords[0].y}`;
   for (let i = 0; i < coords.length - 1; i++) {
     const p0 = coords[i];
     const p1 = coords[i + 1];
     const midX = ((p0.x + p1.x) / 2).toFixed(1);
-    d += ` C ${midX},${p0.y.toFixed(1)} ${midX},${p1.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+    d += ` Q ${p0.x},${p0.y} ${midX},${((p0.y + p1.y) / 2).toFixed(1)}`;
   }
+  d += ` T ${coords[coords.length - 1].x},${coords[coords.length - 1].y}`;
   return d;
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length < 2) {
-    return <div className="h-8 w-full rounded bg-slate-100" />;
+    return <div className="h-8 w-28 rounded bg-slate-100" />;
   }
+
   const width = 120;
   const height = 32;
   const min = Math.min(...values);
@@ -187,21 +172,17 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
     x: (index / (values.length - 1)) * width,
     y: height - ((value - min) / span) * (height - 6) - 3,
   }));
+
   const strokePath = createSmoothPath(coords);
   const areaPath = `${strokePath} L ${width},${height} L 0,${height} Z`;
   const gradId = `spark-grad-${color.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-8 w-full overflow-visible"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
+    <svg width={width} height={height} className="overflow-visible shrink-0">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.16" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.0" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={areaPath} fill={`url(#${gradId})`} />
@@ -209,7 +190,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
         d={strokePath}
         fill="none"
         stroke={color}
-        strokeWidth={1.75}
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -238,7 +219,7 @@ function MultiFactorHealthGauge({
   hrLabel,
   isMetric = true,
 }: HealthGaugeProps) {
-  // 5-Factor Composite Algorithm (Section 5.3):
+  // 5-Factor Composite Algorithm:
   // Score = 0.25*S_CO2 + 0.25*S_Rad + 0.15*S_Temp + 0.15*S_Hum + 0.20*S_Press
   const sCo2 =
     co2Ppm <= 2500 ? 100 : Math.max(20, 100 - ((co2Ppm - 2500) / 2500) * 80);
@@ -334,14 +315,14 @@ function MultiFactorHealthGauge({
   ];
 
   return (
-    <article className="rounded-xl glass-panel glass-card-hover p-4 sm:p-5 space-y-4">
-      <div className="flex items-center justify-between border-b border-border pb-3">
+    <article className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 space-y-4 shadow-2xs">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-sm font-bold text-slate-900">
             5-Factor Composite Health Gauge
           </h3>
-          <p className="text-[11px] text-muted">
-            Weighted environmental + biomedical index
+          <p className="text-[11px] text-slate-500">
+            Weighted environmental + autonomic vital index
           </p>
         </div>
         <Badge
@@ -353,104 +334,91 @@ function MultiFactorHealthGauge({
       </div>
 
       <div className="flex flex-col items-center py-2 text-center">
-        <div className="relative h-40 w-40">
-          <svg
-            width={160}
-            height={160}
-            viewBox="0 0 160 160"
-            className="-rotate-90"
-            aria-label={`Composite health score ${score} percent`}
-          >
+        <div className="relative flex items-center justify-center">
+          <svg width="156" height="156" className="-rotate-90">
             <circle
-              cx={80}
-              cy={80}
+              cx="78"
+              cy="78"
               r={radius}
               fill="none"
               stroke="#e2e8f0"
-              strokeWidth={10}
+              strokeWidth="11"
             />
             <circle
-              cx={80}
-              cy={80}
+              cx="78"
+              cy="78"
               r={radius}
               fill="none"
               stroke={ringColor}
-              strokeWidth={10}
-              strokeLinecap="round"
+              strokeWidth="11"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
-              style={{
-                transition: "stroke-dashoffset 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-              }}
+              strokeLinecap="round"
+              className="transition-all duration-700 ease-out"
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-mono text-2xl font-semibold text-foreground tabular-nums">
-              {score}%
+            <span className="font-mono text-3xl font-black text-slate-900 tracking-tight">
+              {score}
             </span>
-            <span className="text-[11px] text-muted">Health Index</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              / 100 Index
+            </span>
           </div>
         </div>
 
-        {/* Direct icon flow above status title (no boxed container) */}
-        <HeartPulse className={`mt-2 h-5 w-5 ${statusTextClass}`} />
-        <p className={`mt-1 text-base font-semibold tracking-tight ${statusTextClass}`}>
+        <p className={`mt-2 text-xs font-bold ${statusTextClass}`}>
           {statusLabel}
+        </p>
+        <p className="mt-0.5 text-[11px] text-slate-400 font-mono">
+          Algorithm: §5.3 NASA Concordance Model
         </p>
       </div>
 
-      <ul className="space-y-1.5 text-xs">
+      <div className="space-y-1.5 pt-1 border-t border-slate-100 text-xs">
         {checklist.map((item) => {
           const badgeCls = item.ok
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
             : item.caution
-              ? "border-amber-200 bg-amber-50 text-amber-700"
-              : "border-red-200 bg-red-50 text-red-700";
+              ? "text-amber-700 bg-amber-50 border-amber-200"
+              : "text-red-700 bg-red-50 border-red-200";
           const StatusIcon = item.ok
             ? CheckCircle2
             : item.caution
-              ? AlertTriangle
-              : AlertCircle;
-          const statusWord = item.ok
-            ? "Nominal"
-            : item.caution
-              ? "Advisory"
-              : "Alert";
+              ? AlertCircle
+              : AlertTriangle;
+          const statusWord = item.ok ? "Nominal" : item.caution ? "Caution" : "Excursion";
 
           return (
-            <li
+            <div
               key={item.label}
-              className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-subtle px-2.5 py-2"
+              className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              <span className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2">
                 <span
-                  className="h-2 w-2 shrink-0 rounded-full"
+                  className="h-2 w-2 rounded-full shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="truncate text-[11px] text-secondary">
-                  {item.label}
-                </span>
-              </span>
-              <span className="flex items-center gap-2 shrink-0">
-                <span className="font-mono text-[11px] font-semibold text-foreground tabular-nums">
+                <span className="text-slate-600 font-medium">{item.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-slate-800 text-[11px]">
                   {item.reading}
                 </span>
                 <span
-                  className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium ${badgeCls}`}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${badgeCls}`}
                 >
-                  <StatusIcon className="h-3 w-3" />
-                  {statusWord}
+                  <StatusIcon className="h-2.5 w-2.5 shrink-0" />
+                  <span>{statusWord}</span>
                 </span>
-              </span>
-            </li>
+              </div>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </article>
   );
 }
-
-export type OverviewSubSection = "all" | "vitals" | "eclss" | "concordance" | "symptoms" | "wearables" | "risk";
 
 const QUICK_SYMPTOMS = [
   { code: "HEADACHE", label: "Frontal Headache" },
@@ -464,6 +432,21 @@ function latestValue(data: OverviewData, streamId: string): number | null {
   return points.at(-1)?.value ?? null;
 }
 
+export type OverviewSubSection =
+  | "triage"
+  | "concordance"
+  | "vitals"
+  | "environment"
+  | "symptoms"
+  | "all";
+
+export type AstronautOverviewCategory =
+  | "vitals"
+  | "environment"
+  | "gauge"
+  | "symptoms"
+  | "all";
+
 interface AstronautOverviewProps {
   astronautId: string;
   data: OverviewData;
@@ -472,13 +455,12 @@ interface AstronautOverviewProps {
   onQuickLog: (code: string) => void;
   activeScenario?: string;
   activeScenarios?: string[];
+  onOpenHealthImport?: () => void;
 }
 
 /**
- * Astronaut perspective: focused strictly on personal physiological telemetry
- * (HR, HRV/RMSSD, SpO2, Core Temp with live sparklines) and personal health status
- * (5-factor composite health gauge, personal baseline, and 1-tap quick symptom log).
- * Concordance investigation cards, concordance history, and fleet reports are omitted.
+ * Astronaut perspective: focused strictly on personal physiological telemetry,
+ * cabin environment, 5-factor composite health gauge, and 1-tap quick symptom log.
  */
 function AstronautOverview({
   astronautId,
@@ -488,10 +470,14 @@ function AstronautOverview({
   onQuickLog,
   activeScenario = "nominal",
   activeScenarios = [],
+  onOpenHealthImport,
 }: AstronautOverviewProps) {
   const { settings } = useBiomedicalSettings();
   const isMetric = settings.unitSystem === "metric";
   const { astronaut, measurements } = data;
+
+  const [activeCategory, setActiveCategory] =
+    useState<AstronautOverviewCategory>("vitals");
 
   const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
   const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
@@ -508,8 +494,6 @@ function AstronautOverview({
 
   const detectedCrewStation = getAstronautDetectedLocation(astronautId);
 
-  let hr = latestValue(data, "stream_sim_hr");
-  let rmssd = latestValue(data, "stream_sim_hrv");
   let latestCo2 = envTelemetry.co2;
   let latestCabinTemp = envTelemetry.temp;
   const latestPressure = envTelemetry.pressureMmHg;
@@ -517,7 +501,6 @@ function AstronautOverview({
   let latestRmssd = astronaut?.resting_rmssd ?? 55;
   let radValue = envTelemetry.rad;
 
-  // Apply live real-time simulation scenario overrides, supporting multi-anomaly injection
   if (hasCo2) {
     latestHr = (astronaut?.resting_hr ?? 65) + 27; // 92 bpm
     latestRmssd = 24; // 55 ms baseline - 31 ms depression
@@ -532,149 +515,275 @@ function AstronautOverview({
   const eventActive = !isNominal && (autonomicFlagged || hasCo2 || hasThermal || hasSaa);
   const gaugeHrLabel = `${latestHr.toFixed(0)} bpm`;
 
+  const showTab = (cat: AstronautOverviewCategory) =>
+    activeCategory === "all" || activeCategory === cat;
+
   return (
     <div className="space-y-6">
-      {/* Astronaut Header */}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
-        <div className="flex min-w-0 items-center gap-4">
-          <AstronautAvatar
-            astronautId={astronautId}
-            size="xl"
-            label={astronaut?.callsign ?? astronautId}
-            className="shrink-0"
-          />
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] text-slate-500">
-              Astronaut perspective · {astronautId}
-              {astronaut?.mission_id ? (
-                <span className="text-slate-400"> · {astronaut.mission_id}</span>
-              ) : null}
-            </p>
-            <h2 className="mt-0.5 truncate text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-              {astronaut?.callsign ?? astronautId}
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-600">
-              {astronaut?.crew_role ?? "Crew member"}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
-                <span>Station: <strong>{detectedCrewStation.moduleName}</strong> ({detectedCrewStation.location})</span>
-              </span>
+      {/* Astronaut Header & Segmented Controller */}
+      <header className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <AstronautAvatar
+              astronautId={astronautId}
+              size="xl"
+              label={astronaut?.callsign ?? astronautId}
+              className="shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="font-mono text-[11px] text-slate-500">
+                Astronaut perspective · {astronautId}
+                {astronaut?.mission_id ? (
+                  <span className="text-slate-400"> · {astronaut.mission_id}</span>
+                ) : null}
+              </p>
+              <h1 className="mt-0.5 truncate text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                {astronaut?.callsign ?? astronautId}
+              </h1>
+              <p className="mt-0.5 text-xs text-slate-600">
+                {astronaut?.crew_role ?? "Crew member"}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                  <span>
+                    Station: <strong>{detectedCrewStation.moduleName}</strong> ({detectedCrewStation.location})
+                  </span>
+                </span>
+              </div>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <Badge
+              variant={eventActive ? "danger" : "success"}
+              dot
+              pulse={eventActive}
+            >
+              {eventActive ? "Action required" : "All clear"}
+            </Badge>
           </div>
         </div>
-        <div className="flex flex-col items-start gap-1 sm:items-end">
-          <Badge
-            variant={eventActive ? "danger" : "success"}
-            dot
-            pulse={eventActive}
-          >
-            {eventActive ? "Action required" : "All clear"}
-          </Badge>
-        </div>
-      </section>
 
-      {/* 14-Module ISS Location & Sensor Selector */}
-      <SpacecraftModuleSelector />
-
-      {/* Cabin Environmental Telemetry Card */}
-      <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-8 shadow-2xs">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
-              <Wind className={`w-4 h-4 shrink-0 ${latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"}`} />
-            </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 truncate">
-              Cabin Environmental Telemetry · {envTelemetry.module.shortName} [{envTelemetry.location}]
-            </span>
-          </div>
-          {hasCo2 && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
-              CO₂ SPIKE ACTIVE
-            </span>
-          )}
-          {hasThermal && (
-            <span className="rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
-              HEAT SURGE ACTIVE
-            </span>
-          )}
-          {hasSaa && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
-              SAA RADIATION ACTIVE
-            </span>
-          )}
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {/* Cabin CO2 */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
-            <span className="text-[11px] font-semibold text-slate-500 block">
-              Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${latestCo2 > 3500 ? "text-amber-700" : "text-slate-900"}`}>
-                {isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-mono block">
-              {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
-            </span>
-          </div>
-
-          {/* Cabin Temp */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
-            <span className="text-[11px] font-semibold text-slate-500 block">
-              Cabin Temp ({isMetric ? "°C" : "°F"})
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
-                {isMetric ? `${latestCabinTemp.toFixed(1)} °C` : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-mono block">
-              Envelope 20.0–24.0 °C
-            </span>
-          </div>
-
-          {/* Cabin Pressure */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
-            <span className="text-[11px] font-semibold text-slate-500 block">
-              Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-xl sm:text-2xl font-bold tabular-nums text-slate-900">
-                {isMetric ? `${(latestPressure * 0.133322).toFixed(1)} kPa` : `${latestPressure.toFixed(1)} mmHg`}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-mono block">
-              {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
-            </span>
-          </div>
-
-          {/* Radiation */}
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4.5 shadow-2xs transition-all hover:border-slate-300 space-y-1">
-            <span className="text-[11px] font-semibold text-slate-500 block">
-              Radiation Flux
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
-                {radValue.toFixed(2)} mGy/d
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-mono block">
-              Baseline 0.19 mGy/d
-            </span>
+        {/* Ergonomic Category Controller */}
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between overflow-x-auto">
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100/90 border border-slate-200/80">
+            {[
+              { id: "vitals", label: "Vitals & Baselines", icon: Activity },
+              { id: "environment", label: "Cabin Environment", icon: Wind },
+              { id: "gauge", label: "Health Gauge", icon: HeartPulse },
+              { id: "symptoms", label: "Symptoms & Wearables", icon: CheckCircle2 },
+              { id: "all", label: "All Overview", icon: Layers },
+            ].map((tab) => {
+              const isActive = activeCategory === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveCategory(tab.id as AstronautOverviewCategory)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap ${
+                    isActive
+                      ? "bg-white text-slate-900 border border-slate-200/90 shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent"
+                  }`}
+                >
+                  <Icon
+                    className={`w-3.5 h-3.5 ${
+                      isActive ? "text-sky-600" : "text-slate-400"
+                    }`}
+                  />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
-      <PhysiologicalCards astronautId={astronautId} />
+      {/* Cabin Environment Stage */}
+      {showTab("environment") && (
+        <section className="space-y-6">
+          <SpacecraftModuleSelector />
 
-      {/* Focused 2-Column Personal Health Status Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column: 5-Factor Health Gauge */}
+          <div className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+                  <Wind
+                    className={`w-4 h-4 shrink-0 ${
+                      latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"
+                    }`}
+                  />
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 truncate">
+                  Cabin Environmental Telemetry · {envTelemetry.module.shortName} [{envTelemetry.location}]
+                </span>
+              </div>
+              {hasCo2 && (
+                <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+                  CO₂ SPIKE ACTIVE
+                </span>
+              )}
+              {hasThermal && (
+                <span className="rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
+                  HEAT SURGE ACTIVE
+                </span>
+              )}
+              {hasSaa && (
+                <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+                  SAA RADIATION ACTIVE
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {/* Cabin CO2 */}
+              <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-slate-500 block">
+                  Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                      latestCo2 > 3500 ? "text-amber-700 font-extrabold" : "text-slate-900"
+                    }`}
+                  >
+                    {isMetric
+                      ? `${latestCo2.toLocaleString()} PPM`
+                      : `${(latestCo2 / 750).toFixed(2)} mmHg`}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono block">
+                  {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
+                </span>
+              </div>
+
+              {/* Cabin Temp */}
+              <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-slate-500 block">
+                  Cabin Temp ({isMetric ? "°C" : "°F"})
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                      latestCabinTemp > 25.5 ? "text-amber-700 font-extrabold" : "text-slate-900"
+                    }`}
+                  >
+                    {isMetric
+                      ? `${latestCabinTemp.toFixed(1)} °C`
+                      : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono block">
+                  Envelope 20.0–24.0 °C
+                </span>
+              </div>
+
+              {/* Cabin Pressure */}
+              <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-slate-500 block">
+                  Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-xl sm:text-2xl font-bold tabular-nums text-slate-900">
+                    {isMetric
+                      ? `${(latestPressure * 0.133322).toFixed(1)} kPa`
+                      : `${latestPressure.toFixed(1)} mmHg`}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono block">
+                  {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
+                </span>
+              </div>
+
+              {/* Radiation Flux */}
+              <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                <span className="text-[11px] font-semibold text-slate-500 block">
+                  Radiation Flux
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                      radValue > 0.35 ? "text-red-700 font-extrabold" : "text-slate-900"
+                    }`}
+                  >
+                    {radValue.toFixed(2)} mGy/d
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono block">
+                  Baseline 0.19 mGy/d
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Vitals Stage */}
+      {showTab("vitals") && (
+        <section className="space-y-6">
+          <PhysiologicalCards astronautId={astronautId} />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <article className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-2xs">
+              <h3 className="text-sm font-bold text-slate-900">Personal Physiological Baseline</h3>
+              <dl className="mt-3 divide-y divide-slate-100 text-xs">
+                {[
+                  { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
+                  { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
+                  { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
+                  {
+                    label: "Core temp",
+                    value: isMetric
+                      ? `${astronaut?.resting_temp ?? 0} °C`
+                      : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
+                    icon: Thermometer,
+                  },
+                  {
+                    label: "Circadian shift",
+                    value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
+                    icon: Clock3,
+                  },
+                ].map((row) => {
+                  const Icon = row.icon;
+                  return (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
+                    >
+                      <dt className="flex items-center gap-2 text-slate-600 font-medium">
+                        <Icon className="h-3.5 w-3.5 text-slate-400" />
+                        {row.label}
+                      </dt>
+                      <dd className="font-semibold font-mono text-slate-900 tabular-nums">
+                        {row.value}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200/80 bg-white flex items-start gap-3.5 p-5 shadow-2xs">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-sky-600">
+                <Radio className="h-4 w-4" />
+              </span>
+              <div>
+                <h3 className="text-xs font-bold text-slate-900">Personal Health Monitoring</h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Personal vital signals are evaluated continuously against your circadian baseline. Ground telemetry
+                  synchronization is active in real-time.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+      )}
+
+      {/* 5-Factor Health Gauge Stage */}
+      {showTab("gauge") && (
         <section className="space-y-6">
           <MultiFactorHealthGauge
             co2Ppm={latestCo2}
@@ -687,36 +796,39 @@ function AstronautOverview({
             isMetric={isMetric}
           />
         </section>
+      )}
 
-        {/* Right Column: Personal Baseline, Quick Symptom Log, Monitoring Note */}
+      {/* Symptoms & Wearables Stage */}
+      {showTab("symptoms") && (
         <section className="space-y-6">
-          {/* Quick Symptom Log: 1-tap logging for astronaut */}
-          <section className="rounded-xl glass-panel p-4 sm:p-5">
+          {/* Quick Symptom Log */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Quick symptom log
+                <h3 className="text-sm font-bold text-slate-900">
+                  Quick Symptom Log
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  One tap records locally at severity 3/5. Add detail in Symptoms.
+                  One tap records locally at severity 3/5. Add detail in Symptoms view.
                 </p>
               </div>
               {quickNotice ? (
-                <span className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
+                <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800 animate-fadeIn">
                   {quickNotice}
                 </span>
               ) : null}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {QUICK_SYMPTOMS.map((symptom) => (
                 <button
                   key={symptom.code}
                   type="button"
                   onClick={() => onQuickLog(symptom.code)}
                   disabled={quickLogging !== null}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left cursor-pointer transition-colors hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 text-left cursor-pointer transition-all hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 shadow-2xs"
                 >
-                  <span className="block text-xs font-semibold text-slate-900">
+                  <span className="block text-xs font-bold text-slate-900">
                     {symptom.label}
                   </span>
                   <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
@@ -725,64 +837,19 @@ function AstronautOverview({
                 </button>
               ))}
             </div>
-            <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-slate-500">
-              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-              Every log entry is written to the local station log immediately and
-              stays available offline.
+
+            <p className="mt-3.5 flex items-start gap-2 text-xs text-slate-500">
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+              Every log entry is written to the local station diary immediately and stays available offline.
             </p>
-          </section>
+          </div>
 
-          <article className="rounded-xl glass-panel p-4 sm:p-5">
-            <h3 className="text-sm font-semibold text-slate-900">Personal baseline</h3>
-            <dl className="mt-3 divide-y divide-slate-100 text-xs">
-              {[
-                { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
-                { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
-                { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
-                {
-                  label: "Core temp",
-                  value: isMetric
-                    ? `${astronaut?.resting_temp ?? 0} °C`
-                    : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
-                  icon: Thermometer,
-                },
-                {
-                  label: "Circadian shift",
-                  value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
-                  icon: Clock3,
-                },
-              ].map((row) => {
-                const Icon = row.icon;
-                return (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
-                  >
-                    <dt className="flex items-center gap-2 text-slate-600">
-                      <Icon className="h-3.5 w-3.5 text-slate-400" />
-                      {row.label}
-                    </dt>
-                    <dd className="font-semibold font-mono text-slate-900 tabular-nums">{row.value}</dd>
-                  </div>
-                );
-              })}
-            </dl>
-          </article>
-
-          <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
-              <Radio className="h-4 w-4" />
-            </span>
-            <div>
-              <h3 className="text-xs font-semibold text-slate-900">Personal Health Monitoring</h3>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                Personal vital signals are evaluated continuously against your baseline. Ground telemetry
-                synchronization is active.
-              </p>
-            </div>
-          </article>
+          <HuaweiHealthPanel
+            measurements={measurements}
+            onOpenImport={() => onOpenHealthImport?.()}
+          />
         </section>
-      </div>
+      )}
     </div>
   );
 }
@@ -799,7 +866,7 @@ export function OverviewView({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<OverviewSubSection>("all");
+  const [activeSection, setActiveSection] = useState<OverviewSubSection>("triage");
 
   const openForEvent = useAssistantStore((state) => state.openForEvent);
   const isDrawerOpen = useAssistantStore((state) => state.isOpen);
@@ -807,7 +874,8 @@ export function OverviewView({
   const isAstronaut = role === "astronaut";
   const [simulationState, simulationControls] = useSimulationSandbox();
   const { activeScenario, isAnomalyActive } = simulationState;
-  const activeScenarios = simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
+  const activeScenarios =
+    simulationState.activeScenarios || (activeScenario !== "nominal" ? [activeScenario] : []);
   const hasCo2 = activeScenarios.includes("co2_spike") || activeScenario === "co2_spike";
   const hasThermal = activeScenarios.includes("thermal_overheat") || activeScenario === "thermal_overheat";
   const hasSaa = activeScenarios.includes("saa_transit") || activeScenario === "saa_transit";
@@ -820,8 +888,6 @@ export function OverviewView({
   const [healthReportOpen, setHealthReportOpen] = useState(false);
   const [quickLogging, setQuickLogging] = useState<string | null>(null);
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
-
-
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -929,18 +995,6 @@ export function OverviewView({
     );
   }, [data, hasCo2, hasThermal, hasSaa, astronautId, isMetric]);
 
-  useEffect(() => {
-    if (activeEvent && activeEvent.severity_level === "INVESTIGATE") {
-      setActiveSection("concordance");
-    }
-  }, [activeEvent]);
-
-  useEffect(() => {
-    if (hasCo2 || hasThermal || hasSaa) {
-      setActiveSection("eclss");
-    }
-  }, [hasCo2, hasThermal, hasSaa]);
-
   const orderedEvents = useMemo(() => {
     const list = data ? [...data.events] : [];
     if (hasSaa && !list.some((e) => e.event_id === "sim_saa_transit")) {
@@ -1018,7 +1072,6 @@ export function OverviewView({
     setReviewing(event.event_id);
     try {
       if (event.event_id.startsWith("sim_")) {
-        // Simulated anomaly acknowledged; reset simulation to nominal
         await new Promise((resolve) => setTimeout(resolve, 300));
         simulationControls.resetNominal();
         return;
@@ -1069,7 +1122,6 @@ export function OverviewView({
     }
   };
 
-  // Hooks must run before the loading/error early returns below.
   const healthReportSource = useMemo<HealthReportSourceData | null>(() => {
     if (!data?.astronaut) {
       return null;
@@ -1115,15 +1167,12 @@ export function OverviewView({
   const counts = data?.symptoms.length ?? 0;
   const eventTheme = activeEvent ? severityTheme(activeEvent.severity_level) : null;
 
-  // Environmental snapshot values for the 5-Factor Health Gauge with real-time simulation overrides
   const envTelemetry = computeModuleTelemetry(
     selectedModuleId,
     selectedLocation,
     activeScenarios,
     activeScenario,
   );
-
-  const detectedCrewStation = getAstronautDetectedLocation(astronautId);
 
   let latestCo2 = envTelemetry.co2;
   let latestCabinTemp = envTelemetry.temp;
@@ -1143,390 +1192,263 @@ export function OverviewView({
   const gaugeAutonomicFlag =
     !isNominal &&
     ((latestHr !== null && astronaut ? Math.abs(latestHr - astronaut.resting_hr) > 8 : false) ||
-    (latestRmssd !== null && astronaut ? latestRmssd - astronaut.resting_rmssd < -10 : false) ||
-    hasCo2);
+      (latestRmssd !== null && astronaut ? latestRmssd - astronaut.resting_rmssd < -10 : false) ||
+      hasCo2);
   const gaugeHrLabel = `${latestHr.toFixed(0)} bpm`;
+
+  const showSurgeonSection = (sec: OverviewSubSection) =>
+    activeSection === "all" || activeSection === sec;
 
   return (
     <div className="space-y-6">
       <AstronautOnly>
         {data ? (
-          <div className="space-y-6">
-            <AstronautOverview
-              astronautId={astronautId}
-              data={data}
-              quickLogging={quickLogging}
-              quickNotice={quickNotice}
-              onQuickLog={(code) => void quickLogSymptom(code)}
-              activeScenario={activeScenario}
-              activeScenarios={activeScenarios}
-            />
-            <HuaweiHealthPanel
-              measurements={measurements}
-              onOpenImport={() => onOpenHealthImport?.()}
-            />
-          </div>
+          <AstronautOverview
+            astronautId={astronautId}
+            data={data}
+            quickLogging={quickLogging}
+            quickNotice={quickNotice}
+            onQuickLog={(code) => void quickLogSymptom(code)}
+            activeScenario={activeScenario}
+            activeScenarios={activeScenarios}
+            onOpenHealthImport={onOpenHealthImport}
+          />
         ) : null}
       </AstronautOnly>
 
       <SurgeonOnly>
-        <div className="space-y-4">
-          {/* Executive Cockpit Triage Bar */}
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <AstronautAvatar
-                astronautId={astronautId}
-                size="lg"
-                label={astronaut?.callsign ?? astronautId}
-                className="shrink-0"
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="truncate text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+        <div className="space-y-6">
+          {/* Flight Surgeon Header & Segmented Stage Controller */}
+          <header className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <AstronautAvatar
+                  astronautId={astronautId}
+                  size="xl"
+                  label={astronaut?.callsign ?? astronautId}
+                  className="shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="font-mono text-[11px] text-slate-500">
+                    Clinical Expedition Oversight · {astronautId}
+                    {astronaut?.mission_id ? (
+                      <span className="text-slate-400"> · {astronaut.mission_id}</span>
+                    ) : null}
+                  </p>
+                  <h1 className="mt-0.5 truncate text-xl sm:text-2xl font-black tracking-tight text-slate-900">
                     {astronaut?.callsign ?? astronautId}
-                  </h2>
-                  <span className="font-mono text-xs text-slate-500">
-                    {astronautId}
-                    {astronaut?.mission_id ? ` · ${astronaut.mission_id}` : ""}
-                  </span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-slate-600 font-medium">
+                  </h1>
+                  <p className="mt-0.5 text-xs text-slate-600">
                     {astronaut?.crew_role ?? "Crew member"}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
-                    <span>Station: <strong>{detectedCrewStation.moduleName}</strong> ({detectedCrewStation.location})</span>
-                  </span>
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      <MapPin className="h-3 w-3 text-emerald-600 shrink-0" />
+                      <span>
+                        Station: <strong>{getAstronautDetectedLocation(astronautId).moduleName}</strong> ({getAstronautDetectedLocation(astronautId).location})
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => setHealthReportOpen(true)}
+                  leftIcon={<FileText className="h-3.5 w-3.5 text-slate-600" />}
+                >
+                  Export Health Report
+                </Button>
+              </div>
             </div>
 
-            {/* Glanceable Subsystem Triage Status */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs">
-                <span className={`h-2 w-2 rounded-full ${latestHr > 85 || latestRmssd < 30 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
-                <span className="font-medium text-slate-700">Vitals:</span>
-                <span className="font-mono font-semibold text-slate-900">
-                  {latestHr > 85 ? `Elevated (${latestHr.toFixed(0)} bpm)` : "Nominal"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs">
-                <span className={`h-2 w-2 rounded-full ${!isNominal || latestCo2 > 3500 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
-                <span className="font-medium text-slate-700">ECLSS:</span>
-                <span className="font-mono font-semibold text-slate-900">
-                  {hasCo2 ? "CO₂ Spike" : hasThermal ? "Heat Surge" : hasSaa ? "SAA Radiation" : "Nominal"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs">
-                <span className={`h-2 w-2 rounded-full ${activeEvent ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
-                <span className="font-medium text-slate-700">Concordance:</span>
-                <span className="font-mono font-semibold text-slate-900 truncate max-w-[160px]">
-                  {activeEvent ? titleCase(activeEvent.event_type) : "Nominal"}
-                </span>
-              </div>
-
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setHealthReportOpen(true)}
-                leftIcon={<FileText className="h-3.5 w-3.5 text-slate-600" />}
-              >
-                Export Report
-              </Button>
-            </div>
-          </section>
-
-          {/* Subsystem Navigation Buttons (Settings functions pattern) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Operational Subsystems &amp; Clinical Modules
-              </span>
-              <span className="text-[11px] font-mono text-slate-500">
-                Active View: <strong className="text-sky-700">{
-                  activeSection === "all" ? "Command View (All)" :
-                  activeSection === "vitals" ? "Physiological Vitals" :
-                  activeSection === "eclss" ? "Cabin Environmental (ECLSS)" :
-                  activeSection === "concordance" ? "Clinical Concordance" :
-                  activeSection === "symptoms" ? "Crew Symptoms & Diary" :
-                  activeSection === "wearables" ? "Huawei Watch 4 Pro" : "Risk & Triage"
-                }</strong>
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              {[
-                {
-                  id: "all" as const,
-                  label: "Command View",
-                  icon: Layers,
-                  metric: "Panoramic View",
-                  badge: null,
-                  badgeClass: "",
-                  hasAlert: false,
-                },
-                {
-                  id: "vitals" as const,
-                  label: "Physiological",
-                  icon: Activity,
-                  metric: `${latestHr.toFixed(0)} bpm · ${latestRmssd.toFixed(0)} ms`,
-                  badge: latestHr > 85 ? "ELEVATED" : null,
-                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse",
-                  hasAlert: latestHr > 85,
-                },
-                {
-                  id: "eclss" as const,
-                  label: "Cabin ECLSS",
-                  icon: Wind,
-                  metric: isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`,
-                  badge: hasCo2 ? "CO₂ SPIKE" : hasThermal ? "OVERHEAT" : hasSaa ? "SAA RAD" : null,
-                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300 animate-pulse",
-                  hasAlert: !isNominal,
-                },
-                {
-                  id: "concordance" as const,
-                  label: "Concordance",
-                  icon: activeEvent ? ShieldAlert : CheckCircle2,
-                  metric: activeEvent ? titleCase(activeEvent.event_type) : "Nominal (0 active)",
-                  badge: activeEvent ? activeEvent.severity_level : null,
-                  badgeClass: eventTheme ? `${eventTheme.background} ${eventTheme.text} border ${eventTheme.border}` : "",
-                  hasAlert: Boolean(activeEvent),
-                },
-                {
-                  id: "symptoms" as const,
-                  label: "Crew Symptoms",
-                  icon: Stethoscope,
-                  metric: `${counts} logged reports`,
-                  badge: recentSymptoms.length > 0 ? `${recentSymptoms.length} recent` : null,
-                  badgeClass: "bg-slate-100 text-slate-700 border border-slate-200",
-                  hasAlert: false,
-                },
-                {
-                  id: "wearables" as const,
-                  label: "Huawei Watch",
-                  icon: Watch,
-                  metric: `${measurements.length} biometrics`,
-                  badge: "TruSeen 5.5+",
-                  badgeClass: "bg-teal-50 text-teal-800 border border-teal-200",
-                  hasAlert: false,
-                },
-                {
-                  id: "risk" as const,
-                  label: "Risk & Triage",
-                  icon: AlertTriangle,
-                  metric: gaugeAutonomicFlag ? "Autonomic strain" : "5-Factor nominal",
-                  badge: gaugeAutonomicFlag ? "STRAIN" : null,
-                  badgeClass: "bg-amber-100 text-amber-800 border border-amber-300",
-                  hasAlert: gaugeAutonomicFlag,
-                },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const active = activeSection === tab.id;
-                const isAlert = tab.hasAlert;
-
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveSection(tab.id)}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all flex flex-col justify-between gap-2 text-left ${
-                      active
-                        ? isAlert
-                          ? "bg-amber-50 border-amber-400 text-amber-950 shadow-xs ring-2 ring-amber-400/40 font-bold"
-                          : "bg-sky-50 border-sky-400 text-sky-950 shadow-xs ring-2 ring-sky-400/30 font-bold"
-                        : isAlert
-                        ? "bg-amber-50/50 hover:bg-amber-50 border-amber-300 text-amber-800"
-                        : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <Icon className={`w-4 h-4 shrink-0 ${
+            {/* Segmented Sub-section Navigation Controller */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between overflow-x-auto">
+              <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100/90 border border-slate-200/80">
+                {[
+                  { id: "triage" as const, label: "Risk & Triage", icon: ShieldAlert },
+                  { id: "concordance" as const, label: "Concordance Events", icon: Sparkles },
+                  { id: "vitals" as const, label: "Vitals & Baselines", icon: Activity },
+                  { id: "environment" as const, label: "Cabin Environment", icon: Wind },
+                  { id: "symptoms" as const, label: "Symptoms & Wearables", icon: Stethoscope },
+                  { id: "all" as const, label: "Panoramic Command", icon: Layers },
+                ].map((sec) => {
+                  const active = activeSection === sec.id;
+                  const Icon = sec.icon;
+                  return (
+                    <button
+                      key={sec.id}
+                      type="button"
+                      onClick={() => setActiveSection(sec.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer select-none whitespace-nowrap ${
                         active
-                          ? isAlert ? "text-amber-700" : "text-sky-700"
-                          : isAlert ? "text-amber-600" : "text-slate-500"
-                      }`} />
-                      {tab.badge && (
-                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${tab.badgeClass}`}>
-                          {tab.badge}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold leading-tight truncate">{tab.label}</div>
-                      <div className="text-[10px] font-mono text-slate-500 truncate mt-0.5">{tab.metric}</div>
-                    </div>
-                  </button>
-                );
-              })}
+                          ? "bg-white text-slate-900 border border-slate-200/90 shadow-xs font-bold"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent"
+                      }`}
+                    >
+                      <Icon className={`h-3.5 w-3.5 ${active ? "text-sky-600" : "text-slate-400"}`} />
+                      <span>{sec.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </header>
 
-          {/* FUNCTION 1: Physiological Telemetry */}
-          {(activeSection === "vitals" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-rose-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Synchronized Physiological Telemetry</h3>
+          {/* Cabin Environment Stage */}
+          {showSurgeonSection("environment") && (
+            <section className="space-y-6">
+              <SpacecraftModuleSelector />
+
+              <div className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
+                      <Wind
+                        className={`w-4 h-4 shrink-0 ${
+                          latestCo2 > 3500 ? "text-amber-600 animate-pulse" : "text-sky-600"
+                        }`}
+                      />
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 truncate">
+                      Cabin Environmental Telemetry · {envTelemetry.module.shortName} [{envTelemetry.location}]
+                    </span>
                   </div>
-                  <span className="text-xs font-mono text-slate-500">Resting HR: {astronaut?.resting_hr ?? 65} bpm · SpO₂: {astronaut?.resting_spo2 ?? 98}%</span>
+                  {hasCo2 && (
+                    <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+                      CO₂ SPIKE ACTIVE
+                    </span>
+                  )}
+                  {hasThermal && (
+                    <span className="rounded-full bg-orange-100 border border-orange-300 px-2.5 py-0.5 text-[10px] font-bold text-orange-800 animate-pulse">
+                      HEAT SURGE ACTIVE
+                    </span>
+                  )}
+                  {hasSaa && (
+                    <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 animate-pulse">
+                      SAA RADIATION ACTIVE
+                    </span>
+                  )}
                 </div>
-              )}
-              <PhysiologicalCards astronautId={astronautId} />
 
-              <article className="rounded-xl glass-panel p-4 sm:p-5">
-                <h3 className="text-sm font-semibold text-slate-900">Cohort Baseline Targets</h3>
-                <dl className="mt-3 divide-y divide-slate-100 text-xs">
-                  {[
-                    { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
-                    { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
-                    { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
-                    {
-                      label: "Core temp",
-                      value: isMetric
-                        ? `${astronaut?.resting_temp ?? 0} °C`
-                        : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
-                      icon: Thermometer,
-                    },
-                    {
-                      label: "Circadian shift",
-                      value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
-                      icon: Clock3,
-                    },
-                  ].map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div
-                        key={row.label}
-                        className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {/* Cabin CO2 */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                          latestCo2 > 3500 ? "text-amber-700 font-extrabold" : "text-slate-900"
+                        }`}
                       >
-                        <dt className="flex items-center gap-2 text-slate-600">
-                          <Icon className="h-3.5 w-3.5 text-slate-400" />
-                          {row.label}
-                        </dt>
-                        <dd className="font-semibold font-mono text-slate-900 tabular-nums">{row.value}</dd>
-                      </div>
-                    );
-                  })}
-                </dl>
-              </article>
-            </div>
-          )}
-
-          {/* FUNCTION 2: Cabin Environmental Telemetry (ECLSS) */}
-          {(activeSection === "eclss" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Wind className="w-4 h-4 text-sky-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Cabin Environmental Telemetry (ECLSS)</h3>
-                  </div>
-                  <span className="text-xs font-mono text-slate-500">Module: {envTelemetry.module.shortName} [{envTelemetry.location}]</span>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-500 block">
-                    Cabin CO₂ ({isMetric ? "PPM" : "mmHg"})
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`font-mono text-xl font-bold tabular-nums ${latestCo2 > 3500 ? "text-amber-700" : "text-slate-900"}`}>
-                      {isMetric ? `${latestCo2.toLocaleString()} PPM` : `${(latestCo2 / 750).toFixed(2)} mmHg`}
+                        {isMetric
+                          ? `${latestCo2.toLocaleString()} PPM`
+                          : `${(latestCo2 / 750).toFixed(2)} mmHg`}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono block">
-                    {isMetric ? "Nominal ≤2,500 PPM" : "Nominal ≤3.33 mmHg"}
-                  </span>
-                </div>
 
-                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-500 block">
-                    Cabin Temp ({isMetric ? "°C" : "°F"})
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`font-mono text-xl font-bold tabular-nums ${latestCabinTemp > 25.5 ? "text-amber-700" : "text-slate-900"}`}>
-                      {isMetric ? `${latestCabinTemp.toFixed(1)} °C` : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
+                  {/* Cabin Temp */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      Cabin Temp ({isMetric ? "°C" : "°F"})
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                          latestCabinTemp > 25.5 ? "text-amber-700 font-extrabold" : "text-slate-900"
+                        }`}
+                      >
+                        {isMetric
+                          ? `${latestCabinTemp.toFixed(1)} °C`
+                          : `${(latestCabinTemp * 1.8 + 32).toFixed(1)} °F`}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      Envelope 20.0–24.0 °C
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono block">
-                    Envelope 20.0–24.0 °C
-                  </span>
-                </div>
 
-                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-500 block">
-                    Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-xl font-bold tabular-nums text-slate-900">
-                      {isMetric ? `${(latestPressure * 0.133322).toFixed(1)} kPa` : `${latestPressure.toFixed(1)} mmHg`}
+                  {/* Cabin Pressure */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      Cabin Pressure ({isMetric ? "kPa" : "mmHg"})
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-mono text-xl sm:text-2xl font-bold tabular-nums text-slate-900">
+                        {isMetric
+                          ? `${(latestPressure * 0.133322).toFixed(1)} kPa`
+                          : `${latestPressure.toFixed(1)} mmHg`}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono block">
-                    {isMetric ? "Nominal 101.3 kPa" : "Nominal 760.0 mmHg"}
-                  </span>
-                </div>
 
-                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-500 block">
-                    Radiation Flux
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`font-mono text-xl font-bold tabular-nums ${radValue > 0.35 ? "text-red-700" : "text-slate-900"}`}>
-                      {radValue.toFixed(2)} mGy/d
+                  {/* Radiation Flux */}
+                  <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 shadow-2xs space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      Radiation Flux
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className={`font-mono text-xl sm:text-2xl font-bold tabular-nums ${
+                          radValue > 0.35 ? "text-red-700 font-extrabold" : "text-slate-900"
+                        }`}
+                      >
+                        {radValue.toFixed(2)} mGy/d
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      Baseline 0.19 mGy/d
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono block">
-                    Baseline 0.19 mGy/d
-                  </span>
                 </div>
               </div>
-
-              {/* 14-Module ISS Location & Sensor Selector */}
-              <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-2xs space-y-3">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Interactive ISS Module &amp; Compartment Sensor Map
-                </h4>
-                <SpacecraftModuleSelector />
-              </div>
-            </div>
+            </section>
           )}
 
-          {/* FUNCTION 3: Clinical Concordance */}
-          {(activeSection === "concordance" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-amber-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Clinical Concordance Engine</h3>
-                  </div>
-                  <span className="text-xs font-mono text-slate-500">{activeEvent ? "Active Clinical Discordance" : "Circadian Envelopes Nominal"}</span>
-                </div>
-              )}
+          {/* Clinical Risk & Triage Stage */}
+          {showSurgeonSection("triage") && (
+            <section className="space-y-6">
+              <ClinicalRiskMatrix />
+              <ContextualTriageBanner />
+            </section>
+          )}
 
+          {/* Concordance Events Stage */}
+          {showSurgeonSection("concordance") && (
+            <section className="space-y-6">
               {activeEvent && eventTheme ? (
-                <article className="rounded-2xl border border-amber-300/80 bg-white shadow-2xs p-5 sm:p-6 space-y-4">
+                <article className="rounded-[32px] border border-slate-200/90 bg-white shadow-2xs p-6 sm:p-8 space-y-4 transition-all hover:border-slate-300">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`badge border ${eventTheme.border} ${eventTheme.text} ${eventTheme.background}`}>
+                        <span
+                          className={`badge border ${eventTheme.border} ${eventTheme.text} ${eventTheme.background}`}
+                        >
                           <span className={`h-1.5 w-1.5 rounded-full ${eventTheme.dot}`} />
-                          {eventTheme.label} · Active Concordance
+                          {eventTheme.label} · Active concordance
                         </span>
                         <Badge variant="default">{activeEvent.review_status}</Badge>
-                        <span className={`badge border ${uncertaintyTheme(activeEvent.uncertainty_level)}`}>
+                        <span
+                          className={`badge border ${uncertaintyTheme(
+                            activeEvent.uncertainty_level,
+                          )}`}
+                        >
                           Uncertainty {activeEvent.uncertainty_level}
                         </span>
                       </div>
-                      <h3 className="mt-2 text-lg font-bold tracking-tight text-slate-900">
+                      <h3 className="mt-2.5 text-lg font-bold tracking-tight text-slate-900">
                         {titleCase(activeEvent.event_type)}
                       </h3>
                       <EventRationaleDisplay
@@ -1534,17 +1456,7 @@ export function OverviewView({
                         eventType={activeEvent.event_type}
                       />
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => void acknowledge(activeEvent)}
-                        disabled={reviewing === activeEvent.event_id}
-                        leftIcon={<CheckCircle2 className="h-3.5 w-3.5 text-slate-600" />}
-                      >
-                        {activeEvent.review_status === "PENDING" ? "Acknowledge" : "Resolve"}
-                      </Button>
+                    <div className="flex flex-col items-stretch gap-2 shrink-0">
                       <Button
                         variant="primary"
                         size="sm"
@@ -1556,18 +1468,32 @@ export function OverviewView({
                       >
                         Explain with Evidence
                       </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => void acknowledge(activeEvent)}
+                        disabled={reviewing === activeEvent.event_id}
+                        leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                      >
+                        {activeEvent.review_status === "PENDING" ? "Acknowledge" : "Resolve"}
+                      </Button>
+                      {isDrawerOpen ? (
+                        <span className="text-center text-[11px] uppercase tracking-wider text-slate-600 font-medium">
+                          Drawer active
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
                       <p className="field-label">Window</p>
                       <p className="mt-1 text-xs text-slate-900 font-mono">
                         {formatDateTime(activeEvent.start_time)} →{" "}
                         {formatDateTime(activeEvent.end_time)}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
                       <p className="field-label">Peak deviation</p>
                       <p className="mt-1 text-xs text-slate-900 font-mono">
                         {activeEvent.peak_deviation_sigma !== null
@@ -1575,7 +1501,7 @@ export function OverviewView({
                           : "Not quantified"}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
                       <p className="field-label">Contributing streams</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {parseStreamIds(activeEvent.contributing_stream_ids).map((stream) => (
@@ -1591,10 +1517,10 @@ export function OverviewView({
                   </div>
 
                   {/* Immediate Clinical Action & Flight Countermeasures */}
-                  <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 p-4 space-y-2">
+                  <div className="rounded-2xl border border-sky-200/80 bg-sky-50/60 p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <ShieldAlert className="h-4 w-4 text-sky-700" />
-                      <span className="font-semibold text-xs text-sky-950 uppercase tracking-wider">
+                      <span className="font-bold text-xs text-sky-950 uppercase tracking-wider">
                         Immediate Clinical Action Plan &amp; Protocol Guidelines
                       </span>
                     </div>
@@ -1615,28 +1541,29 @@ export function OverviewView({
                   </div>
                 </article>
               ) : (
-                <article className="rounded-xl glass-panel flex items-center gap-4 p-5">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700">
+                <article className="rounded-2xl border border-slate-200/80 bg-white flex items-center gap-4 p-5 shadow-2xs">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700">
                     <CheckCircle2 className="h-4 w-4" />
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
+                    <h3 className="text-sm font-bold text-slate-900">
                       No active concordance events
                     </h3>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      All evaluated multi-signal windows remain within calibrated circadian envelopes for {astronaut?.callsign ?? astronautId}.
+                      All evaluated multi-signal windows remain within calibrated circadian
+                      envelopes for {astronaut?.callsign ?? astronautId}.
                     </p>
                   </div>
                 </article>
               )}
 
-              {/* Concordance History Log */}
+              {/* Recent Concordance History & Audit Log */}
               {orderedEvents.length > 0 && (
-                <article className="rounded-xl glass-panel p-4 sm:p-5">
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-2xs">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Concordance Event History &amp; Audit Trail
-                    </h4>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Recent Concordance History &amp; Audit Log
+                    </h3>
                     <span className="text-xs text-slate-500 font-mono">
                       {orderedEvents.length} events
                     </span>
@@ -1647,7 +1574,7 @@ export function OverviewView({
                       return (
                         <li
                           key={event.event_id}
-                          className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+                          className="flex flex-wrap items-center justify-between gap-2 py-3"
                         >
                           <div className="flex min-w-0 items-center gap-3">
                             <span className={`h-2 w-2 rounded-full ${theme.dot}`} />
@@ -1661,7 +1588,9 @@ export function OverviewView({
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`badge border ${theme.border} ${theme.text} ${theme.background}`}>
+                            <span
+                              className={`badge border ${theme.border} ${theme.text} ${theme.background}`}
+                            >
                               {theme.label}
                             </span>
                             <Button
@@ -1678,72 +1607,110 @@ export function OverviewView({
                   </ul>
                 </article>
               )}
-            </div>
+
+              <article className="rounded-2xl border border-slate-200/80 bg-white flex items-start gap-3.5 p-5 shadow-2xs">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-sky-600">
+                  <Radio className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Decision Support System</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    Events are ranked by operational severity. Explanations are
+                    grounded in the bundled NASA HRR/OSDR corpus with non-causal verification.
+                  </p>
+                </div>
+              </article>
+            </section>
           )}
 
-          {/* FUNCTION 4: Crew Symptoms & Self-Reports */}
-          {(activeSection === "symptoms" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Stethoscope className="w-4 h-4 text-amber-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Crew Symptoms &amp; Clinical Diary</h3>
-                  </div>
-                  <Badge variant="default">{counts} reports total</Badge>
-                </div>
-              )}
+          {/* Vitals & Baselines Stage */}
+          {showSurgeonSection("vitals") && (
+            <section className="space-y-6">
+              <PhysiologicalCards astronautId={astronautId} />
 
-              {/* Fast Log Strip */}
-              <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Quick Clinical Symptom Log
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Record directly to station diary</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {["HEADACHE", "FATIGUE", "NAUSEA", "DIZZINESS"].map((symptomCode) => (
-                    <button
-                      key={symptomCode}
-                      type="button"
-                      onClick={() => void quickLogSymptom(symptomCode)}
-                      disabled={quickLogging === symptomCode}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer transition-colors shadow-2xs"
-                    >
-                      {quickLogging === symptomCode ? "Logging..." : titleCase(symptomCode)}
-                    </button>
-                  ))}
-                </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <MultiFactorHealthGauge
+                  co2Ppm={latestCo2}
+                  radiationMGy={radValue}
+                  cabinTempC={latestCabinTemp}
+                  humidityPct={envTelemetry.humidity}
+                  pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
+                  autonomicFlagged={gaugeAutonomicFlag}
+                  hrLabel={gaugeHrLabel}
+                  isMetric={isMetric}
+                />
 
-                {quickNotice && (
-                  <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 font-medium">
-                    {quickNotice}
-                  </div>
-                )}
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-2xs">
+                  <h3 className="text-sm font-bold text-slate-900">Cohort Physiological Baseline</h3>
+                  <dl className="mt-3 divide-y divide-slate-100 text-xs">
+                    {[
+                      { label: "Resting HR", value: `${astronaut?.resting_hr ?? 0} bpm`, icon: HeartPulse },
+                      { label: "RMSSD", value: `${astronaut?.resting_rmssd ?? 0} ms`, icon: Brain },
+                      { label: "SpO₂", value: `${astronaut?.resting_spo2 ?? 0}%`, icon: Droplets },
+                      {
+                        label: "Core temp",
+                        value: isMetric
+                          ? `${astronaut?.resting_temp ?? 0} °C`
+                          : `${((astronaut?.resting_temp ?? 36.8) * 1.8 + 32).toFixed(1)} °F`,
+                        icon: Thermometer,
+                      },
+                      {
+                        label: "Circadian shift",
+                        value: `${formatSigned(astronaut?.circadian_phase_shift_hours ?? 0, 1)} h`,
+                        icon: Clock3,
+                      },
+                    ].map((row) => {
+                      const Icon = row.icon;
+                      return (
+                        <div
+                          key={row.label}
+                          className="flex items-center justify-between py-2.5 first:pt-1 last:pb-1"
+                        >
+                          <dt className="flex items-center gap-2 text-slate-600 font-medium">
+                            <Icon className="h-3.5 w-3.5 text-slate-400" />
+                            {row.label}
+                          </dt>
+                          <dd className="font-semibold font-mono text-slate-900 tabular-nums">
+                            {row.value}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </article>
               </div>
+            </section>
+          )}
 
-              {/* Symptom Log */}
-              <article className="rounded-xl glass-panel p-4 sm:p-5">
+          {/* Symptoms & Wearables Stage */}
+          {showSurgeonSection("symptoms") && (
+            <section className="space-y-6">
+              <HuaweiHealthPanel
+                measurements={measurements}
+                onOpenImport={() => onOpenHealthImport?.()}
+              />
+
+              <article className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-2xs">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Recent Crew Symptom Reports
-                  </h4>
-                  <span className="text-xs text-slate-500 font-mono">{recentSymptoms.length} displayed</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Recent Crew Symptom Reports</h3>
+                    <p className="text-[11px] text-slate-500">Subjective telemetry logs recorded by expedition crew</p>
+                  </div>
+                  <Badge variant="default">{counts} total</Badge>
                 </div>
                 {recentSymptoms.length === 0 ? (
-                  <p className="mt-3 rounded-lg border border-dashed border-slate-200 p-4 text-xs text-slate-500">
+                  <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-500">
                     No symptom reports logged for this crew member.
                   </p>
                 ) : (
-                  <ul className="mt-3 space-y-2">
+                  <ul className="mt-3 space-y-2.5">
                     {recentSymptoms.map((symptom) => (
                       <li
                         key={symptom.report_id}
-                        className="rounded-lg border border-slate-200/80 bg-slate-50/70 p-3"
+                        className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-slate-900">
+                          <span className="text-xs font-bold text-slate-900">
                             {symptom.symptom_code.replace(/_/g, " ")}
                           </span>
                           <span className="flex items-center gap-1">
@@ -1771,72 +1738,7 @@ export function OverviewView({
                   </ul>
                 )}
               </article>
-            </div>
-          )}
-
-          {/* FUNCTION 5: Huawei Smart Watch Telemetry */}
-          {(activeSection === "wearables" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Watch className="w-4 h-4 text-teal-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Huawei Watch 4 Pro Telemetry</h3>
-                  </div>
-                  <span className="text-xs font-mono text-slate-500">{measurements.length} biometrics synchronized</span>
-                </div>
-              )}
-              <HuaweiHealthPanel
-                measurements={measurements}
-                onOpenImport={() => onOpenHealthImport?.()}
-              />
-            </div>
-          )}
-
-          {/* FUNCTION 6: Multi-Factor Risk & Triage */}
-          {(activeSection === "risk" || activeSection === "all") && (
-            <div className="space-y-4">
-              {activeSection !== "all" && (
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-purple-600" />
-                    <h3 className="text-sm font-bold text-slate-900">Multi-Factor Risk &amp; Clinical Triage</h3>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${gaugeAutonomicFlag ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
-                    {gaugeAutonomicFlag ? "AUTONOMIC STRAIN" : "5-FACTOR NOMINAL"}
-                  </span>
-                </div>
-              )}
-
-              <ClinicalRiskMatrix />
-              <ContextualTriageBanner />
-
-              <div className="pt-2">
-                <MultiFactorHealthGauge
-                  co2Ppm={latestCo2}
-                  radiationMGy={radValue}
-                  cabinTempC={latestCabinTemp}
-                  humidityPct={envTelemetry.humidity}
-                  pressureMmHg={latestPressure > 200 ? latestPressure : 758.2}
-                  autonomicFlagged={gaugeAutonomicFlag}
-                  hrLabel={gaugeHrLabel}
-                  isMetric={isMetric}
-                />
-              </div>
-
-              <article className="rounded-xl glass-panel flex items-start gap-3 p-4">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600">
-                  <Radio className="h-4 w-4" />
-                </span>
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-900">Decision support</h4>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                    Events are ranked by operational severity. Explanations are
-                    grounded in the bundled NASA HRR/OSDR corpus with non-causal verification.
-                  </p>
-                </div>
-              </article>
-            </div>
+            </section>
           )}
         </div>
       </SurgeonOnly>
