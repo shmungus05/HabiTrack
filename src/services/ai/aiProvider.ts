@@ -23,6 +23,13 @@ import {
   generateLocalClinicalTriage,
   isLocalModelReady,
 } from "./localModelService.ts";
+import {
+  generateSargalayChatCompletion,
+  getSargalayApiKey,
+  getSargalayModel,
+  getSargalayModelLabel,
+  type SargalayChatMessage,
+} from "./sargalayClient.ts";
 
 export type SIModelMode = "frontier" | "local";
 export type AIModelMode = SIModelMode;
@@ -34,7 +41,7 @@ export interface UnifiedRagResult {
 }
 
 /**
- * Dispatches knowledge queries to the selected model mode.
+ * Dispatches knowledge queries to the selected model mode or active gateway.
  */
 export async function generateUnifiedRagResponse(params: {
   mode: SIModelMode;
@@ -60,7 +67,7 @@ export async function generateUnifiedRagResponse(params: {
     telemetryContext = null,
   } = params;
 
-  // 1. Local WebGPU Execution
+  // 1. Local WebGPU Execution (if explicitly requested)
   if (mode === "local") {
     if (isLocalModelReady()) {
       try {
@@ -84,8 +91,61 @@ export async function generateUnifiedRagResponse(params: {
     }
   }
 
-  // 2. Frontier (Gemini 2.5 Flash) Execution
+  // 2. Frontier Execution (Sargalay Gateway preferred, then direct Gemini)
   if (mode === "frontier") {
+    const sargalayKey = getSargalayApiKey();
+    if (sargalayKey) {
+      try {
+        const messages: SargalayChatMessage[] = [
+          {
+            role: "system",
+            content:
+              "You are HabiTrack Flight SI, an advanced onboard clinical decision-support and crew health synthetic intelligence system for ISS Expedition 71. Ground your answers in spaceflight physiology and NASA Flight Rules, maintaining non-causal epistemic guardrails.",
+          },
+        ];
+
+        if (history.length > 0) {
+          for (const h of history) {
+            if (h.text && h.text.trim()) {
+              messages.push({
+                role: h.role === "user" ? "user" : "assistant",
+                content: h.text,
+              });
+            }
+          }
+        }
+
+        let promptText = "";
+        if (evidence.length > 0) {
+          promptText += `Relevant NASA Biomedical Evidence:\n${evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join("\n\n")}\n\n`;
+        }
+        if (telemetryContext) {
+          promptText += `Station Telemetry (${telemetryContext.compartment || "Onboard"}):\n- CO2: ${telemetryContext.co2Ppm} ppm | Temp: ${telemetryContext.tempC}°C | Humidity: ${telemetryContext.humidityPct}% | Rad: ${telemetryContext.radiationRateMGy} mGy/d | Pressure: ${telemetryContext.pressureMmHg} mmHg\n\n`;
+        }
+        if (crewContext) {
+          promptText += `Active Crewmember: ${crewContext}\n\n`;
+        }
+        promptText += `Crew Query: "${userQuery}"`;
+
+        messages.push({ role: "user", content: promptText });
+
+        const res = await generateSargalayChatCompletion({
+          messages,
+          preferredModel: getSargalayModel(),
+          temperature: 0.6,
+          maxTokens: 800,
+        });
+
+        return {
+          answer: res.content,
+          provider: `${getSargalayModelLabel(res.modelUsed)} (via Sargalay Gateway)`,
+          isFallback: res.isFallback,
+        };
+      } catch (sargalayErr) {
+        console.warn("[siProvider] Sargalay Gateway call failed, attempting fallback:", sargalayErr);
+      }
+    }
+
     try {
       const geminiRes = await generateGeminiRagResponse(
         userQuery,
@@ -104,7 +164,7 @@ export async function generateUnifiedRagResponse(params: {
     }
   }
 
-  // 3. Deterministic Extractive Fallback
+  // 4. Deterministic Extractive Fallback
   let fallbackText = "";
   if (evidence.length === 0) {
     fallbackText =

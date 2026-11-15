@@ -8,3 +8,4 @@ export * from "./MockLlmAdapter.ts";
 export * from "./ExtractiveFallbackAdapter.ts";
 export * from "./GeminiFrontierAdapter.ts";
 export * from "./WebGpuLocalAdapter.ts";
+export * from "./SargalayAdapter.ts";
