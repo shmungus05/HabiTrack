@@ -48,13 +48,6 @@ export const ContextualTriageBanner: React.FC<ContextualTriageBannerProps> = ({
     setEvaluation(evaluateContextualTriage(text, currentSnapshot));
   };
 
-  const sampleCases = [
-    "Throbbing frontal headache in Node 2 crew quarters",
-    "Dry stinging eyes and irritation in Columbus module",
-    "Extreme sweating and core heat buildup after workout in US Lab",
-    "Feeling lightheaded and fatigued during EVA preparation",
-  ];
-
   return (
     <section
       className={`p-5 sm:p-6 glass-panel rounded-xl relative overflow-hidden ${className}`}
@@ -84,24 +77,30 @@ export const ContextualTriageBanner: React.FC<ContextualTriageBannerProps> = ({
         </span>
       </div>
 
-      {/* Preset Query Chips */}
-      <div className="pt-6 space-y-2">
-        <span className="text-xs font-semibold text-secondary">Select Test Scenario or Enter Freeform Query:</span>
-        <div className="flex flex-wrap gap-2">
-          {sampleCases.map((sc) => (
-            <button
-              key={sc}
-              onClick={() => handleEvaluate(sc)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium text-left transition-all cursor-pointer glass-card-hover ${
-                query === sc
-                  ? "bg-sky-50 text-sky-700 border border-sky-300 border-l-2 border-l-sky-600"
-                  : "glass-panel-subtle text-secondary hover:text-foreground"
-              }`}
-            >
-              {sc}
-            </button>
-          ))}
-        </div>
+      {/* Clinical Query Evaluation Input */}
+      <div className="pt-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleEvaluate(query);
+          }}
+          className="relative flex items-center"
+        >
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Enter crew symptom or compartment observation for 5-factor triage..."
+            className="w-full px-4 py-2.5 pr-28 rounded-xl border border-border bg-white text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-sky-500 shadow-2xs"
+          />
+          <button
+            type="submit"
+            className="absolute right-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Triage</span>
+          </button>
+        </form>
       </div>
 
       {/* Evaluation Results Card */}

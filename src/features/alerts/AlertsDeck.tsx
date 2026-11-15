@@ -32,7 +32,7 @@ import { useCohortStore } from "../../stores/cohortStore";
 import { useSimulationSandbox } from "../simulation";
 import { parseEventRationale } from "../../components/EventRationaleDisplay";
 import { useBiomedicalSettings } from "../settings";
-import { PhysiologicalCards, usePhysiologicalTelemetry } from "../biometrics";
+import { usePhysiologicalTelemetry } from "../biometrics";
 import { useActiveMissionTime } from "../../stores/missionStore";
 import {
   computeModuleTelemetry,
@@ -612,11 +612,6 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
-      </div>
-
-      {/* Synchronized Physiological Telemetry & Circadian Envelope */}
-      <div className="mt-4">
-        <PhysiologicalCards astronautId={activeAstronautId} compact />
       </div>
 
       {/* Real-time Telemetry Status Ribbon - Unit Synchronized & Fully Interactive */}
