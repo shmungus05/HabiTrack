@@ -197,14 +197,14 @@ export function HuaweiHealthPanel({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900">
-                Smart Watch Biometrics
+                Huawei Health Smart Watch Biometrics
               </h2>
-              <Badge variant="accent">Health Data Export</Badge>
+              <Badge variant="accent">Huawei Health Export</Badge>
             </div>
             <p className="text-xs text-slate-500">
               {huaweiMeasurements.length > 0
                 ? `${formatRecordCount(huaweiMeasurements.length)} stored locally in IndexedDB`
-                : "No Health Data Export imported yet"}
+                : "No Huawei Health data imported yet"}
             </p>
           </div>
         </div>
@@ -214,17 +214,17 @@ export function HuaweiHealthPanel({
           onClick={onOpenImport}
           leftIcon={<Upload className="h-3.5 w-3.5" />}
         >
-          Import Health Data
+          Import Huawei Health Data
         </Button>
       </div>
 
       {huaweiMeasurements.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center space-y-2">
           <p className="text-sm font-semibold text-slate-800">
-            Ready to import historical smart watch health data
+            Ready to import historical Huawei Health smart watch data
           </p>
           <p className="mx-auto max-w-xl text-xs text-slate-500">
-            Click <strong>Import Health Data</strong> to select your{" "}
+            Click <strong>Import Huawei Health Data</strong> to select your{" "}
             <code className="rounded bg-white px-1 py-0.5 font-mono">export.zip</code>. Only
             records with <code className="rounded bg-white px-1 py-0.5 font-mono">sourceName="HUAWEI Health"</code>{" "}
             are imported.

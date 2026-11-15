@@ -197,13 +197,37 @@ function generateUuid(): string {
 // PUBLIC API IMPLEMENTATION (100% TypeScript)
 // -----------------------------------------------------------------------------
 
+async function checkOllamaOnline(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  // Try via local dev proxy first, then direct port fallback
+  const endpoints = ["/api/ollama/api/tags", "http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"];
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1200);
+      const res = await fetch(url, {
+        method: "GET",
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        return true;
+      }
+    } catch {
+      // Continue to next endpoint fallback
+    }
+  }
+  return false;
+}
+
 export async function fetchHealth(): Promise<HealthStatus> {
   const seed = await loadSeedData();
+  const isOllamaOnline = await checkOllamaOnline();
   return {
     ...seed.health,
     version: "3.2.0-ts-client",
     vector_store_chunks: researchChunks.length,
-    ollama_online: false,
+    ollama_online: isOllamaOnline,
   };
 }
 

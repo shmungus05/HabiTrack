@@ -146,6 +146,7 @@ export default function App() {
   const [isHealthImportOpen, setIsHealthImportOpen] = useState(false);
   const [healthImportRevision, setHealthImportRevision] = useState(0);
   const [now, setNow] = useState<Date>(() => new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const astronauts = useCohortStore((state) => state.astronauts);
   const activeAstronautId = useCohortStore((state) => state.activeAstronautId);
@@ -273,6 +274,18 @@ export default function App() {
     : "Ollama offline — deterministic extractive synthesis active";
   const clock = useMemo(() => formatCockpitClock(now), [now]);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadCohort(),
+        fetchHealth().then(setHealth).catch(() => setHealth(null)),
+      ]);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
+
   if (!hasSelectedRole) {
     return <IntroPage onSelectRole={() => setActiveView("overview")} />;
   }
@@ -349,7 +362,7 @@ export default function App() {
             <Badge
               variant={ollamaOnline ? "accent" : "default"}
               title={ollamaTitle}
-              className="hidden 2xl:inline-flex"
+              className="hidden xl:inline-flex"
             >
               {ollamaOnline ? (
                 <Wifi className="h-3 w-3 text-sky-600" />
@@ -359,7 +372,7 @@ export default function App() {
               {ollamaOnline ? "Ollama Online" : "Extractive Mode"}
             </Badge>
             <div
-              className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] 2xl:flex"
+              className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] lg:flex"
               title={
                 missionMode === "simulation"
                   ? "Simulated Mission Operations Time"
@@ -376,16 +389,6 @@ export default function App() {
                 {missionMode === "simulation" ? "SIM UTC" : "UTC"}
               </span>
             </div>
-
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => setIsHealthImportOpen(true)}
-              leftIcon={<Upload className="h-3.5 w-3.5 text-sky-600" />}
-              title="Import historical Huawei Health data from Apple Health ZIP export"
-            >
-              <span className="hidden sm:inline">Import Health Data</span>
-            </Button>
 
             <Button
               size="sm"
@@ -450,17 +453,13 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                void loadCohort();
-                void fetchHealth()
-                  .then(setHealth)
-                  .catch(() => setHealth(null));
-              }}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 cursor-pointer transition-colors hover:border-slate-300 hover:text-slate-900"
-              title="Refresh cohort and service health"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoadingCohort}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 cursor-pointer transition-colors hover:border-slate-300 hover:text-slate-900 disabled:opacity-75"
+              title="Synchronize cohort and service health"
             >
               <RefreshCw
-                className={`h-3.5 w-3.5 ${isLoadingCohort ? "animate-spin text-sky-600" : ""}`}
+                className={`h-3.5 w-3.5 ${isRefreshing || isLoadingCohort ? "animate-spin text-sky-600" : ""}`}
               />
             </button>
           </div>

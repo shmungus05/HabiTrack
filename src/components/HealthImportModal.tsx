@@ -81,7 +81,7 @@ export function HealthImportModal({
       setError(
         caught instanceof Error
           ? caught.message
-          : "Unable to import the selected Apple Health ZIP file."
+          : "Unable to import the selected Huawei Health archive."
       );
     } finally {
       setIsImporting(false);
@@ -134,10 +134,10 @@ export function HealthImportModal({
                 id="huawei-import-modal-title"
                 className="text-base font-bold text-slate-900"
               >
-                Import Health Data
+                Import Huawei Health Data
               </h2>
               <p className="text-xs text-slate-500">
-                Source: <span className="font-semibold text-slate-700">Health Data Export</span>{" "}
+                Source: <span className="font-semibold text-slate-700">Huawei Health Export</span>{" "}
                 (historical `.zip` export, processed locally)
               </p>
             </div>
@@ -157,7 +157,7 @@ export function HealthImportModal({
           <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs text-emerald-900">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
             <p>
-              <strong>On-device privacy:</strong> Your Apple Health ZIP is extracted and streamed
+              <strong>On-device privacy:</strong> Your Huawei Health ZIP is extracted and streamed
               inside a local Web Worker. Only records with exact{" "}
               <code className="rounded bg-white/80 px-1 py-0.5 font-mono text-[11px]">
                 sourceName="HUAWEI Health"
@@ -172,11 +172,11 @@ export function HealthImportModal({
                 <FileArchive className="h-5 w-5 shrink-0 text-slate-500" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-800">
-                    {selectedFile ? selectedFile.name : "Select Apple Health export (.zip)"}
+                    {selectedFile ? selectedFile.name : "Select Huawei Health export (.zip)"}
                   </p>
                   <p className="text-xs text-slate-500">
                     {selectedFile
-                      ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Expects apple_health_export/export.xml`
+                      ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB · Expects export.xml with Huawei Health records`
                       : "Choose your exported export.zip file"}
                   </p>
                 </div>
@@ -189,10 +189,10 @@ export function HealthImportModal({
                   onChange={handleFileChange}
                   disabled={isImporting}
                   className="hidden"
-                  id="apple-health-zip-input"
+                  id="huawei-health-zip-input"
                 />
                 <label
-                  htmlFor="apple-health-zip-input"
+                  htmlFor="huawei-health-zip-input"
                   className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 ${
                     isImporting ? "pointer-events-none opacity-50" : "cursor-pointer"
                   }`}
