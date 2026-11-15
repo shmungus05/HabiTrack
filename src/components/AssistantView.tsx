@@ -13,6 +13,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   AudioLines,
   BookOpen,
   CheckCircle2,
@@ -275,14 +276,14 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
 
   const modelLabel =
     aiModelMode === "frontier"
-      ? "Frontier (Gemini)"
+      ? "Frontier"
       : localModelStatus === "ready"
-        ? "Local (Llama 3.2)"
+        ? "Local"
         : localModelStatus === "loading"
-          ? "Local (loading)"
+          ? "Local · loading"
           : localModelStatus === "error"
-            ? "Local (failed)"
-            : "Local (not loaded)";
+            ? "Local · unavailable"
+            : "Local · idle";
 
   const modelDotClass =
     aiModelMode === "frontier"
@@ -1031,17 +1032,22 @@ export const AssistantView: React.FC<AssistantViewProps> = ({
                   <button
                     type="button"
                     onClick={handleModelModeToggle}
-                    className="group inline-flex items-center gap-1.5 rounded-md py-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
-                    title="Inference engine — click to switch between Frontier (Gemini) and local WebGPU"
+                    className="group inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 font-sans text-[11px] shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-sky-500/30 focus-visible:outline-none"
+                    title="Inference engine — click to switch between frontier and local execution"
+                    aria-label={`Inference engine: ${modelLabel}. Click to switch.`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${modelDotClass}`}
                       aria-hidden="true"
                     />
-                    <span>Model</span>
-                    <span className="font-semibold text-slate-700 transition-colors group-hover:text-slate-900">
-                      {modelLabel}
+                    <span className="font-medium uppercase tracking-wide text-[10px] text-slate-500">
+                      Engine
                     </span>
+                    <span className="font-semibold text-slate-800">{modelLabel}</span>
+                    <ArrowLeftRight
+                      className="h-3 w-3 shrink-0 text-slate-400 transition-colors group-hover:text-slate-600"
+                      aria-hidden="true"
+                    />
                   </button>
 
                   <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
