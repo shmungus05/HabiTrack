@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
-  Download,
   FileText,
   MapPin,
   Plus,
@@ -21,7 +20,6 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
-  Trash2,
   Users,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -54,6 +52,39 @@ interface LocalSymptomEntry {
   acknowledgmentNotes?: string | null;
 }
 
+/** Formats cabin telemetry into concise operational readout without AI boilerplate */
+function formatCabinTelemetry(factor?: string): string {
+  if (!factor) return "";
+  return factor
+    .replace(/\bCO:?\s*([0-9,]+)\s*(?:PPM|ppm)?\b/gi, "CO₂ $1 ppm")
+    .replace(/\bRad:?\s*([0-9.]+)\s*mGy\/d\b/gi, "Rad $1 mGy/d")
+    .replace(/\bTemp:?\s*([0-9.]+)\s*(?:°?C)?\b/gi, "Temp $1°C")
+    .replace(/\s{2,}/g, " · ")
+    .trim();
+}
+
+/** Cleans robotic AI placeholder text into natural operational log wording */
+function cleanDescription(desc?: string): string {
+  if (!desc) return "Onset noted during shift activities.";
+  const trimmed = desc.trim();
+  if (trimmed.startsWith("Reported during mission tasks in")) {
+    return "Onset noted during shift activities.";
+  }
+  return trimmed;
+}
+
+/** Distills corporate AI disclaimers into standard flight medicine sign-off */
+function cleanAcknowledgmentNotes(notes?: string | null): string {
+  if (!notes) return "Logged to medical record · Follow-up via PMC.";
+  if (
+    notes.includes("Telemetry correlation logged in mission health record") ||
+    notes.includes("Space-to-Ground Voice Loops")
+  ) {
+    return "Logged to medical record · Follow-up via PMC.";
+  }
+  return notes;
+}
+
 const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
   {
     id: "sym-001",
@@ -62,10 +93,10 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     symptom: "Headache",
     severity: "Moderate",
     time: "10:12 UTC",
-    location: "Node 2 (Harmony) - Crew Quarters",
-    duration: "45 mins",
-    description: "Bifrontal throbbing pressure developing after 2 hours working on payload rack in Node 2 forward bay.",
-    environmentalFactor: "CO₂ elevated in Node 2 pocket (peak 3,620 PPM).",
+    location: "Node 2 (Harmony)",
+    duration: "45m",
+    description: "Bifrontal throbbing pressure noted after 2h payload rack work in forward bay.",
+    environmentalFactor: "CO₂ 3,620 ppm · Temp 22.8°C · Rad 0.20 mGy/d",
     reviewStatus: "PENDING",
   },
   {
@@ -76,12 +107,13 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     severity: "Mild",
     time: "08:47 UTC",
     location: "US Lab (Destiny)",
-    duration: "2 hours",
-    description: "General lethargy and mild heaviness in limbs following morning treadmill workout session.",
-    environmentalFactor: "Moderate CO₂ rise during exercise period + cumulative sleep deficit.",
+    duration: "2h",
+    description: "Lethargy and limb heaviness following morning treadmill session.",
+    environmentalFactor: "CO₂ 2,840 ppm · Temp 22.4°C · Rad 0.18 mGy/d",
     reviewStatus: "ACKNOWLEDGED",
     acknowledgedAt: "09:05 UTC",
     acknowledgedBy: "Flight Surgeon (Surgeon Console)",
+    acknowledgmentNotes: "Logged to medical record · Follow-up via PMC.",
   },
   {
     id: "sym-003",
@@ -91,12 +123,13 @@ const SAMPLE_NASA_DIARY: LocalSymptomEntry[] = [
     severity: "Mild",
     time: "06:20 UTC",
     location: "Node 1 (Unity)",
-    duration: "15 mins",
-    description: "Transient postural disorientation upon waking and translating from sleep quarters to galley.",
-    environmentalFactor: "Microgravity neuro-vestibular re-adaptation.",
+    duration: "15m",
+    description: "Transient disorientation upon waking and translating from sleep quarters to galley.",
+    environmentalFactor: "CO₂ 2,410 ppm · Temp 22.1°C · Rad 0.19 mGy/d",
     reviewStatus: "ACKNOWLEDGED",
     acknowledgedAt: "06:45 UTC",
     acknowledgedBy: "Flight Surgeon (Surgeon Console)",
+    acknowledgmentNotes: "Logged to medical record · Monitored on morning loop.",
   },
 ];
 
@@ -270,12 +303,12 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         symptom: titleCase(symptomCode),
         severity: severity >= 4 ? "Severe" : severity >= 2 ? "Moderate" : "Mild",
         time: isSimulation
-          ? `Day ${currentMissionDay} · ${utcString.slice(11, 19)} UTC`
+          ? `Day ${currentMissionDay} · ${utcString.slice(11, 16)} UTC`
           : new Date().toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC",
         location: cabinModule,
-        duration: "30 mins",
-        description: notes.trim() || `Reported during mission tasks in ${cabinModule}.`,
-        environmentalFactor: "CO₂: 3,197 PPM · Rad: 0.20 mGy/d · Temp: 22.8 °C",
+        duration: "30m",
+        description: notes.trim() || `Onset noted during shift activities in ${cabinModule}.`,
+        environmentalFactor: "CO₂ 3,197 ppm · Temp 22.8°C · Rad 0.20 mGy/d",
         reviewStatus: "PENDING",
         acknowledgedAt: null,
         acknowledgedBy: null,
@@ -299,6 +332,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
   const handleAcknowledge = async (entryId: string) => {
     const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " UTC";
     const surgeonSig = "Flight Surgeon (Surgeon Console)";
+    const defaultNotes = "Logged to medical record · Follow-up via PMC.";
     setLocalDiary((prev) =>
       prev.map((item) =>
         item.id === entryId
@@ -307,40 +341,19 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
               reviewStatus: "ACKNOWLEDGED",
               acknowledgedAt: now,
               acknowledgedBy: surgeonSig,
+              acknowledgmentNotes: item.acknowledgmentNotes ?? defaultNotes,
             }
           : item
       )
     );
     try {
-      await acknowledgeSymptom(entryId, surgeonSig);
+      await acknowledgeSymptom(entryId, surgeonSig, defaultNotes);
     } catch (err) {
       console.warn("Error acknowledging symptom via API service", err);
     }
-    setNotice(`Acknowledged by Flight Surgeon · ${now} (Operational consults occur via S/G Voice Loops / PMC)`);
+    setNotice(`Symptom signed off by Flight Surgeon · ${now}`);
     setTimeout(() => setNotice(null), 5000);
   };
-
-  const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localDiary, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `habitrack_symptom_diary_${astronautId}_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const handleClearDiary = () => {
-    if (window.confirm("Clear all locally recorded symptom entries from this browser?")) {
-      setLocalDiary([]);
-      localStorage.removeItem("habitrack_symptom_diary_v3");
-    }
-  };
-
-  const handleLoadSamples = () => {
-    setLocalDiary(SAMPLE_NASA_DIARY);
-  };
-  const handleLoadSample = handleLoadSamples;
 
   const filteredDiary = localDiary.filter((item) => {
     // If astronaut, lock to astronautId
@@ -557,31 +570,6 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                   <FileText className="w-3.5 h-3.5" />
                   <span>Clinical Health Report</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  className="px-3.5 py-2 rounded-lg bg-white border border-border hover:border-sky-300 text-xs font-semibold text-secondary hover:text-sky-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Load Sample Case</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExportJSON}
-                  className="px-3.5 py-2 rounded-lg bg-white border border-border hover:bg-slate-50 text-secondary text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-                  title="Export local diary as JSON for offline clinician review"
-                >
-                  <Download className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Export JSON</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearDiary}
-                  className="p-2 rounded-lg bg-white border border-border hover:bg-red-50 hover:border-red-200 text-muted hover:text-red-700 transition-colors cursor-pointer"
-                  title="Clear Diary"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -613,98 +601,122 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
                 filteredDiary.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 rounded-xl border border-border bg-white shadow-2xs hover:shadow-xs transition-shadow space-y-3"
+                    className="p-5 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between gap-3"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="font-semibold text-sm text-foreground">{item.symptom}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider ${
-                            item.severity === "Severe"
-                              ? "bg-red-50 text-red-700 border border-red-200"
-                              : item.severity === "Moderate"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          }`}
-                        >
-                          {item.severity}
-                        </span>
-                        {item.astronautId && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
-                            <Users className="w-3 h-3 text-sky-600" />
-                            <span>{item.astronautId}{item.callsign ? ` · ${item.callsign}` : ""}</span>
+                    <div className="space-y-2.5">
+                      {/* Top Bar: Symptom, Severity, Status */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-slate-900 tracking-tight">
+                            {item.symptom}
+                          </h4>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider ${
+                              item.severity === "Severe"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200/80"
+                                : item.severity === "Moderate"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                                : "bg-slate-100 text-slate-700 border border-slate-200/80"
+                            }`}
+                          >
+                            {item.severity}
                           </span>
-                        )}
+                        </div>
+
                         {item.reviewStatus === "ACKNOWLEDGED" ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             <span>Acknowledged</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-50 text-amber-700 border border-amber-200/80 font-medium">
+                            <Clock className="w-3 h-3 text-amber-600" />
                             <span>Pending Review</span>
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-muted">
-                        <Clock className="w-3.5 h-3.5 text-sky-600" />
-                        <span>{item.time}</span>
-                        <span>·</span>
-                        <MapPin className="w-3.5 h-3.5 text-sky-600" />
-                        <span>{item.location}</span>
-                      </div>
-                    </div>
 
-                    <p className="text-xs text-secondary leading-relaxed">{item.description}</p>
-
-                    {item.environmentalFactor && (
-                      <div className="pt-2 border-t border-border text-[11px] font-mono text-muted flex items-center gap-2">
-                        <span className="text-sky-700 font-medium">Telemetry Concordance:</span>
-                        <span>{item.environmentalFactor}</span>
-                      </div>
-                    )}
-
-                    {/* Operational Acknowledgment Banner & Action */}
-                    {item.reviewStatus === "ACKNOWLEDGED" ? (
-                      <div className="pt-2.5 border-t border-border flex items-start gap-2.5 text-[11px] bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <div className="leading-relaxed">
-                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                            <span className="text-emerald-900 font-semibold font-mono text-[11px]">
-                              ACKNOWLEDGED BY FLIGHT SURGEON
-                            </span>
-                            <span className="text-emerald-700 font-mono text-[10px]">
-                              {item.acknowledgedAt ?? item.time} · {item.acknowledgedBy ?? "Surgeon Console"}
-                            </span>
-                          </div>
-                          <p className="text-slate-600 text-[11px]">
-                            Telemetry correlation logged in mission health record. Operational clinical guidance, prescription workflows, and countermeasures occur via primary Space-to-Ground Voice Loops (S/G-1 / S/G-2) or Private Medical Conference (PMC).
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="pt-2 border-t border-border flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-700">
-                          <Clock className="w-3.5 h-3.5 text-amber-600" />
-                          <span>
-                            {isFlightSurgeon
-                              ? "Awaiting Flight Surgeon acknowledgment"
-                              : "Transmitted to Ground · Awaiting Flight Surgeon review"}
+                      {/* Crew Identity & Context line */}
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-mono text-slate-500">
+                        {item.astronautId && (
+                          <span className="inline-flex items-center gap-1 text-slate-700 font-medium">
+                            <Users className="w-3 h-3 text-slate-400" />
+                            <span>{item.callsign || item.astronautId}</span>
                           </span>
-                        </div>
-                        {isFlightSurgeon && (
-                          <button
-                            type="button"
-                            onClick={() => void handleAcknowledge(item.id)}
-                            className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Acknowledge</span>
-                          </button>
+                        )}
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{item.time}</span>
+                        </span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{item.location}</span>
+                        </span>
+                        {item.duration && (
+                          <>
+                            <span>·</span>
+                            <span>{item.duration}</span>
+                          </>
                         )}
                       </div>
-                    )}
+
+                      {/* Clean Astronaut Observation */}
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {cleanDescription(item.description)}
+                      </p>
+                    </div>
+
+                    {/* Operational Footer (Environment & Sign-off) */}
+                    <div className="space-y-2 pt-2.5 border-t border-slate-100">
+                      {item.environmentalFactor && (
+                        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono">
+                          <span className="text-slate-400 font-medium">Cabin at onset:</span>
+                          <span className="text-slate-700 font-medium">
+                            {formatCabinTelemetry(item.environmentalFactor)}
+                          </span>
+                        </div>
+                      )}
+
+                      {item.reviewStatus === "ACKNOWLEDGED" ? (
+                        <div className="flex items-start gap-2 pt-1 text-[11px]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono text-slate-500">
+                              <span className="font-semibold text-slate-700">Flight Surgeon Sign-off</span>
+                              <span>
+                                {item.acknowledgedAt ?? item.time} · {item.acknowledgedBy ?? "Surgeon Console"}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-slate-600 text-[11px]">
+                              {cleanAcknowledgmentNotes(item.acknowledgmentNotes)}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-700">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>
+                              {isFlightSurgeon
+                                ? "Awaiting Flight Surgeon sign-off"
+                                : "Transmitted to Ground · Awaiting review"}
+                            </span>
+                          </div>
+                          {isFlightSurgeon && (
+                            <button
+                              type="button"
+                              onClick={() => void handleAcknowledge(item.id)}
+                              className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Acknowledge</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -718,7 +730,7 @@ export function SymptomsView({ astronautId }: SymptomsViewProps) {
         <div className="p-6 sm:p-8 rounded-[32px] border border-slate-200/90 bg-white shadow-2xs max-w-2xl mx-auto space-y-6">
           <div className="border-b border-border pb-4">
             <h3 className="text-base font-semibold text-foreground">Manual Crew Symptom Entry</h3>
-            <p className="text-xs text-muted">Validated submission feeding clinical concordance models</p>
+            <p className="text-xs text-muted">Log symptom onset to the mission medical timeline</p>
           </div>
 
           <form onSubmit={submitManual} className="space-y-4 text-xs">

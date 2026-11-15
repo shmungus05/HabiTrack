@@ -10,16 +10,13 @@
 import React, { useState } from "react";
 import {
   Database,
-  Download,
   ExternalLink,
   ShieldCheck,
   FileCode,
   BookOpen,
-  CheckCircle2,
 } from "lucide-react";
 import {
   NASA_DATASETS_CATALOG,
-  exportDatasetToJson,
   type NasaDatasetEntry,
 } from "./NasaDatasetsModule";
 
@@ -27,13 +24,6 @@ export const NasaDatasetsCatalog: React.FC<{ className?: string }> = ({ classNam
   const [selectedDataset, setSelectedDataset] = useState<NasaDatasetEntry>(
     NASA_DATASETS_CATALOG[0],
   );
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
-
-  const handleExport = () => {
-    exportDatasetToJson(selectedDataset.id);
-    setDownloadSuccess(true);
-    setTimeout(() => setDownloadSuccess(false), 2500);
-  };
 
   return (
     <section
@@ -59,21 +49,10 @@ export const NasaDatasetsCatalog: React.FC<{ className?: string }> = ({ classNam
           </p>
         </div>
 
-        {/* 1-Click JSON Export Button */}
         <div className="flex items-center gap-2">
-          {downloadSuccess && (
-            <span className="text-xs font-mono font-medium text-emerald-700 flex items-center gap-1 animate-fadeIn">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              Exported!
-            </span>
-          )}
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export JSON Archive</span>
-          </button>
+          <span className="px-3 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-200/80 text-xs font-mono">
+            {NASA_DATASETS_CATALOG.length} Scientific Catalogs
+          </span>
         </div>
       </div>
 
