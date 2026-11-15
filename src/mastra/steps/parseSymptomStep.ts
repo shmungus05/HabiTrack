@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createStep } from "../core";
+import { createStep } from "../core/index.ts";
 
 export const parseSymptomStep = createStep({
   id: "parse-symptom",
@@ -21,11 +21,23 @@ export const parseSymptomStep = createStep({
     detectedCompartmentName: z.string(),
     primarySymptomCategory: z.enum([
       "HEADACHE_HYPERCAPNIA",
+      "MUSCLE_SORENESS",
+      "SLEEP_DISTURBANCE",
       "OCULAR_IRRITATION",
       "THERMAL_EXERTION",
       "NEUROVESTIBULAR_DIZZINESS",
+      "CRITICAL_EMERGENCY",
       "GENERIC_DISCOMFORT",
     ]),
+    intent: z.enum([
+      "health_concern",
+      "exercise_guidance",
+      "sleep_guidance",
+      "mental_wellbeing",
+      "daily_living",
+      "general_question",
+    ]),
+    followupQuestions: z.array(z.string()).optional(),
     currentSnapshot: z.object({
       co2Ppm: z.number(),
       tempC: z.number(),
@@ -62,13 +74,26 @@ export const parseSymptomStep = createStep({
       compartmentName = "Cupola Observation Module";
     }
 
-    // 2. Identify primary symptom category
+    // 2. Identify primary symptom category and conversational intent
     let category:
       | "HEADACHE_HYPERCAPNIA"
+      | "MUSCLE_SORENESS"
+      | "SLEEP_DISTURBANCE"
       | "OCULAR_IRRITATION"
       | "THERMAL_EXERTION"
       | "NEUROVESTIBULAR_DIZZINESS"
+      | "CRITICAL_EMERGENCY"
       | "GENERIC_DISCOMFORT" = "GENERIC_DISCOMFORT";
+
+    let intent:
+      | "health_concern"
+      | "exercise_guidance"
+      | "sleep_guidance"
+      | "mental_wellbeing"
+      | "daily_living"
+      | "general_question" = "general_question";
+
+    let followupQuestions: string[] = [];
 
     const hasNegation =
       textLower.includes("no headache") ||
@@ -79,14 +104,82 @@ export const parseSymptomStep = createStep({
       textLower.includes("feeling fine");
 
     if (!hasNegation) {
-      if (textLower.includes("headache") || textLower.includes("throbbing") || textLower.includes("fog") || textLower.includes("pco2")) {
+      if (
+        textLower.includes("chest pain") ||
+        textLower.includes("cannot breathe") ||
+        textLower.includes("shortness of breath") ||
+        textLower.includes("toxic") ||
+        textLower.includes("ammonia")
+      ) {
+        category = "CRITICAL_EMERGENCY";
+        intent = "health_concern";
+      } else if (
+        textLower.includes("headache") ||
+        textLower.includes("throbbing") ||
+        textLower.includes("fog") ||
+        textLower.includes("pco2") ||
+        textLower.includes("hypercapnia")
+      ) {
         category = "HEADACHE_HYPERCAPNIA";
-      } else if (textLower.includes("eye") || textLower.includes("dry") || textLower.includes("stinging") || textLower.includes("irritat")) {
+        intent = "health_concern";
+      } else if (
+        textLower.includes("sore") ||
+        textLower.includes("soreness") ||
+        textLower.includes("muscle") ||
+        textLower.includes("stiff") ||
+        textLower.includes("aching") ||
+        textLower.includes("strain") ||
+        textLower.includes("doms") ||
+        textLower.includes("back pain")
+      ) {
+        category = "MUSCLE_SORENESS";
+        intent = textLower.includes("exercise") || textLower.includes("workout") || textLower.includes("squat")
+          ? "exercise_guidance"
+          : "health_concern";
+        followupQuestions = [
+          "Where are you feeling the soreness (e.g. lower back, thighs, shoulders)?",
+          "Did this discomfort begin during or after your ARED or treadmill workout?",
+          "Is it a dull muscular ache or a sharp/shooting pain?",
+        ];
+      } else if (
+        textLower.includes("sleep") ||
+        textLower.includes("insomnia") ||
+        textLower.includes("wake up") ||
+        textLower.includes("bunk") ||
+        textLower.includes("rest cycle") ||
+        textLower.includes("cannot sleep")
+      ) {
+        category = "SLEEP_DISTURBANCE";
+        intent = "sleep_guidance";
+        followupQuestions = [
+          "Are you experiencing local airflow stagnation in your sleep station?",
+          "Is acoustic background noise (>60 dBA) disrupting your rest cycle?",
+        ];
+      } else if (
+        textLower.includes("eye") ||
+        textLower.includes("dry") ||
+        textLower.includes("stinging") ||
+        textLower.includes("irritat")
+      ) {
         category = "OCULAR_IRRITATION";
-      } else if (textLower.includes("hot") || textLower.includes("sweat") || textLower.includes("heat") || textLower.includes("workout")) {
+        intent = "health_concern";
+      } else if (
+        textLower.includes("hot") ||
+        textLower.includes("sweat") ||
+        textLower.includes("heat") ||
+        textLower.includes("workout")
+      ) {
         category = "THERMAL_EXERTION";
-      } else if (textLower.includes("dizzy") || textLower.includes("lightheaded") || textLower.includes("nausea") || textLower.includes("spinning")) {
+        intent = "exercise_guidance";
+      } else if (
+        textLower.includes("dizzy") ||
+        textLower.includes("lightheaded") ||
+        textLower.includes("nausea") ||
+        textLower.includes("spinning") ||
+        textLower.includes("vertigo")
+      ) {
         category = "NEUROVESTIBULAR_DIZZINESS";
+        intent = "health_concern";
       }
     }
 
@@ -95,6 +188,8 @@ export const parseSymptomStep = createStep({
       detectedCompartmentId: compartmentId,
       detectedCompartmentName: compartmentName,
       primarySymptomCategory: category,
+      intent,
+      followupQuestions: followupQuestions.length > 0 ? followupQuestions : undefined,
       currentSnapshot: context.currentSnapshot,
       astronautId: context.astronautId || "ASTRO-01",
     };

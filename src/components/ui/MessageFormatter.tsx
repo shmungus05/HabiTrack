@@ -1,4 +1,5 @@
 import React from "react";
+import { Info } from "lucide-react";
 
 export interface MessageFormatterProps {
   text: string;
@@ -7,12 +8,13 @@ export interface MessageFormatterProps {
 }
 
 /**
- * Formats inline text converting markdown styles (**bold**, *italic*, `code`) into
- * styled React elements, while ensuring no raw asterisks or syntax symbols leak.
+ * Formats inline text converting markdown styles (**bold**, *italic*, `code`, source tags `[REF]`)
+ * into styled React elements, while ensuring no raw asterisks or syntax symbols leak.
  */
 function renderInlineContent(content: string, isUser: boolean): React.ReactNode[] {
-  // Regex to match inline code (`code`), bold (**bold** or __bold__), and italic (*italic* or _italic_)
-  const tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
+  // Regex to match inline code (`code`), bold (**bold** or __bold__), italic (*italic* or _italic_),
+  // and reference tags [EVT-...] or [FR-...]
+  const tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_|\[[A-Za-z0-9_\-:\.]{2,40}\])/g;
   const parts = content.split(tokenRegex);
 
   return parts.map((part, index) => {
@@ -32,6 +34,23 @@ function renderInlineContent(content: string, isUser: boolean): React.ReactNode[
         >
           {codeText}
         </code>
+      );
+    }
+
+    // Source Reference Tag: [EVT-EDA-LIVE-SAA], [FR-ECLSS-001], [astro-ASTRO-01], etc.
+    if (part.startsWith("[") && part.endsWith("]") && part.length >= 4 && !part.includes("](")) {
+      const refTag = part.slice(1, -1);
+      return (
+        <span
+          key={index}
+          className={`inline-flex items-center px-1.5 py-0.2 mx-0.5 rounded font-mono text-[10px] font-bold tracking-tight border ${
+            isUser
+              ? "bg-slate-800 text-sky-200 border-slate-700"
+              : "bg-slate-100 text-slate-700 border-slate-200/90 shadow-2xs"
+          }`}
+        >
+          {refTag}
+        </span>
       );
     }
 
@@ -74,7 +93,8 @@ function renderInlineContent(content: string, isUser: boolean): React.ReactNode[
 
 /**
  * MessageFormatter renders conversational AI messages with clean typography,
- * properly formatted bold headers, lists, and spacing, with zero raw asterisks.
+ * properly formatted bold headers (#, ##, ###, ####), blockquotes (>), lists,
+ * and reference badges with zero raw syntax leakage.
  */
 export function MessageFormatter({
   text,
@@ -83,7 +103,6 @@ export function MessageFormatter({
 }: MessageFormatterProps) {
   if (!text) return null;
 
-  // Split content into lines to handle blocks (headings, lists, paragraphs)
   const lines = text.split("\n");
   const renderedElements: React.ReactNode[] = [];
   let currentListItems: React.ReactNode[] = [];
@@ -117,14 +136,29 @@ export function MessageFormatter({
       continue;
     }
 
-    // Headings (###, ##, #)
+    // Level 4 Heading (#### )
+    if (trimmed.startsWith("#### ")) {
+      flushList();
+      const headingContent = trimmed.slice(5);
+      renderedElements.push(
+        <h5
+          key={`h5-${i}`}
+          className={`text-xs font-bold tracking-tight mt-3 mb-1 text-slate-900 flex items-center gap-1.5 pb-1 border-b border-slate-100`}
+        >
+          {renderInlineContent(headingContent, isUser)}
+        </h5>
+      );
+      continue;
+    }
+
+    // Level 3 Heading (### )
     if (trimmed.startsWith("### ")) {
       flushList();
       const headingContent = trimmed.slice(4);
       renderedElements.push(
         <h4
           key={`h4-${i}`}
-          className={`text-xs uppercase font-bold tracking-wider mt-3 mb-1.5 ${
+          className={`text-xs sm:text-sm font-bold uppercase tracking-wider mt-4 mb-2 flex items-center gap-1.5 ${
             isUser ? "text-sky-300" : "text-sky-900"
           }`}
         >
@@ -134,13 +168,14 @@ export function MessageFormatter({
       continue;
     }
 
+    // Level 2 Heading (## )
     if (trimmed.startsWith("## ")) {
       flushList();
       const headingContent = trimmed.slice(3);
       renderedElements.push(
         <h3
           key={`h3-${i}`}
-          className={`text-sm font-bold tracking-tight mt-3.5 mb-1.5 ${
+          className={`text-sm sm:text-base font-black tracking-tight mt-5 mb-2 pb-1.5 border-b border-slate-200/80 flex items-center gap-2 ${
             isUser ? "text-white" : "text-slate-950"
           }`}
         >
@@ -150,18 +185,37 @@ export function MessageFormatter({
       continue;
     }
 
+    // Level 1 Heading (# )
     if (trimmed.startsWith("# ")) {
       flushList();
       const headingContent = trimmed.slice(2);
       renderedElements.push(
         <h2
           key={`h2-${i}`}
-          className={`text-base font-black tracking-tight mt-4 mb-2 ${
+          className={`text-base sm:text-lg font-black tracking-tight mt-5 mb-2.5 pb-2 border-b border-slate-200 ${
             isUser ? "text-white" : "text-slate-950"
           }`}
         >
           {renderInlineContent(headingContent, isUser)}
         </h2>
+      );
+      continue;
+    }
+
+    // Blockquote (> )
+    if (trimmed.startsWith("> ")) {
+      flushList();
+      const quoteContent = trimmed.slice(2);
+      renderedElements.push(
+        <blockquote
+          key={`quote-${i}`}
+          className="my-3 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs sm:text-[13px] leading-relaxed shadow-2xs italic flex items-start gap-2"
+        >
+          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 not-italic" />
+          <div className="flex-1 not-italic">
+            {renderInlineContent(quoteContent, isUser)}
+          </div>
+        </blockquote>
       );
       continue;
     }

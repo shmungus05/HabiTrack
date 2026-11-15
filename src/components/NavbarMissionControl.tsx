@@ -21,6 +21,7 @@ import {
   Check,
   Radio,
   Rocket,
+  X,
 } from "lucide-react";
 import {
   useMissionStore,
@@ -234,8 +235,9 @@ export const NavbarMissionControl: React.FC = () => {
                         type="button"
                         onClick={() => setShowCustomModal(false)}
                         className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
+                        aria-label="Close"
                       >
-                        ✕
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
 

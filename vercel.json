@@ -5,6 +5,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/models/:model/resolve/main/:path*",
+      "destination": "/models/:model/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

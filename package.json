@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "tsc": "tsc --noEmit",
-    "test": "node --experimental-strip-types src/features/health-report/healthReportCompiler.test.ts && node --experimental-strip-types src/features/library/library.test.ts",
+    "test": "node --experimental-strip-types src/features/health-report/healthReportCompiler.test.ts && node --experimental-strip-types src/features/library/library.test.ts && node --experimental-strip-types src/lib/speech.test.ts && node --experimental-strip-types src/lib/huaweiHealthParser.test.ts && node --experimental-strip-types src/mastra/spaceCareTriage.test.ts && node --experimental-strip-types src/features/handover/shiftHandover.test.ts && node --experimental-strip-types src/mastra/conversationalAi.test.ts && node --experimental-strip-types src/services/ai/aiProvider.test.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.88",
     "fflate": "^0.8.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",

@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { createWorkflow } from "../core";
-import { parseSymptomStep } from "../steps/parseSymptomStep";
-import { correlateTelemetryStep } from "../steps/correlateTelemetryStep";
-import { generateInterimActionsStep } from "../steps/generateInterimActionsStep";
-import { epistemicGuardrailStep } from "../steps/epistemicGuardrailStep";
-import { buildSurgeonPacketStep } from "../steps/buildSurgeonPacketStep";
+import { createWorkflow } from "../core/index.ts";
+import { parseSymptomStep } from "../steps/parseSymptomStep.ts";
+import { correlateTelemetryStep } from "../steps/correlateTelemetryStep.ts";
+import { generateInterimActionsStep } from "../steps/generateInterimActionsStep.ts";
+import { epistemicGuardrailStep } from "../steps/epistemicGuardrailStep.ts";
+import { buildSurgeonPacketStep } from "../steps/buildSurgeonPacketStep.ts";
 
 export const clinicalTriageWorkflow = createWorkflow({
   id: "clinical-triage-workflow",

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { createStep } from "../core";
-import { telemetryTool } from "../tools/telemetryTool";
-import { flightRulesTool } from "../tools/flightRulesTool";
+import { createStep } from "../core/index.ts";
+import { telemetryTool } from "../tools/telemetryTool.ts";
+import { flightRulesTool } from "../tools/flightRulesTool.ts";
 
 export const correlateTelemetryStep = createStep({
   id: "correlate-telemetry",
@@ -11,11 +11,16 @@ export const correlateTelemetryStep = createStep({
     detectedCompartmentName: z.string(),
     primarySymptomCategory: z.enum([
       "HEADACHE_HYPERCAPNIA",
+      "MUSCLE_SORENESS",
+      "SLEEP_DISTURBANCE",
       "OCULAR_IRRITATION",
       "THERMAL_EXERTION",
       "NEUROVESTIBULAR_DIZZINESS",
+      "CRITICAL_EMERGENCY",
       "GENERIC_DISCOMFORT",
     ]),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
     currentSnapshot: z.object({
       co2Ppm: z.number(),
       tempC: z.number(),
@@ -37,6 +42,8 @@ export const correlateTelemetryStep = createStep({
       airflowProfile: z.string(),
     }),
     primarySymptomCategory: z.string(),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
     latchedRuleId: z.string(),
     flightRuleTitle: z.string(),
     biologicalLatencyLag: z.string(),
@@ -58,16 +65,29 @@ export const correlateTelemetryStep = createStep({
     let rationale = "Biometric readings reflect transient operational fluctuation.";
     let confidence = "78% (Circadian Norm)";
 
-    if (context.primarySymptomCategory === "HEADACHE_HYPERCAPNIA") {
-      const lower = context.symptomText.toLowerCase();
-      if (lower.includes("cdra") || lower.includes("mitigation") || lower.includes("4.0") || lower.includes("p_co2") || lower.includes("eclss")) {
-        ruleId = "FR-ECLSS-001";
-      } else {
-        ruleId = "FR-MED-71-04";
-      }
+    if (context.primarySymptomCategory === "CRITICAL_EMERGENCY") {
+      ruleId = "FR-MED-71-04";
+      lagWindow = "Immediate (0 Minutes)";
+      rationale =
+        "CRITICAL ALERT: Acute physiological distress or toxic exposure reported. Normal knowledge retrieval bypassed. Initiate emergency crew medical protocol immediately.";
+      confidence = "99% (Emergency Escalation)";
+    } else if (context.primarySymptomCategory === "HEADACHE_HYPERCAPNIA") {
+      ruleId = "FR-ECLSS-001";
       lagWindow = "1.5 to 2.0 Hours post-exposure";
       rationale = `Cabin CO₂ is elevated at ${telemetry.co2Ppm.toLocaleString()} PPM. Cephalic fluid shift increases intracranial pressure, producing delayed headache onset.`;
       confidence = "86% (NASA LSDA Correlation Peak)";
+    } else if (context.primarySymptomCategory === "MUSCLE_SORENESS") {
+      ruleId = "FR-EVA-003";
+      lagWindow = "12 to 24 Hours post-exercise (DOMS Curve)";
+      rationale =
+        "Musculoskeletal fatigue and delayed onset muscle soreness (DOMS) temporally associated with microgravity resistive loading (ARED). Non-acute; no uncontained cabin excursion detected.";
+      confidence = "92% (Exercise Countermeasure Dynamics)";
+    } else if (context.primarySymptomCategory === "SLEEP_DISTURBANCE") {
+      ruleId = "FR-GEN-001";
+      lagWindow = "Diurnal Rest Cycle (0 to 8 Hours)";
+      rationale =
+        "Rest-cycle disruption temporally correlated with localized crew quarters airflow turnover and acoustic background levels.";
+      confidence = "84% (Circadian & Acoustic Habitability)";
     } else if (context.primarySymptomCategory === "OCULAR_IRRITATION") {
       ruleId = "FR-ECLSS-012";
       lagWindow = "30 to 45 Minutes post-onset";
@@ -92,6 +112,8 @@ export const correlateTelemetryStep = createStep({
       compartmentName: telemetry.compartmentName,
       telemetryReadings: telemetry,
       primarySymptomCategory: context.primarySymptomCategory,
+      intent: context.intent,
+      followupQuestions: context.followupQuestions,
       latchedRuleId: flightRule.rule_id,
       flightRuleTitle: flightRule.title,
       biologicalLatencyLag: lagWindow,

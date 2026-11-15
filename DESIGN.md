@@ -1,76 +1,78 @@
 ---
-name: "Expo"
-category: Brands
+name: "HabiTrack"
+category: Products
 surface: web
 colors:
-  background: "#000000"
-  surface: "#0a0a0a"
-  foreground: "#ffffff"
-  muted: "#737373"
-  border: "#242424"
-  accent: "#000000"
-  accent-secondary: "#0026a3"
+  background: "#f8fafc"
+  surface: "#ffffff"
+  foreground: "#0f172a"
+  muted: "#64748b"
+  border: "#e2e8f0"
+  accent: "#0284c7"
+  accent-secondary: "#0369a1"
 ---
 
-# Expo
+# HabiTrack
 
-> Category: Brands
+> Category: Products  
+> Surface: web  
 
-> Surface: web
+*Evidence-Grounded Spaceflight Health Intelligence & Environmental Exposure Analysis*
 
-*Agentic mobile infrastructure*
-
-Develop, validate, deploy and monitor iOS, Android, and web apps from one codebase. Expo gives your team and its agents the infrastructure to ship apps to production.
+HabiTrack is an offline-first operational clinical intelligence workstation designed for long-duration human spaceflight (e.g., ISS Expeditions and lunar/Mars transit missions). It unifies environmental telemetry, autonomic vital dynamics, crew-reported symptoms, and NASA Human Research Program (HRP) evidence into a unified, calm decision-support interface.
 
 ## Color Palette
 
 | Role | Name | Hex | Usage |
 | --- | --- | --- | --- |
-| background | Background | `#000000` | page canvas |
-| surface | Surface | `#0a0a0a` | cards / raised surfaces |
-| foreground | Foreground | `#ffffff` | body text |
-| muted | Muted | `#737373` | secondary text |
-| border | Border | `#242424` | hairlines / dividers |
-| accent | Accent | `#000000` | primary brand color |
-| accent-secondary | Accent secondary | `#0026a3` | secondary brand color / links |
+| background | Background | `#f8fafc` | page canvas / workstation ground |
+| surface | Surface | `#ffffff` | cards / elevated `rounded-[32px]` containers |
+| surface-subtle | Subtle Surface | `#f1f5f9` | segmented control trays, sub-panels |
+| foreground | Foreground | `#0f172a` | titles, headings, active labels, high-contrast text |
+| secondary | Secondary Text | `#334155` | body copy, description text |
+| muted | Muted Text | `#64748b` | secondary metadata, timestamps, units |
+| border | Border | `#e2e8f0` | container borders, dividers, subtle outlines |
+| border-strong | Strong Border | `#cbd5e1` | active borders, input focus states |
+| accent | Accent (Aerospace Sky) | `#0284c7` | primary interactive highlights, active badges, CTA buttons |
+| accent-secondary | Accent Secondary | `#0369a1` | hover states, pressed buttons, active focus rings |
+| status-nominal | Nominal Green | `#059669` | nominal telemetry, passing flight rules, verified states |
+| status-caution | Caution Amber | `#d97706` | advisory warnings, moderate exposure excursions |
+| status-critical | Critical Red | `#dc2626` | alerts, emergency thresholds, flight rule violations |
 
 ## Typography
-- **Display:** JetBrains Mono — weights 400, 700 — fallbacks: system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif
-- **Body:** JetBrains Mono — weights 400, 700 — fallbacks: system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif
+
+- **Display & Section Titles:** `Inter` — weights 700 (Bold), 900 (Black) for primary section hero banners — fallbacks: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
+- **Body & Controls:** `Inter` — weights 400 (Regular), 500 (Medium), 600 (SemiBold) — fallbacks: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
+- **Telemetry & Metadata:** `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace` — used for sensor readings, document IDs, timestamps, and astronaut callsigns
 
 ## Voice & Tone
 
-- **Adjectives:** agentic, infrastructure-grade, developer-first, autonomous, precise, composable
-- **Tone:** Authoritative, technical, developer-centric, and forward-looking. Emphasizes automation, agentic workflows, reliability, and unified cross-platform execution.
+- **Adjectives:** calm, clinical, objective, evidence-grounded, non-causal, rigorous, restrained
+- **Tone:** High-reliability operational medicine. Prioritizes scanability, low cognitive load during high-stress missions, and transparent uncertainty over decorative fluff.
 
-### Messaging pillars
-- Agentic mobile infrastructure
-- Building blocks for agentic workflows
-- Infrastructure for your apps
-- Ship native apps from one codebase
-- End-to-end cloud build, test, and observability
+### Epistemic Decision Support Rules
+- **Non-Causal Guardrail:** Strictly maintain non-causal terminology. Correlated signals indicate temporal co-occurrence, not unverified clinical causation. Use phrases like *"temporally associated with"*, *"co-occurs with"*, rather than claiming single-variable causation.
+- **Decision Support:** Frame all assessments as decision support for flight surgeons and astronauts, not autonomous unilateral medical diagnosis.
 
 ### Vocabulary
-- **Use:** Agentic, Infrastructure, Workflows, Simulators, EAS, SDK, MCP, One codebase, Observe, TestFlight, Production-grade, Dev tools
-- **Avoid:** Magic, Easy-peasy, No-code, Toy apps, Hassle-free, Revolutionary, Disruptive, Synergy, One-click wonder
+- **Use:** Telemetry, Concordance, Flight Rule, Baseline Delta, Anomaly, Excursion, Evidence-Grounded, Countermeasure, Autonomic Strain, Circadian Phase, Expedition
+- **Avoid:** Pitch-black dark UI, Magic, Guaranteed cure, Unilateral diagnosis, Flashy neon gamification, Clutter
 
-## Imagery
+## Imagery & Media Treatment
 
-- **Style:** Technical dark-mode product UI, isometric device frames, dark ambient neon glows, code terminal interfaces, and architectural pipeline diagrams.
-- **Subjects:** Mobile device simulators, Cloud build pipelines, Agentic developer workflows, Crash observability metrics, Terminal CLI interfaces, Cross-platform deployment badges
-- **Treatment:** Deep obsidian backgrounds (#000000, #0a0a0a), sharp 1px borders (#242424), atmospheric top flares and subtle blue gradients, high-contrast typography, and crisp isometric app previews.
-- **Avoid:** Hand-drawn cartoon doodles, Generic stock smiling business people, Pastel clay 3D illustrations, Warm beige/cream palettes, Cluttered non-technical marketing fluff
+- **Authentic Aerospace Footage:** Direct integration with NASA CDN media and research archives.
+- **Media Frame Backgrounds:** True black (`#000000` / `bg-black`) is strictly confined to video stream viewports and media players to preserve aspect-ratio letterboxing contrast.
+- **Video Badges:** Semi-transparent frosted overlays (`bg-black/75 backdrop-blur-xs text-white`) used only when overlaid on image thumbnails for legibility.
 
-## Layout
+## Layout & Perplexity Aesthetic Posture
 
-- **Radius:** 8px
-- **Border weight:** 1px
-- **Spacing:** 8px baseline grid
-
-### Posture rules
-- Strict 8px corner radius on cards, buttons, and containers
-- Hairline 1px border (#242424) separating obsidian surfaces (#0a0a0a)
-- 8px baseline spatial rhythm (8px, 16px, 24px, 32px, 48px, 64px)
-- High-contrast JetBrains Mono monospace headings paired with dense technical tables and code snippets
-- Accent secondary (#0026a3) reserved for interactive elements, focus states, and key links
-- No large washes of accent colors; dark pitch-black canvas (#000000) dominates
+- **Primary Container Radius:** `rounded-[32px]` for primary dashboard sections, views, and cards.
+- **Secondary Radius:** `rounded-2xl` (16px) or `rounded-xl` (12px) for inner modules, modals, and input fields.
+- **Whitespace & Breathing Room:** Generous internal padding (`p-6 sm:p-8`), clear vertical rhythm, and uncluttered layouts.
+- **Segmented Controls & Tabs:**
+  - Enclosed neutral tray: `bg-slate-100/90` with border `border-slate-200/80`.
+  - Elevated active indicator: `bg-white text-slate-900 border border-slate-200/90 shadow-xs`.
+  - Inactive options: `text-slate-600 hover:text-slate-900 hover:bg-white/60`.
+  - **Banned:** Solid pitch-black buttons (`bg-slate-900 text-white`) for general navigation tabs and category filter pills.
+- **Filter Pills:** Active states use Aerospace Sky (`bg-sky-600 text-white border-sky-600 shadow-xs`) or subtle tinted pills; inactive states use `bg-white text-slate-600 border-slate-200 hover:bg-slate-50`.
+- **Shadows:** Minimalist soft shadows (`shadow-xs`, `shadow-2xs`), never heavy harsh drop shadows.

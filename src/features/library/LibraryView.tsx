@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   BookOpen,
-  CheckCircle2,
   Film,
   Globe2,
   Image as ImageIcon,
@@ -121,40 +120,38 @@ export function LibraryView({
               <span className="text-slate-400">CREW:</span>
               <span className="font-bold text-slate-900">{astronautId}</span>
             </div>
-            <div className="px-3.5 py-2 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-1.5 font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>NASA CDN Direct Stream</span>
-            </div>
           </div>
         </div>
 
         {/* Tab Switcher: Curated vs Live NASA Search */}
-        <div className="flex items-center gap-2 mt-6 pt-6 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => setActiveTab("curated_procedures")}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === "curated_procedures"
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-600"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Flight Procedures &amp; Countermeasures ({guides.length})</span>
-          </button>
+        <div className="mt-6 pt-6 border-t border-slate-100">
+          <div className="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => setActiveTab("curated_procedures")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === "curated_procedures"
+                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/90"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent"
+              }`}
+            >
+              <BookOpen className={`w-4 h-4 ${activeTab === "curated_procedures" ? "text-sky-600" : "text-slate-400"}`} />
+              <span>Flight Procedures &amp; Countermeasures ({guides.length})</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("nasa_live_search")}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === "nasa_live_search"
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-600"
-            }`}
-          >
-            <Globe2 className="w-4 h-4 text-sky-500" />
-            <span>Live NASA Image &amp; Video Search</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("nasa_live_search")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === "nasa_live_search"
+                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/90"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50 border border-transparent"
+              }`}
+            >
+              <Globe2 className={`w-4 h-4 ${activeTab === "nasa_live_search" ? "text-sky-600" : "text-slate-400"}`} />
+              <span>Live NASA Image &amp; Video Search</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -195,7 +192,7 @@ export function LibraryView({
                     onClick={() => setActiveCategory(cat.key)}
                     className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                       isActive
-                        ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                        ? "bg-sky-600 text-white border-sky-600 shadow-xs"
                         : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
@@ -229,7 +226,7 @@ export function LibraryView({
                   setSearchQuery("");
                   setActiveCategory("all");
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-colors cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -405,7 +402,7 @@ export function LibraryView({
                       <span className="text-[10px] font-mono font-semibold text-slate-400 block truncate uppercase">
                         {item.nasaId} {item.center ? `· ${item.center}` : ""}
                       </span>
-                      <h4 className="text-sm font-black text-slate-900 group-hover:text-sky-700 transition-colors tracking-tight line-clamp-2 leading-snug">
+                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-sky-700 transition-colors tracking-tight line-clamp-2 leading-snug">
                         {item.title}
                       </h4>
                       <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">

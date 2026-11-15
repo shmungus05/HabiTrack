@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createStep } from "../core";
+import { createStep } from "../core/index.ts";
 
 const PROHIBITED_CAUSAL_TERMS = /\b(cause|causes|caused|causing|proves|proven|diagnose|diagnosed|diagnosis|prescribe|prescribes|prescribed|prescription|treat|treated|treating|treatment|cure|remedy)\b/gi;
 
@@ -30,6 +30,9 @@ export const epistemicGuardrailStep = createStep({
         completed: z.boolean(),
       })
     ),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
+    resources: z.array(z.any()).optional(),
     latchedRuleId: z.string(),
     flightRuleTitle: z.string(),
     biologicalLatencyLag: z.string(),
@@ -59,6 +62,9 @@ export const epistemicGuardrailStep = createStep({
         completed: z.boolean(),
       })
     ),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
+    resources: z.array(z.any()).optional(),
     latchedRuleId: z.string(),
     flightRuleTitle: z.string(),
     biologicalLatencyLag: z.string(),

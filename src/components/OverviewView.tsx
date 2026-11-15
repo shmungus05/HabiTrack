@@ -64,7 +64,6 @@ import {
   uncertaintyTheme,
 } from "../lib/format";
 import { AstronautAvatar, Badge, Button, Card } from "./ui";
-import { EdaStreamController } from "../features/eda";
 import { ClinicalRiskMatrix } from "../features/risk";
 import {
   SpacecraftModuleSelector,
@@ -82,6 +81,7 @@ interface OverviewViewProps {
   astronautId: string;
   onOpenHealthImport?: () => void;
   healthImportRevision?: number;
+  onNavigateToAssistant?: () => void;
 }
 
 interface OverviewData {
@@ -446,7 +446,7 @@ function MultiFactorHealthGauge({
   );
 }
 
-export type OverviewSubSection = "vitals" | "atmospheric" | "risk" | "all";
+export type OverviewSubSection = "vitals" | "risk" | "all";
 
 const QUICK_SYMPTOMS = [
   { code: "HEADACHE", label: "Frontal Headache" },
@@ -798,6 +798,7 @@ export function OverviewView({
   astronautId,
   onOpenHealthImport,
   healthImportRevision = 0,
+  onNavigateToAssistant,
 }: OverviewViewProps) {
   const { isSimulation, currentMissionDay } = useActiveMissionTime();
   const [data, setData] = useState<OverviewData | null>(null);
@@ -1050,7 +1051,7 @@ export function OverviewView({
           ? { ...current, symptoms: [created, ...current.symptoms] }
           : current,
       );
-      setQuickNotice(`✓ Recorded locally · ${titleCase(code)} logged`);
+      setQuickNotice(`Recorded locally · ${titleCase(code)} logged`);
       window.setTimeout(() => setQuickNotice(null), 4500);
     } catch (caught) {
       setQuickNotice(
@@ -1316,7 +1317,6 @@ export function OverviewView({
         <div className="flex flex-wrap items-center gap-1">
           {[
             { id: "vitals" as const, label: "Vitals & Concordance", icon: Activity },
-            { id: "atmospheric" as const, label: "Atmospheric & EDA", icon: Wind },
             { id: "risk" as const, label: "Clinical Risk & Triage", icon: ShieldAlert },
             { id: "all" as const, label: "Command View (All)", icon: Layers },
           ].map((sec) => {
@@ -1345,13 +1345,6 @@ export function OverviewView({
             : `Segment: ${activeSection.toUpperCase()}`}
         </div>
       </div>
-
-      {/* Atmospheric & EDA Sub-section */}
-      {(activeSection === "atmospheric" || activeSection === "all") && (
-        <section className="space-y-6">
-          <EdaStreamController />
-        </section>
-      )}
 
       {/* Clinical Risk & Triage Sub-section */}
       {(activeSection === "risk" || activeSection === "all") && (
@@ -1398,7 +1391,10 @@ export function OverviewView({
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => void openForEvent(activeEvent)}
+                    onClick={() => {
+                      void openForEvent(activeEvent);
+                      onNavigateToAssistant?.();
+                    }}
                     leftIcon={<Sparkles className="h-3.5 w-3.5" />}
                   >
                     Explain with Evidence

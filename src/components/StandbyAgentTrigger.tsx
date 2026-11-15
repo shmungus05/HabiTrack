@@ -12,7 +12,15 @@ import {
 } from "../lib/speech";
 import { useAssistantStore } from "../stores/assistantStore";
 
-export const StandbyAgentTrigger: React.FC = () => {
+interface StandbyAgentTriggerProps {
+  onNavigateToAssistant?: () => void;
+  isAssistantPage?: boolean;
+}
+
+export const StandbyAgentTrigger: React.FC<StandbyAgentTriggerProps> = ({
+  onNavigateToAssistant,
+  isAssistantPage = false,
+}) => {
   const {
     isOpen,
     openDrawer,
@@ -22,6 +30,9 @@ export const StandbyAgentTrigger: React.FC = () => {
     setSpeechTranscript,
     submitQuery,
     latchedRule,
+    isVoiceModalOpen,
+    openVoiceModal,
+    closeVoiceModal,
   } = useAssistantStore();
 
   const [energyLevel, setEnergyLevel] = useState<number>(0);
@@ -53,25 +64,27 @@ export const StandbyAgentTrigger: React.FC = () => {
     };
   }, [setSpeechTranscript, submitQuery]);
 
-  // Global Keybindings: Ctrl+K (open drawer & focus) and Alt+V (toggle voice PTT)
+  // Global Keybindings: Ctrl+K (open assistant & focus) and Alt+V (toggle voice PTT)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+K: Open Standby Drawer
+      // Ctrl+K: Navigate to Dedicated AI Assistant
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        if (isOpen) {
+        if (onNavigateToAssistant) {
+          onNavigateToAssistant();
+        } else if (isOpen) {
           closeDrawer();
         } else {
           openDrawer("chat");
         }
       }
-      // Alt+V: Toggle Voice PTT
+      // Alt+V: Launch Interactive Voice Mode
       if (e.altKey && e.key.toLowerCase() === "v") {
         e.preventDefault();
-        if (pttState === "LISTENING") {
-          stopListening();
+        if (isVoiceModalOpen) {
+          closeVoiceModal();
         } else {
-          startListening();
+          openVoiceModal();
         }
       }
     };
@@ -124,6 +137,10 @@ export const StandbyAgentTrigger: React.FC = () => {
 
   const isRecording = pttState === "LISTENING";
 
+  if (isAssistantPage) {
+    return null;
+  }
+
   return (
     <aside
       aria-label="Standby AI Assistant"
@@ -132,11 +149,17 @@ export const StandbyAgentTrigger: React.FC = () => {
       {/* Single Unified HabiTrack AI Floating Action Trigger */}
       <button
         type="button"
-        onClick={() => openDrawer("chat")}
+        onClick={() => {
+          if (onNavigateToAssistant) {
+            onNavigateToAssistant();
+          } else {
+            openDrawer("chat");
+          }
+        }}
         className={`group relative flex items-center gap-2.5 p-2 pr-3.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 hover:border-slate-300 transition-all duration-200 cursor-pointer shadow-elevated hover:shadow-lg active:scale-95 ${
           isRecording ? "ring-2 ring-red-500/50 border-red-500" : ""
         }`}
-        title="Open HabiTrack AI (Ctrl+K · Alt+V Voice)"
+        title="Open Dedicated HabiTrack AI Workstation (Ctrl+K · Alt+V Voice)"
       >
         {/* Dynamic Waveform Energy Aura during Voice Dictation */}
         {isRecording && (

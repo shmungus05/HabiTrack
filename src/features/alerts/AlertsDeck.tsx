@@ -752,7 +752,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
           {isAnomalyActive ? (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-bold text-[10px] animate-pulse flex items-center gap-1 shadow-2xs">
-                <span>⚡ Live Anomaly Active: {activeScenarios.map((s) => s.replace(/_/g, " ").toUpperCase()).join(" + ")}</span>
+                <span>Live Anomaly Active: {activeScenarios.map((s) => s.replace(/_/g, " ").toUpperCase()).join(" + ")}</span>
               </span>
               <button
                 type="button"
@@ -768,7 +768,7 @@ export const AlertsDeck: React.FC<AlertsDeckProps> = ({
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium text-[10px] flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>✓ All Telemetry Nominal</span>
+                <span>All Telemetry Nominal</span>
               </span>
               {/* Quick Anomaly Testing Injectors */}
               <div className="hidden sm:flex items-center gap-1">

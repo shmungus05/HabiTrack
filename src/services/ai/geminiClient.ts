@@ -1,38 +1,170 @@
 /**
- * Client-side Gemini 2.5 Flash RAG generative engine.
+ * Client-side Gemini Flash-Lite / Flash RAG generative engine.
  * Direct browser execution with zero backend server dependencies.
  */
 
 import type { CitedEvidence } from "../../types/api";
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+export const GEMINI_MODELS = [
+  {
+    id: "gemini-2.5-flash-lite",
+    name: "Gemini 2.5 Flash-Lite",
+    label: "Gemini 2.5 Flash-Lite (Fastest · High Quota)",
+    description: "Optimized for high-throughput, lowest latency, and generous rate limits",
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    name: "Gemini 2.0 Flash-Lite",
+    label: "Gemini 2.0 Flash-Lite (High Quota)",
+    description: "High-volume lightweight model",
+  },
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    label: "Gemini 2.5 Flash (Standard)",
+    description: "Standard multimodal frontier model",
+  },
+] as const;
+
+export type GeminiModelId = (typeof GEMINI_MODELS)[number]["id"];
+
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = "gemini-2.5-flash-lite";
+
+export function getGeminiModel(): string {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("habitrack_gemini_model") || DEFAULT_GEMINI_MODEL;
+  }
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env.VITE_GEMINI_MODEL as string | undefined)
+      : undefined) || DEFAULT_GEMINI_MODEL
+  );
+}
+
+export function setGeminiModel(model: string): void {
+  if (typeof window !== "undefined") {
+    const trimmed = model.trim();
+    if (trimmed) {
+      localStorage.setItem("habitrack_gemini_model", trimmed);
+    } else {
+      localStorage.removeItem("habitrack_gemini_model");
+    }
+    window.dispatchEvent(
+      new CustomEvent("habitrack_api_key_updated", { detail: { model: trimmed } })
+    );
+  }
+}
+
+export function getGeminiModelLabel(modelId?: string): string {
+  const id = modelId || getGeminiModel();
+  const match = GEMINI_MODELS.find((m) => m.id === id);
+  return match ? match.name : "Gemini 2.5 Flash-Lite";
+}
+
+export function getGeminiApiUrl(modelId?: string): string {
+  const model = modelId || getGeminiModel();
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 const SYSTEM_INSTRUCTION = `
-You are HabiTrack, an onboard clinical decision-support co-pilot for ISS Expedition 71.
-You assist astronauts, flight surgeons, and mission specialists in monitoring environmental factors, vital signs, and NASA Flight Rules.
+You are HabiTrack Flight Co-Pilot, an advanced onboard clinical decision-support and crew health intelligence AI for ISS Expedition 71.
+You assist astronauts, flight surgeons, and mission specialists in monitoring environmental factors, vital signs, NASA Flight Rules, and crew wellbeing.
 
-Guidelines:
-1. Be helpful, concise, professional, and clear.
-2. If NASA research context is provided, ground your answer in it and reference findings.
-3. If the user greeting or general conversation (e.g. "hi", "hello", "how are you"), respond naturally and warmly as the onboard AI assistant without inventing citations.
-4. Non-Causal Epistemic Guardrail: Never claim single-variable clinical causation (avoid asserting that X "caused" or "cured" Y). Use correlation terminology ("temporally associated with", "correlated with").
-5. Keep responses concise (typically 2-4 sentences unless detailed analysis is requested).
+Core Operating Directives:
+1. Natural Conversational Fluency: Speak naturally, warmly, intelligently, and empathetically like ChatGPT / Claude. Hold multi-turn conversations seamlessly, retaining context of prior remarks and queries.
+2. Grounded Biomedical Knowledge: When biomedical questions, symptoms, or telemetry excursions are discussed, ground your reasoning in spaceflight physiology (cephalic fluid shifts, lack of thermal buoyancy leading to CO2 pocketing, circadian desynchrony, radiation, microgravity musculoskeletal unloading).
+3. Non-Causal Epistemic Guardrail: In clinical observations, avoid claiming single-variable clinical causation (avoid asserting that X directly caused Y). Use correlation terminology ("temporally associated with", "correlated with", "concordant with").
+4. Crew Wellness & Morale: When asked about crew wellbeing, happiness, mood, or daily life in space, respond thoughtfully, warmly, and realistically about astronaut psychological adaptation, habitability, and mission support without generating rigid clinical forms.
+5. Markdown Formatting: Use clean markdown with clear paragraphs, bullet points, and bold text for readability on the flight deck console.
 `.trim();
+
+export interface ChatHistoryTurn {
+  role: "user" | "model";
+  text: string;
+}
 
 export interface GeminiResponse {
   answer: string;
   provider: string;
 }
 
+export function getGeminiApiKey(): string | null {
+  return (
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)
+      : undefined) ||
+    (typeof window !== "undefined" ? localStorage.getItem("habitrack_gemini_api_key") : null) ||
+    null
+  );
+}
+
+export function setGeminiApiKey(key: string): void {
+  if (typeof window !== "undefined") {
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem("habitrack_gemini_api_key", trimmed);
+    } else {
+      localStorage.removeItem("habitrack_gemini_api_key");
+    }
+    window.dispatchEvent(new CustomEvent("habitrack_api_key_updated", { detail: { key: trimmed } }));
+  }
+}
+
+export async function testGeminiApiKey(
+  testKey?: string,
+  modelId?: string
+): Promise<{ success: boolean; message: string }> {
+  const key = testKey?.trim() || getGeminiApiKey();
+  if (!key) {
+    return { success: false, message: "No Gemini API key provided." };
+  }
+
+  const model = modelId || getGeminiModel();
+  const endpoint = getGeminiApiUrl(model);
+
+  try {
+    const response = await fetch(`${endpoint}?key=${key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "Ping test. Respond with 'PONG' only." }] }],
+        generationConfig: { maxOutputTokens: 10, temperature: 0.1 },
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        message: err?.error?.message || `API error HTTP ${response.status}`,
+      };
+    }
+
+    const label = getGeminiModelLabel(model);
+    return { success: true, message: `${label} connection verified successfully!` };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Network error contacting Gemini API",
+    };
+  }
+}
+
 export async function generateGeminiRagResponse(
   userQuery: string,
   evidence: CitedEvidence[] = [],
-  crewContext?: string | null
+  crewContext?: string | null,
+  history: ChatHistoryTurn[] = [],
+  telemetryContext?: {
+    co2Ppm: number;
+    tempC: number;
+    humidityPct: number;
+    radiationRateMGy: number;
+    pressureMmHg: number;
+    compartment?: string;
+  } | null
 ): Promise<GeminiResponse> {
-  const apiKey =
-    (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ||
-    (typeof window !== "undefined" ? localStorage.getItem("habitrack_gemini_api_key") : null);
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     throw new Error("No Gemini API key available");
@@ -45,32 +177,47 @@ export async function generateGeminiRagResponse(
     const citationsText = evidence
       .map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`)
       .join("\n\n");
-    promptContent = `Relevant Evidence from NASA Human Research Program:\n${citationsText}\n\nCrew Query: "${userQuery}"`;
-  } else {
-    promptContent = `Crew Query: "${userQuery}"`;
+    promptContent = `Relevant Evidence from NASA Human Research Program:\n${citationsText}\n\n`;
+  }
+
+  if (telemetryContext) {
+    promptContent += `Current Compartment Telemetry (${telemetryContext.compartment || "Onboard"}):\n- CO2: ${telemetryContext.co2Ppm} ppm | Temp: ${telemetryContext.tempC}°C | Humidity: ${telemetryContext.humidityPct}% | Rad: ${telemetryContext.radiationRateMGy} mGy/d | Pressure: ${telemetryContext.pressureMmHg} mmHg\n\n`;
   }
 
   if (crewContext) {
-    promptContent = `Active Crewmember: ${crewContext}\n${promptContent}`;
+    promptContent += `Active Crewmember: ${crewContext}\n\n`;
   }
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+  promptContent += `Crew Query: "${userQuery}"`;
+
+  // Format multi-turn conversation contents
+  const contents = [
+    ...history
+      .filter((h) => h.text && h.text.trim().length > 0)
+      .map((h) => ({
+        role: h.role === "user" ? "user" : "model",
+        parts: [{ text: h.text }],
+      })),
+    {
+      role: "user",
+      parts: [{ text: promptContent }],
+    },
+  ];
+
+  const endpoint = getGeminiApiUrl();
+  const response = await fetch(`${endpoint}?key=${apiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: promptContent }],
-        },
-      ],
+      contents,
       systemInstruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
       },
       generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 600,
+        temperature: 0.6,
+        maxOutputTokens: 800,
       },
     }),
   });
@@ -87,14 +234,16 @@ export async function generateGeminiRagResponse(
     data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
     "No response generated.";
 
+  const label = getGeminiModelLabel();
   return {
     answer: rawAnswer,
-    provider: "Gemini 2.5 Flash (Direct Browser Execution)",
+    provider: `${label} (Direct Browser Execution)`,
   };
 }
 
 export interface DynamicTriageAIResponse {
   headline: string;
+  conversationalOverview?: string;
   physiologicalRationale: string;
   biologicalLatencyLag: string;
   confidenceMatch: string;
@@ -115,18 +264,19 @@ You are the Onboard Clinical First-Response AI for ISS Expedition 71.
 Your role is rapid triage and immediate physical stabilization countermeasures during Loss of Signal (LOS) or when Earth flight surgeons are unavailable.
 
 Operating Directives:
-1. Ground your reasoning in spaceflight physiology: cephalic fluid shift, microgravity lack of thermal buoyancy (causing CO2 pocketing around the head), lack of convective sweat evaporation, forced air drying of the cornea, or barometric adaptation.
-2. Formulate EXACTLY 3 practical, physical stabilization actions the crewmember can physically perform inside the spacecraft RIGHT NOW before the flight surgeon arrives:
+1. Provide a natural, empathetic, conversational summary in "conversationalOverview" (2-3 sentences speaking directly to the astronaut, validating their symptom, explaining the physiological context like microgravity fluid shifts or ventilation, and reassuring them).
+2. Ground your reasoning in spaceflight physiology: cephalic fluid shift, microgravity lack of thermal buoyancy (causing CO2 pocketing around the head), lack of convective sweat evaporation, forced air drying of the cornea, or barometric adaptation.
+3. Formulate EXACTLY 3 practical, physical stabilization actions the crewmember can physically perform inside the spacecraft RIGHT NOW before the flight surgeon arrives:
    - Step 1: Immediate local hardware / compartment environmental check (e.g., check diffuser exhaust fan for blockage, adjust ventilation louvers, inspect return grilles).
    - Step 2: Immediate physical / hydration stabilization measure (e.g., ingest 500 mL water with electrolytes to support venous return, instill preservative-free artificial tears, gentle Valsalva maneuver, anchor feet to deck).
    - Step 3: Location relocation, PPE, or vital monitoring step (e.g., relocate to higher-turnover US Lab Destiny, attach pulse oximeter finger probe, rest in neutral body posture).
-3. Match to an authentic NASA Flight Rule:
+4. Match to an authentic NASA Flight Rule:
    - FR-ECLSS-001 (Elevated Cabin CO2 & CDRA High-Flow Mitigation)
    - FR-MED-71-04 (Spacecraft Hypercapnia & Headache Mitigation)
    - FR-ECLSS-012 (Cabin Low-Humidity Ocular Protection)
    - FR-EVA-003 (Autonomic Exertion Strain & Heat Dissipation)
-4. Non-causal constraint: Avoid asserting clinical causation or prescribing medications. Focus on physical and environmental stabilization countermeasures.
-5. Return JSON ONLY matching the requested schema.
+5. Non-causal constraint: Avoid asserting clinical causation or prescribing medications. Focus on physical and environmental stabilization countermeasures.
+6. Return JSON ONLY matching the requested schema.
 `.trim();
 
 export async function generateClinicalTriageAI(params: {
@@ -142,9 +292,7 @@ export async function generateClinicalTriageAI(params: {
   };
   astronautId?: string;
 }): Promise<DynamicTriageAIResponse> {
-  const apiKey =
-    (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) ||
-    (typeof window !== "undefined" ? localStorage.getItem("habitrack_gemini_api_key") : null);
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     throw new Error("No Gemini API key available for dynamic clinical triage");
@@ -166,7 +314,8 @@ Live 5-Factor Telemetry in Compartment:
 Generate the 3 immediate physical stabilization countermeasures and clinical rationale in JSON format.
 `.trim();
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+  const endpoint = getGeminiApiUrl();
+  const response = await fetch(`${endpoint}?key=${apiKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -211,6 +360,7 @@ Generate the 3 immediate physical stabilization countermeasures and clinical rat
 
   return {
     headline: parsed.headline || `First-Response Interim Protocol: ${params.compartmentName}`,
+    conversationalOverview: parsed.conversationalOverview?.trim() || undefined,
     physiologicalRationale:
       parsed.physiologicalRationale ||
       `Telemetry evaluation indicated operational parameters requiring physical stabilization.`,

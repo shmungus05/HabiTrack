@@ -840,9 +840,9 @@ Monitor the astronaut. Understand the environment. Investigate the change. Suppo
 
 | Requirement | Capability | Status |
 | :--- | :--- | :--- |
-| `FR-11` | Offline-first local read/write access and reference retrieval | ✅ Delivered |
-| `FR-12` | Structured Clinical Investigation Dossier (Markdown, print-PDF, downlink) | ✅ 100% Delivered |
-| `Section 4` | Multi-Role Perspective Switcher (Astronaut / Flight Surgeon) | ✅ 100% Delivered |
-| `FR-01`–`FR-10` | Cohort profiles, ingestion, quality, environment, symptoms, timeline, baselines, analytics, alerts, local assistant | ✅ Delivered (V1–V4) |
+| `FR-11` | Offline-first local read/write access and reference retrieval | Delivered |
+| `FR-12` | Structured Clinical Investigation Dossier (Markdown, print-PDF, downlink) | 100% Delivered |
+| `Section 4` | Multi-Role Perspective Switcher (Astronaut / Flight Surgeon) | 100% Delivered |
+| `FR-01`–`FR-10` | Cohort profiles, ingestion, quality, environment, symptoms, timeline, baselines, analytics, alerts, local assistant | Delivered (V1–V4) |
 
 **Important limitation:** HabiTrack is a hackathon research prototype, not flight-certified medical software. Operational use would require appropriate clinical, engineering, security, human-factors, and mission-system validation.

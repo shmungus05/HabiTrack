@@ -89,7 +89,7 @@ export function generateHealthReportHtml(report: HealthReport): string {
                 ${rule.checklistSteps
                   .map(
                     (step) =>
-                      `<li style="margin:2px 0;">${step.verified ? "☑" : "☐"} ${step.stepNumber}. ${escapeHtml(step.instruction)}</li>`,
+                      `<li style="margin:2px 0;">${step.verified ? "[X]" : "[ ]"} ${step.stepNumber}. ${escapeHtml(step.instruction)}</li>`,
                   )
                   .join("")}
               </ul>

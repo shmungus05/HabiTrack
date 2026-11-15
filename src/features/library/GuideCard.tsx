@@ -83,7 +83,7 @@ export function GuideCard({ guide, onSelect }: GuideCardProps) {
           </div>
 
           {/* Title */}
-          <h3 className="text-base font-black text-slate-900 group-hover:text-sky-700 transition-colors tracking-tight leading-snug">
+          <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-700 transition-colors tracking-tight leading-snug">
             {guide.title}
           </h3>
 
