@@ -113,6 +113,30 @@ export interface CitedEvidence {
   relevance_pct: number;
 }
 
+export interface SpaceCareResourceReference {
+  id: string;
+  title: string;
+  category: "exercise" | "sleep" | "medical" | "nutrition" | "adaptation";
+  contentType: "video" | "gif" | "image" | "guide";
+  description: string;
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  durationMinutes?: number;
+  chapters?: Array<{ time: string; seconds: number; title: string }>;
+  instructions?: string[];
+  sourceName: string;
+  sourceDocId: string;
+  safetyNotices?: Array<{ level: string; text: string }>;
+}
+
+export type SpaceCareIntent =
+  | "health_concern"
+  | "exercise_guidance"
+  | "sleep_guidance"
+  | "mental_wellbeing"
+  | "daily_living"
+  | "general_question";
+
 export interface AssistantResponse {
   interaction_id: string;
   astronaut_id: string | null;
@@ -130,6 +154,9 @@ export interface AssistantResponse {
   verbatim_checklist?: ChecklistStep[];
   provider_used?: string | null;
   answer?: string | null;
+  resources?: SpaceCareResourceReference[];
+  followup_questions?: string[];
+  intent?: SpaceCareIntent;
 }
 
 export interface ProviderStatusResponse {

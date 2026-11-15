@@ -85,7 +85,7 @@ export function NasaMediaModal({ item, onClose }: NasaMediaModalProps) {
               <span className="text-[11px] font-mono text-slate-500 block truncate">
                 NASA ID: {item.nasaId} {item.center ? `· Center: ${item.center}` : ""} · {item.dateCreated}
               </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                 {item.title}
               </h2>
             </div>

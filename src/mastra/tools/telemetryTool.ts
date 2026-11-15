@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTool } from "../core";
+import { createTool } from "../core/index.ts";
 
 export const telemetryTool = createTool({
   id: "get-compartment-telemetry",

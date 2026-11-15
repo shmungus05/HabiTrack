@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createStep } from "../core";
+import { createStep } from "../core/index.ts";
 
 export const buildSurgeonPacketStep = createStep({
   id: "build-surgeon-packet",
@@ -25,6 +25,9 @@ export const buildSurgeonPacketStep = createStep({
         completed: z.boolean(),
       })
     ),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
+    resources: z.array(z.any()).optional(),
     latchedRuleId: z.string(),
     flightRuleTitle: z.string(),
     biologicalLatencyLag: z.string(),
@@ -56,6 +59,9 @@ export const buildSurgeonPacketStep = createStep({
         completed: z.boolean(),
       })
     ),
+    intent: z.string().optional(),
+    followupQuestions: z.array(z.string()).optional(),
+    resources: z.array(z.any()).optional(),
     latchedRuleId: z.string(),
     flightRuleTitle: z.string(),
     biologicalLatencyLag: z.string(),

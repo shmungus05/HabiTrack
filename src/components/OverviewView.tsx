@@ -82,6 +82,7 @@ interface OverviewViewProps {
   astronautId: string;
   onOpenHealthImport?: () => void;
   healthImportRevision?: number;
+  onNavigateToAssistant?: () => void;
 }
 
 interface OverviewData {
@@ -798,6 +799,7 @@ export function OverviewView({
   astronautId,
   onOpenHealthImport,
   healthImportRevision = 0,
+  onNavigateToAssistant,
 }: OverviewViewProps) {
   const { isSimulation, currentMissionDay } = useActiveMissionTime();
   const [data, setData] = useState<OverviewData | null>(null);
@@ -1398,7 +1400,10 @@ export function OverviewView({
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => void openForEvent(activeEvent)}
+                    onClick={() => {
+                      void openForEvent(activeEvent);
+                      onNavigateToAssistant?.();
+                    }}
                     leftIcon={<Sparkles className="h-3.5 w-3.5" />}
                   >
                     Explain with Evidence

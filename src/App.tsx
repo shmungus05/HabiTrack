@@ -16,6 +16,7 @@ import {
   Library as LibraryIcon,
   Settings as SettingsIcon,
   ShieldAlert,
+  Sparkles,
   Stethoscope,
   Upload,
   Wifi,
@@ -24,7 +25,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
-import { AssistantDrawer } from "./components/AssistantDrawer";
+import { AssistantView } from "./components/AssistantView";
 import { HealthImportModal } from "./components/HealthImportModal";
 import { OverviewView } from "./components/OverviewView";
 import { ResearchView } from "./components/ResearchView";
@@ -40,6 +41,7 @@ import { getAstronautDetectedLocation } from "./features/topology";
 import { AstronautAvatar, Badge, Button } from "./components/ui";
 import { IntroPage } from "./components/IntroPage";
 import { NavbarMissionControl } from "./components/NavbarMissionControl";
+import { VoiceModeModal } from "./components/VoiceModeModal";
 import { fetchHealth } from "./services/api";
 import { useCohortStore } from "./stores/cohortStore";
 import { useMissionStore, useActiveMissionTime } from "./stores/missionStore";
@@ -54,6 +56,7 @@ export type ViewKey =
   | "timeline"
   | "symptoms"
   | "library"
+  | "assistant"
   | "research"
   | "alerts"
   | "settings";
@@ -71,6 +74,7 @@ const ALL_VIEWS: readonly ViewDefinition[] = [
   { key: "timeline", label: "Timeline", icon: Activity, path: "/timeline", surgeonOnly: false },
   { key: "symptoms", label: "Symptoms", icon: Stethoscope, path: "/symptoms", surgeonOnly: false },
   { key: "library", label: "Library", icon: LibraryIcon, path: "/library", surgeonOnly: false },
+  { key: "assistant", label: "HabiTrack AI", icon: Sparkles, path: "/assistant", surgeonOnly: false },
   { key: "research", label: "Research", icon: BookOpen, path: "/research", surgeonOnly: true },
   { key: "alerts", label: "Alerts", icon: ShieldAlert, path: "/alerts", surgeonOnly: false },
   { key: "settings", label: "Settings", icon: SettingsIcon, path: "/settings", surgeonOnly: false },
@@ -136,6 +140,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<ViewKey>(() =>
     viewFromPath(window.location.pathname),
   );
+  const [previousView, setPreviousView] = useState<ViewKey>("overview");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isHealthReportOpen, setIsHealthReportOpen] = useState(false);
   const [isHealthImportOpen, setIsHealthImportOpen] = useState(false);
@@ -246,10 +251,18 @@ export default function App() {
   }, [missionMode, isSimulationPlaying, tickSimulation]);
 
   const navigate = (view: (typeof ALL_VIEWS)[number]) => {
+    if (activeView !== "assistant") {
+      setPreviousView(activeView);
+    }
     setActiveView(view.key);
     if (window.location.pathname !== view.path) {
       window.history.pushState({}, "", view.path);
     }
+  };
+
+  const navigateToAssistant = () => {
+    const target = ALL_VIEWS.find((v) => v.key === "assistant");
+    if (target) navigate(target);
   };
 
   const cohortChoices =
@@ -259,13 +272,29 @@ export default function App() {
     ? "Local Ollama generative model online"
     : "Ollama offline — deterministic extractive synthesis active";
   const clock = useMemo(() => formatCockpitClock(now), [now]);
-  const activeViewMeta = useMemo(
-    () => ALL_VIEWS.find((v) => v.key === activeView) ?? ALL_VIEWS[0],
-    [activeView],
-  );
 
   if (!hasSelectedRole) {
     return <IntroPage onSelectRole={() => setActiveView("overview")} />;
+  }
+
+  // Dedicated Full-Page Standalone AI Workspace — outside the cockpit shell!
+  if (activeView === "assistant") {
+    return (
+      <ErrorBoundary fallbackTitle="AI Assistant encountered a display issue">
+        <AssistantView
+          onBackToDashboard={() => {
+            const returnKey = previousView === "assistant" ? "overview" : previousView;
+            const targetView = ALL_VIEWS.find((v) => v.key === returnKey) ?? ALL_VIEWS[0];
+            navigate(targetView);
+          }}
+          previousViewLabel={
+            ALL_VIEWS.find((v) => v.key === (previousView === "assistant" ? "overview" : previousView))?.label ?? "Mission Control"
+          }
+          astronautCallsign={activeAstronaut?.callsign}
+        />
+        <VoiceModeModal />
+      </ErrorBoundary>
+    );
   }
 
   return (
@@ -281,15 +310,9 @@ export default function App() {
               />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900">
-                  HabiTrack
-                </h1>
-                <span className="hidden text-xs text-slate-400 sm:inline">/</span>
-                <span className="hidden truncate text-xs font-medium text-slate-500 sm:inline">
-                  {activeViewMeta.label}
-                </span>
-              </div>
+              <h1 className="truncate text-sm font-semibold tracking-tight text-slate-900">
+                HabiTrack
+              </h1>
               <p className="hidden font-mono text-[11px] text-slate-500 xl:block">
                 ISS Exp 72 · HabiTrack
               </p>
@@ -353,6 +376,16 @@ export default function App() {
                 {missionMode === "simulation" ? "SIM UTC" : "UTC"}
               </span>
             </div>
+
+            <Button
+              size="sm"
+              variant="default"
+              onClick={navigateToAssistant}
+              leftIcon={<Sparkles className="h-3.5 w-3.5 text-sky-600" />}
+              title="Open Dedicated HabiTrack AI Workstation"
+            >
+              <span className="hidden sm:inline">HabiTrack AI</span>
+            </Button>
 
             <Button
               size="sm"
@@ -639,15 +672,6 @@ export default function App() {
             </div>
           ) : null}
 
-          {isAstronaut && (activeView === "timeline" || activeView === "research") ? (
-            <div className="mt-4 w-full px-4 sm:px-6">
-              <div className="rounded-xl glass-panel px-4 py-2 text-[11px] text-slate-500">
-                Viewing in Astronaut Perspective · Flight Surgeon diagnostic controls
-                minimized.
-              </div>
-            </div>
-          ) : null}
-
           {cohortError ? (
             <div className="mt-4 w-full px-4 sm:px-6">
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
@@ -663,6 +687,7 @@ export default function App() {
                   astronautId={activeAstronautId}
                   onOpenHealthImport={() => setIsHealthImportOpen(true)}
                   healthImportRevision={healthImportRevision}
+                  onNavigateToAssistant={navigateToAssistant}
                 />
               ) : null}
               {activeView === "timeline" ? (
@@ -675,6 +700,7 @@ export default function App() {
                     astronautId={activeAstronautId}
                     onOpenHealthImport={() => setIsHealthImportOpen(true)}
                     healthImportRevision={healthImportRevision}
+                    onNavigateToAssistant={navigateToAssistant}
                   />
                 </Suspense>
               ) : null}
@@ -702,8 +728,8 @@ export default function App() {
         </div>
       </div>
 
-      <AssistantDrawer />
-      <StandbyAgentTrigger />
+      <StandbyAgentTrigger onNavigateToAssistant={navigateToAssistant} />
+      <VoiceModeModal />
       <HealthReportModal
         open={isHealthReportOpen}
         onClose={() => setIsHealthReportOpen(false)}

@@ -3,7 +3,7 @@ import {
   type HuaweiImportSummary,
   type ParsedHuaweiRecord,
   type StreamingParseResult,
-} from "../lib/huaweiHealthParser";
+} from "../lib/huaweiHealthParser.ts";
 import type { Measurement } from "../types/api";
 
 const DB_NAME = "habitrack_health_imports_v1";

@@ -108,7 +108,7 @@ export function GuideDetailModal({
               <span className="text-[11px] font-mono text-slate-500 block truncate">
                 REF: {guide.nasaDocumentId} · {guide.sourceRepository}
               </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                 {guide.title}
               </h2>
             </div>
@@ -160,6 +160,12 @@ export function GuideDetailModal({
                 controls
                 playsInline
                 preload="metadata"
+                onPlay={() => {
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                    setIsSpeaking(false);
+                  }
+                }}
                 className="w-full h-full object-contain"
               >
                 Your browser does not support the video tag.

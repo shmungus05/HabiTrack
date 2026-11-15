@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTool } from "../core";
+import { createTool } from "../core/index.ts";
 import type { FlightRule } from "../../types/api";
 
 export const NASA_FLIGHT_RULES: Record<string, FlightRule> = {

@@ -169,16 +169,23 @@ export class GeminiAudioWebSocketClient {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
   private isConnected = false;
+  private callbacks: {
+    onReady?: (sessionId: string) => void;
+    onDeltaText?: (text: string) => void;
+    onAudioChunk?: (pcmBytes: ArrayBuffer) => void;
+    onError?: (error: string) => void;
+    onClose?: () => void;
+  };
 
-  constructor(
-    private callbacks: {
-      onReady?: (sessionId: string) => void;
-      onDeltaText?: (text: string) => void;
-      onAudioChunk?: (pcmBytes: ArrayBuffer) => void;
-      onError?: (error: string) => void;
-      onClose?: () => void;
-    }
-  ) {}
+  constructor(callbacks: {
+    onReady?: (sessionId: string) => void;
+    onDeltaText?: (text: string) => void;
+    onAudioChunk?: (pcmBytes: ArrayBuffer) => void;
+    onError?: (error: string) => void;
+    onClose?: () => void;
+  }) {
+    this.callbacks = callbacks;
+  }
 
   public connect(apiKey: string, astronautId?: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -289,4 +296,353 @@ export class GeminiAudioWebSocketClient {
       this.audioContext = null;
     }
   }
+}
+
+/**
+ * Checks if browser supports SpeechSynthesis API.
+ */
+export function isSpeechSynthesisSupported(): boolean {
+  return typeof window !== "undefined" && "speechSynthesis" in window;
+}
+
+/**
+ * Sanitizes markdown, tables, and raw code tokens for pleasant, natural voice playback.
+ */
+export function cleanTextForVoice(markdownText: string): string {
+  if (!markdownText) return "";
+
+  let cleaned = markdownText;
+
+  // Remove markdown images and links: [Text](URL) -> Text
+  cleaned = cleaned.replace(/!\[([^\]]*)\]\([^)]*\)/g, "");
+  cleaned = cleaned.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+
+  // Remove code blocks and inline code
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, "Code block omitted.");
+  cleaned = cleaned.replace(/`([^`]+)`/g, "$1");
+
+  // Remove Markdown table divider rows |---|---| or | :--- | :--- |
+  cleaned = cleaned.replace(/^\s*\|?[\s-:]+\|[\s-:|]*$/gm, "");
+  // Replace remaining table pipes with commas/spaces
+  cleaned = cleaned.replace(/\|/g, ", ");
+
+  // Remove headers (#, ##, ###)
+  cleaned = cleaned.replace(/^#{1,6}\s+/gm, "");
+
+  // Remove bold/italics markers (*, **, _, __)
+  cleaned = cleaned.replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1");
+
+  // Remove bullet points / dashes at start of lines
+  cleaned = cleaned.replace(/^\s*[-*+]\s+/gm, "");
+  cleaned = cleaned.replace(/^\s*\d+\.\s+/gm, "");
+
+  // Clean excessive whitespace, double commas, and newlines
+  cleaned = cleaned.replace(/,\s*,/g, ",");
+  cleaned = cleaned.replace(/\n{2,}/g, ". ");
+  cleaned = cleaned.replace(/\n/g, " ");
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+
+  return cleaned;
+}
+
+export type VoicePersona = "nova" | "orion" | "athena" | "capcom" | "custom";
+
+export interface SpeakOptions {
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+  persona?: VoicePersona;
+  voiceName?: string | null;
+  onStart?: () => void;
+  onEnd?: () => void;
+  onError?: (err: any) => void;
+}
+
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+/**
+ * Returns available system voices, ensuring cache hydration.
+ */
+export function getAvailableVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
+  if (cachedVoices.length === 0) {
+    cachedVoices = window.speechSynthesis.getVoices();
+  }
+  return cachedVoices;
+}
+
+// Pre-hydrate cache when voices change asynchronously in Chromium / WebKit
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    cachedVoices = window.speechSynthesis.getVoices();
+  };
+}
+
+/**
+ * Resolves the optimal voice and acoustics profile for a given persona.
+ */
+export function resolveVoiceForPersona(
+  persona: VoicePersona = "nova",
+  explicitVoiceName?: string | null
+): { voice: SpeechSynthesisVoice | null; defaultPitch: number; defaultRate: number } {
+  const voices = getAvailableVoices();
+  if (voices.length === 0) {
+    return { voice: null, defaultPitch: 1.0, defaultRate: 1.05 };
+  }
+
+  // Explicit voice name override
+  if (explicitVoiceName) {
+    const match = voices.find((v) => v.name === explicitVoiceName);
+    if (match) {
+      return { voice: match, defaultPitch: 1.0, defaultRate: 1.05 };
+    }
+  }
+
+  const enVoices = voices.filter((v) => v.lang.startsWith("en"));
+  const pool = enVoices.length > 0 ? enVoices : voices;
+
+  switch (persona) {
+    case "nova": {
+      // Warm, natural female voice
+      const match =
+        pool.find(
+          (v) =>
+            (v.name.includes("Natural") &&
+              (v.name.includes("Jenny") || v.name.includes("Aria") || v.name.includes("Female"))) ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Jenny") ||
+            v.name.includes("Aria") ||
+            v.name.includes("Zira") ||
+            v.name.includes("Victoria") ||
+            v.name.includes("Karen") ||
+            (v.name.includes("Google") && !v.name.toLowerCase().includes("male"))
+        ) ||
+        pool.find(
+          (v) =>
+            !v.name.toLowerCase().includes("male") &&
+            !v.name.includes("David") &&
+            !v.name.includes("Mark") &&
+            !v.name.includes("Guy") &&
+            !v.name.includes("Ryan")
+        );
+      return {
+        voice: match || pool[0] || null,
+        defaultPitch: 1.06,
+        defaultRate: 1.02,
+      };
+    }
+
+    case "orion": {
+      // Calm, grounded, confident male voice
+      const match = pool.find(
+        (v) =>
+          (v.name.includes("Natural") &&
+            (v.name.includes("Guy") || v.name.includes("Ryan") || v.name.includes("Male"))) ||
+          v.name.includes("Guy") ||
+          v.name.includes("Ryan") ||
+          v.name.includes("David") ||
+          v.name.includes("Mark") ||
+          (v.name.includes("Google") && v.name.includes("Male"))
+      );
+      return {
+        voice: match || pool[0] || null,
+        defaultPitch: 0.92,
+        defaultRate: 1.0,
+      };
+    }
+
+    case "athena": {
+      // Refined British / European clear clinical tone
+      const match = pool.find(
+        (v) =>
+          v.lang.includes("GB") ||
+          v.name.includes("UK") ||
+          v.name.includes("George") ||
+          v.name.includes("Hazel") ||
+          v.name.includes("Susan") ||
+          v.name.includes("Oliver") ||
+          v.name.includes("Stephanie")
+      );
+      return {
+        voice: match || pool[0] || null,
+        defaultPitch: 1.0,
+        defaultRate: 1.04,
+      };
+    }
+
+    case "capcom": {
+      // Tactical spaceflight flight loop voice
+      const match = pool.find(
+        (v) =>
+          v.name.includes("Guy") ||
+          v.name.includes("David") ||
+          v.name.includes("Male")
+      );
+      return {
+        voice: match || pool[0] || null,
+        defaultPitch: 0.88,
+        defaultRate: 1.10,
+      };
+    }
+
+    default:
+      return { voice: pool[0] || null, defaultPitch: 1.0, defaultRate: 1.05 };
+  }
+}
+
+let activeSpeechUtterance: SpeechSynthesisUtterance | null = null;
+
+/**
+ * Procedurally plays Apollo/ISS Quindar communication beeps using the Web Audio API.
+ * Intro beep: 2525 Hz for 250ms
+ * Outro beep: 2475 Hz for 250ms
+ */
+export function playQuindarTone(type: "intro" | "outro" = "intro", volume = 0.08): void {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const frequency = type === "intro" ? 2525 : 2475;
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+    // Smooth envelope attack and release
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.02);
+    gain.gain.setValueAtTime(volume, ctx.currentTime + 0.22);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+
+    setTimeout(() => {
+      try {
+        if (ctx.state !== "closed") ctx.close();
+      } catch {
+        // Safe close
+      }
+    }, 400);
+  } catch {
+    // Audio best-effort
+  }
+}
+
+/**
+ * Procedurally plays a subtle radio comms chirp for push-to-talk button clicks.
+ */
+export function playCommsChirp(volume = 0.05): void {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 0.08);
+
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.08);
+
+    setTimeout(() => {
+      try {
+        if (ctx.state !== "closed") ctx.close();
+      } catch {
+        // Safe close
+      }
+    }, 200);
+  } catch {
+    // Best-effort
+  }
+}
+
+/**
+ * Synthesizes speech using the browser SpeechSynthesis engine.
+ */
+export function speakText(text: string, options: SpeakOptions = {}): Promise<void> {
+  return new Promise((resolve) => {
+    if (!isSpeechSynthesisSupported()) {
+      options.onError?.(new Error("Speech synthesis not supported"));
+      resolve();
+      return;
+    }
+
+    cancelSpeech();
+
+    const clean = cleanTextForVoice(text);
+    if (!clean) {
+      resolve();
+      return;
+    }
+
+    const { voice, defaultPitch, defaultRate } = resolveVoiceForPersona(
+      options.persona ?? "nova",
+      options.voiceName
+    );
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = options.rate ?? defaultRate;
+    utterance.pitch = options.pitch ?? defaultPitch;
+    utterance.volume = options.volume ?? 1.0;
+
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.onstart = () => {
+      activeSpeechUtterance = utterance;
+      options.onStart?.();
+    };
+
+    utterance.onend = () => {
+      activeSpeechUtterance = null;
+      options.onEnd?.();
+      resolve();
+    };
+
+    utterance.onerror = (err) => {
+      activeSpeechUtterance = null;
+      options.onError?.(err);
+      resolve();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+/**
+ * Instantly stops/cancels ongoing speech synthesis.
+ */
+export function cancelSpeech(): void {
+  if (isSpeechSynthesisSupported()) {
+    try {
+      window.speechSynthesis.cancel();
+      activeSpeechUtterance = null;
+    } catch {
+      // Safe cancel
+    }
+  }
+}
+
+/**
+ * Checks if speech is currently being actively synthesized.
+ */
+export function isCurrentlySpeaking(): boolean {
+  if (!isSpeechSynthesisSupported()) return false;
+  return window.speechSynthesis.speaking;
 }

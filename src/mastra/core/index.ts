@@ -4,7 +4,7 @@
  */
 
 import type { z } from "zod";
-import { generateGeminiRagResponse } from "../../services/ai/geminiClient";
+import { generateGeminiRagResponse } from "../../services/ai/geminiClient.ts";
 import type {
   MastraTool,
   MastraToolConfig,
@@ -13,9 +13,9 @@ import type {
   MastraWorkflowConfig,
   MastraAgentConfig,
   ExecutionContext,
-} from "./types";
+} from "./types.ts";
 
-export * from "./types";
+export * from "./types.ts";
 
 export function createTool<TInput extends z.ZodTypeAny, TOutput extends z.ZodTypeAny>(
   config: MastraToolConfig<TInput, TOutput>

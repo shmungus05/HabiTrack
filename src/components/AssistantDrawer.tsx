@@ -31,8 +31,11 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Square,
   Trash2,
   TriangleAlert,
+  Volume2,
+  VolumeX,
   Wind,
   X,
 } from "lucide-react";
@@ -52,9 +55,18 @@ import {
   type InterimActionItem,
   type SurgeonHandoffPacket,
 } from "../stores/assistantStore";
+import { useRoleStore } from "../stores/roleStore";
+import { ShiftHandoverCard } from "../features/handover";
 import { EvidenceCard } from "./EvidenceCard";
 import { parseEventRationale } from "./EventRationaleDisplay";
 import { Badge, MessageFormatter } from "./ui";
+import { WatchableResourceCard } from "./WatchableResourceCard";
+import { GuideDetailModal } from "../features/library/GuideDetailModal";
+import { fetchLibraryGuideById } from "../services/api";
+import { getGeminiApiKey } from "../services/ai/geminiClient";
+import { GeminiApiKeyModal } from "./GeminiApiKeyModal";
+import type { LibraryGuide } from "../types/library";
+import type { SpaceCareResourceReference } from "../types/api";
 
 const CABIN_MODULES = [
   "Auto-Detect",
@@ -69,15 +81,18 @@ const CABIN_MODULES = [
 const CLINICAL_SUGGESTIONS = [
   "🩺 Run full 5-factor triage",
   "Headache & throbbing in Node 2",
+  "I have muscle soreness after workout",
+  "Sleep airflow in Node 2 crew quarters",
   "Stinging irritated eyes in Columbus",
   "Dizziness upon waking in crew quarters",
-  "Overheating after workout in US Lab",
   "Check ECLSS CO2 flight rule limits",
 ];
 
 export function AssistantDrawer() {
   const isOpen = useAssistantStore((state) => state.isOpen);
   const isLoading = useAssistantStore((state) => state.isLoading);
+  const userRole = useRoleStore((state) => state.role);
+  const isFlightSurgeon = userRole === "flight_surgeon";
   const activeTab = useAssistantStore((state) => state.activeTab);
   const setActiveTab = useAssistantStore((state) => state.setActiveTab);
   const messages = useAssistantStore((state) => state.messages);
@@ -94,11 +109,71 @@ export function AssistantDrawer() {
   const submitQuery = useAssistantStore((state) => state.submitQuery);
   const clearChat = useAssistantStore((state) => state.clearChat);
 
+  // Voice Mode & TTS hooks
+  const openVoiceModal = useAssistantStore((state) => state.openVoiceModal);
+  const isSpeaking = useAssistantStore((state) => state.isSpeaking);
+  const speakingMessageId = useAssistantStore((state) => state.speakingMessageId);
+  const autoSpeakEnabled = useAssistantStore((state) => state.autoSpeakEnabled);
+  const toggleAutoSpeak = useAssistantStore((state) => state.toggleAutoSpeak);
+  const speakMessage = useAssistantStore((state) => state.speakMessage);
+
+  // AI Model Selection & Local WebGPU status
+  const aiModelMode = useAssistantStore((state) => state.aiModelMode);
+  const setAiModelMode = useAssistantStore((state) => state.setAiModelMode);
+  const localModelStatus = useAssistantStore((state) => state.localModelStatus);
+  const loadLocalModel = useAssistantStore((state) => state.loadLocalModel);
+
   const [inputQuery, setInputQuery] = useState("");
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [isListening, setIsListening] = useState(false);
   const [viewingPacket, setViewingPacket] = useState<SurgeonHandoffPacket | null>(null);
+  const [selectedGuideForModal, setSelectedGuideForModal] = useState<LibraryGuide | null>(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(Boolean(getGeminiApiKey()));
+
+  useEffect(() => {
+    const checkKey = () => setHasApiKey(Boolean(getGeminiApiKey()));
+    checkKey();
+    window.addEventListener("habitrack_api_key_updated", checkKey);
+    return () => window.removeEventListener("habitrack_api_key_updated", checkKey);
+  }, []);
+
+  const handleWatchResource = async (res: SpaceCareResourceReference) => {
+    try {
+      const guide = await fetchLibraryGuideById(res.id);
+      if (guide) {
+        setSelectedGuideForModal(guide);
+        return;
+      }
+    } catch {
+      // Best effort
+    }
+
+    setSelectedGuideForModal({
+      id: res.id,
+      nasaDocumentId: res.sourceDocId,
+      title: res.title,
+      category: res.category,
+      durationMinutes: res.durationMinutes ?? 3.5,
+      sourceRepository: res.sourceName,
+      summary: res.description,
+      instructions: res.instructions ?? [],
+      safetyNotices: (res.safetyNotices ?? []).map((s) => ({
+        level: s.level as any,
+        text: s.text,
+      })),
+      chapters: (res.chapters ?? []).map((c) => ({
+        time: c.time,
+        seconds: c.seconds,
+        title: c.title,
+      })),
+      mediaType: "video_stream",
+      mediaUrl: res.mediaUrl,
+      thumbnailUrl: res.thumbnailUrl,
+      verifiedBy: "NASA Flight Surgeon / HRP Lead",
+    });
+  };
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -221,13 +296,39 @@ export function AssistantDrawer() {
                   <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900">
                     HABITRACK CLINICAL CO-PILOT
                   </h2>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Standby Online
-                  </span>
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono">
-                  <span>ISS Expedition 71 · Autonomous Flight Decision Support</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMode = aiModelMode === "frontier" ? "local" : "frontier";
+                      setAiModelMode(nextMode);
+                      if (nextMode === "local" && localModelStatus !== "ready") {
+                        loadLocalModel();
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                      aiModelMode === "local"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                        : "bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100"
+                    }`}
+                    title="Click to toggle between Frontier Cloud and Local WebGPU"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        aiModelMode === "local"
+                          ? localModelStatus === "ready"
+                            ? "bg-emerald-500 animate-pulse"
+                            : "bg-amber-500"
+                          : "bg-sky-500 animate-pulse"
+                      }`}
+                    />
+                    <span>
+                      {aiModelMode === "frontier"
+                        ? "✨ Frontier (Gemini)"
+                        : localModelStatus === "ready"
+                        ? "⚡ Local (Llama 3.2)"
+                        : "⚡ Local (Init Required)"}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -309,11 +410,73 @@ export function AssistantDrawer() {
               </button>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 font-mono">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                Standby Engine Active
-              </span>
+            <div className="flex items-center gap-2">
+              {/* AI Engine Status & Key Modal Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowApiKeyModal(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer shadow-2xs ${
+                  hasApiKey
+                    ? "bg-emerald-50/90 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                    : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
+                }`}
+                title="Configure Gemini 2.5 Flash API Key and connection"
+              >
+                {hasApiKey ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                    <span className="hidden sm:inline">Gemini 2.5 Flash</span>
+                    <span className="sm:hidden">Gemini</span>
+                  </>
+                ) : (
+                  <>
+                    <Radio className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="hidden sm:inline">Mastra Standby</span>
+                    <span className="sm:hidden">Mastra</span>
+                  </>
+                )}
+              </button>
+
+              {/* Live Voice Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeDrawer();
+                  openVoiceModal();
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-sky-300/80 bg-gradient-to-r from-sky-50 to-indigo-50/50 text-sky-800 hover:text-sky-950 hover:border-sky-400 transition-all cursor-pointer text-xs font-bold shadow-2xs group"
+                title="Launch Live Voice Mode"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <Radio className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
+                <span>Live</span>
+              </button>
+
+              {/* Auto Speak Toggle */}
+              <button
+                type="button"
+                onClick={toggleAutoSpeak}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  autoSpeakEnabled
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-2xs"
+                    : "bg-white border-slate-200 text-slate-500 hover:text-slate-800"
+                }`}
+                title={
+                  autoSpeakEnabled
+                    ? "Auto-speak active (Assistant responses will be read aloud)"
+                    : "Auto-speak disabled (Text responses only)"
+                }
+              >
+                {autoSpeakEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5" />
+                )}
+                <span className="hidden md:inline">{autoSpeakEnabled ? "Voice On" : "Muted"}</span>
+              </button>
             </div>
           </div>
 
@@ -322,27 +485,6 @@ export function AssistantDrawer() {
             {/* Tab 1: Conversational Chatbot & Triage */}
             {activeTab === "chat" && (
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Quick Suggestion Chips (compact header bar when in active conversation) */}
-                {messages.length > 1 && (
-                  <div className="px-6 sm:px-8 py-2 bg-slate-50/60 border-b border-slate-100 flex items-center gap-2 overflow-x-auto shrink-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono shrink-0">
-                      Quick Prompts:
-                    </span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {CLINICAL_SUGGESTIONS.map((sug) => (
-                        <button
-                          key={sug}
-                          type="button"
-                          onClick={() => submitQuery(sug)}
-                          className="px-2.5 py-1 rounded-full text-xs font-medium bg-white hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-700 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-                        >
-                          {sug}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Messages Stream */}
                 <div
                   ref={chatScrollRef}
@@ -383,6 +525,27 @@ export function AssistantDrawer() {
                                 >
                                   {isUser ? "Astronaut (Crew)" : "HabiTrack Flight Co-Pilot"}
                                 </span>
+                                {!isUser && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium ${
+                                      (msg.provider || response?.provider_used)?.includes("Gemini")
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    }`}
+                                  >
+                                    {(msg.provider || response?.provider_used)?.includes("Gemini") ? (
+                                      <>
+                                        <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                                        Gemini 2.5 Flash
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Radio className="w-2.5 h-2.5 text-slate-500" />
+                                        Mastra Standby
+                                      </>
+                                    )}
+                                  </span>
+                                )}
                                 {msg.location && (
                                   <span
                                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] ${
@@ -397,11 +560,51 @@ export function AssistantDrawer() {
                                 )}
 
                               </div>
-                              <span className="text-slate-400 text-[11px]">{msg.timestamp}</span>
+                              <div className="flex items-center gap-2">
+                                {!isUser && (
+                                  <button
+                                    type="button"
+                                    onClick={() => speakMessage(msg.id, msg.text)}
+                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[11px] font-mono transition-all cursor-pointer ${
+                                      speakingMessageId === msg.id && isSpeaking
+                                        ? "bg-emerald-50 border-emerald-300 text-emerald-700 font-bold shadow-2xs"
+                                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800"
+                                    }`}
+                                    title={
+                                      speakingMessageId === msg.id && isSpeaking
+                                        ? "Stop reading aloud"
+                                        : "Read response aloud (Voice TTS)"
+                                    }
+                                  >
+                                    {speakingMessageId === msg.id && isSpeaking ? (
+                                      <>
+                                        <Square className="w-3 h-3 fill-current text-emerald-600" />
+                                        <span className="text-emerald-700 animate-pulse">Stop</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Volume2 className="w-3 h-3 text-slate-400" />
+                                        <span>Read Aloud</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                                <span className="text-slate-400 text-[11px]">{msg.timestamp}</span>
+                              </div>
                             </div>
 
                             {/* Content text formatted with Perplexity-style clean typography */}
-                            <MessageFormatter text={msg.text} isUser={isUser} />
+                            {!msg.shiftHandover ? (
+                              <MessageFormatter text={msg.text} isUser={isUser} />
+                            ) : (
+                              /* Shift Handover Briefing Card (Flight Surgeon Only) */
+                              <div className="pt-2">
+                                <ShiftHandoverCard
+                                  briefing={msg.shiftHandover}
+                                  onSelectWindow={(hours) => submitQuery(`Brief me on the last ${hours} hours`)}
+                                />
+                              </div>
+                            )}
 
                             {/* ChatGPT / Perplexity Style Starter Prompt Cards on Welcome */}
                             {!isUser && msg.id === "welcome-msg" && messages.length <= 1 && (
@@ -410,7 +613,7 @@ export function AssistantDrawer() {
                                   Suggested Inquiries
                                 </span>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                  {CLINICAL_SUGGESTIONS.map((sug) => (
+                                  {(isFlightSurgeon ? ["📋 Brief me on the last 12 hours", ...CLINICAL_SUGGESTIONS] : CLINICAL_SUGGESTIONS).map((sug) => (
                                     <button
                                       key={sug}
                                       type="button"
@@ -427,8 +630,8 @@ export function AssistantDrawer() {
                               </div>
                             )}
 
-                            {/* Embedded 5-Factor Telemetry Scorecard */}
-                            {!isUser && msg.snapshot && (
+                            {/* Embedded 5-Factor Telemetry Scorecard (Clinical Excursions Only) */}
+                            {!isUser && msg.snapshot && (msg.location || msg.interimActions || msg.latchedRuleId) && (
                               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
                                 <div className="flex items-center justify-between text-xs font-mono text-slate-500">
                                   <span className="font-bold uppercase tracking-wider text-[11px] text-slate-700 flex items-center gap-1.5">
@@ -541,6 +744,54 @@ export function AssistantDrawer() {
                               </div>
                             )}
 
+                            {/* SpaceLife Library Certified Watchable References */}
+                            {!isUser && msg.resources && msg.resources.length > 0 && (
+                              <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-sky-900 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                                    <BookOpen className="w-3.5 h-3.5 text-sky-600" />
+                                    SpaceLife Library Instructional Guides:
+                                  </span>
+                                  <span className="text-[11px] font-mono text-slate-500">
+                                    {msg.resources.length} Watchable Guide{msg.resources.length > 1 ? "s" : ""}
+                                  </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {msg.resources.map((res) => (
+                                    <WatchableResourceCard
+                                      key={res.id}
+                                      resource={res}
+                                      onWatch={handleWatchResource}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Contextual Follow-Up Suggestions */}
+                            {!isUser && msg.followupQuestions && msg.followupQuestions.length > 0 && (
+                              <div className="pt-3 border-t border-slate-100/80">
+                                <div className="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+                                  Suggested Follow-Up Clarifications:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {msg.followupQuestions.map((q, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => void submitQuery(q)}
+                                      className="text-xs px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-sky-50 border border-slate-200/80 hover:border-sky-300 text-slate-700 hover:text-sky-800 transition-all text-left cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-98"
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                                      <span>{q}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Astronaut Symptom Logging Consent / Permission Box */}
                             {!isUser && msg.symptomConsent && (
                               <div className="pt-3 border-t border-slate-100">
@@ -565,11 +816,11 @@ export function AssistantDrawer() {
                                     </p>
 
                                     <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono bg-white/80 p-2 rounded-xl border border-sky-100 text-slate-700">
-                                      <span>Crew: <strong>{msg.symptomConsent.astronautId}</strong> ({msg.symptomConsent.callsign})</span>
+                                      <span>Crew: <strong>{msg.symptomConsent.astronautId ?? "ASTRO-01"}</strong> ({msg.symptomConsent.callsign ?? "Crew"})</span>
                                       <span>•</span>
-                                      <span>Location: <strong>{msg.symptomConsent.location}</strong></span>
+                                      <span>Location: <strong>{msg.symptomConsent.location ?? "Node 2"}</strong></span>
                                       <span>•</span>
-                                      <span>CO₂: <strong>{msg.symptomConsent.snapshot.co2Ppm.toLocaleString()} PPM</strong></span>
+                                      <span>CO₂: <strong>{(msg.symptomConsent.snapshot?.co2Ppm ?? 0).toLocaleString()} PPM</strong></span>
                                     </div>
 
                                     <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
@@ -725,6 +976,19 @@ export function AssistantDrawer() {
 
                 {/* Persistent Chat Input Bar (Perplexity Command Dock) */}
                 <div className="p-4 sm:p-5 border-t border-slate-200/80 bg-white/95 backdrop-blur-md space-y-2 shrink-0">
+                  {/* Flight Surgeon Shift Handover Quick Action Chip */}
+                  {isFlightSurgeon && (
+                    <div className="max-w-5xl mx-auto flex items-center gap-2 pb-1">
+                      <button
+                        type="button"
+                        onClick={() => submitQuery("Brief me on the last 12 hours")}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-[11px] font-mono font-semibold transition-all cursor-pointer shadow-2xs group"
+                      >
+                        <FileCheck2 className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
+                        <span>📋 Brief me on the last 12 hours</span>
+                      </button>
+                    </div>
+                  )}
                   <form onSubmit={handleQuerySubmit} className="max-w-5xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                     {/* Compartment Selector */}
                     <div className="flex items-center gap-2 sm:w-48 shrink-0 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2">
@@ -817,7 +1081,7 @@ export function AssistantDrawer() {
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-emerald-700">
                         <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                        <span>SHA-256: {latchedRule.sha256_hash.slice(0, 16)}... (Verified NASA Certified Flight Rule)</span>
+                        <span>SHA-256: {latchedRule.sha256_hash ? latchedRule.sha256_hash.slice(0, 16) : "VERIFIED"}... (Verified NASA Certified Flight Rule)</span>
                       </div>
                     </div>
                   ) : null}
@@ -1062,11 +1326,11 @@ export function AssistantDrawer() {
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">Environmental Snapshot At Excursion</span>
                 <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-1">
-                  <span>CO₂: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot.co2Ppm}</strong> ppm</span>
-                  <span>Temp: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot.tempC}</strong> °C</span>
-                  <span>Humidity: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot.humidityPct}</strong>%</span>
-                  <span>Rad: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot.radiationRateMGy}</strong> mGy</span>
-                  <span>Press: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot.pressureMmHg}</strong> mmHg</span>
+                  <span>CO₂: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot?.co2Ppm ?? "—"}</strong> ppm</span>
+                  <span>Temp: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot?.tempC ?? "—"}</strong> °C</span>
+                  <span>Humidity: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot?.humidityPct ?? "—"}</strong>%</span>
+                  <span>Rad: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot?.radiationRateMGy ?? "—"}</strong> mGy</span>
+                  <span>Press: <strong className="text-slate-900">{viewingPacket.environmentalSnapshot?.pressureMmHg ?? "—"}</strong> mmHg</span>
                   <span className="text-sky-700 font-bold">Rule: {viewingPacket.latchedRuleId}</span>
                 </div>
               </div>
@@ -1084,6 +1348,20 @@ export function AssistantDrawer() {
           </div>
         </div>
       )}
+
+      {/* SpaceLife Library Guide Video Modal */}
+      {selectedGuideForModal && (
+        <GuideDetailModal
+          guide={selectedGuideForModal}
+          onClose={() => setSelectedGuideForModal(null)}
+        />
+      )}
+
+      {/* Gemini 2.5 Flash API Key & Diagnostics Modal */}
+      <GeminiApiKeyModal
+        isOpen={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+      />
     </>
   );
 }

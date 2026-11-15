@@ -73,6 +73,7 @@ interface TimelineViewProps {
   astronautId: string;
   onOpenHealthImport?: () => void;
   healthImportRevision?: number;
+  onNavigateToAssistant?: () => void;
 }
 
 interface TimelineData {
@@ -155,6 +156,7 @@ export function TimelineView({
   astronautId,
   onOpenHealthImport,
   healthImportRevision = 0,
+  onNavigateToAssistant,
 }: TimelineViewProps) {
   const [data, setData] = useState<TimelineData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +168,6 @@ export function TimelineView({
   const toggleStream = useTimelineStore((state) => state.toggleStream);
   const zoomRange = useTimelineStore((state) => state.zoomRange);
   const setZoomRange = useTimelineStore((state) => state.setZoomRange);
-  const isDrawerOpen = useAssistantStore((state) => state.isOpen);
   const openForEvent = useAssistantStore((state) => state.openForEvent);
 
   const plotRef = useRef<HTMLElement | null>(null);
@@ -859,11 +860,7 @@ export function TimelineView({
       ) : null}
 
       {/* Main Chart Container */}
-      <div
-        className={`transition-[width] duration-300 ease-out ${
-          isDrawerOpen ? "w-full lg:w-[calc(100%-500px)]" : "w-full"
-        }`}
-      >
+      <div className="w-full">
         <div className="rounded-xl border border-border bg-white relative h-[calc(100vh-260px)] min-h-[580px] overflow-hidden p-2 shadow-sm">
           {!hasTelemetry && !isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted">
@@ -911,7 +908,10 @@ export function TimelineView({
                 <button
                   key={event.event_id}
                   type="button"
-                  onClick={() => void openForEvent(event)}
+                  onClick={() => {
+                    void openForEvent(event);
+                    onNavigateToAssistant?.();
+                  }}
                   className={`rounded-md border px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors hover:bg-surface-subtle ${theme.border} ${theme.text}`}
                 >
                   {theme.label} · {titleCase(event.event_type)}

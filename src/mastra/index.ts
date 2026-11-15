@@ -9,11 +9,13 @@ import { clinicalTriageWorkflow } from "./workflows/clinicalTriageWorkflow";
 import { telemetryTool } from "./tools/telemetryTool";
 import { flightRulesTool } from "./tools/flightRulesTool";
 import { researchRagTool } from "./tools/researchRagTool";
+import { spaceLifeLibraryTool } from "./tools/spaceLifeLibraryTool";
 
 export * from "./core";
 export * from "./tools/telemetryTool";
 export * from "./tools/flightRulesTool";
 export * from "./tools/researchRagTool";
+export * from "./tools/spaceLifeLibraryTool";
 export * from "./workflows/clinicalTriageWorkflow";
 export * from "./agents/firstResponderAgent";
 
@@ -33,5 +35,7 @@ export const mastra = new Mastra({
     "get-flight-rule": flightRulesTool,
     researchRag: researchRagTool,
     "search-research-rag": researchRagTool,
+    spaceLifeLibrary: spaceLifeLibraryTool,
+    "query-spacelife-library": spaceLifeLibraryTool,
   },
 });

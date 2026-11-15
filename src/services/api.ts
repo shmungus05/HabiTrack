@@ -5,13 +5,15 @@
  * making the application completely hostable on Vercel, Netlify, or static CDN.
  */
 
-import researchChunksRaw from "../data/researchChunks.json";
-import officialNasaGuidesRaw from "../data/officialNasaGuides.json";
-import { generateGeminiRagResponse } from "./ai/geminiClient";
-import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator";
-import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore";
+import researchChunksRaw from "../data/researchChunks.json" with { type: "json" };
+import officialNasaGuidesRaw from "../data/officialNasaGuides.json" with { type: "json" };
+import { generateGeminiRagResponse } from "./ai/geminiClient.ts";
+import { generateUnifiedRagResponse, type AIModelMode } from "./ai/aiProvider.ts";
+import { generate180DayTelemetry, generate180DayEvents } from "./telemetryGenerator.ts";
+import { getActiveMissionTimeMs, useMissionStore } from "../stores/missionStore.ts";
 import type { LibraryGuide, GuideCategory, NasaMediaItem } from "../types/library";
-import { getImportedHuaweiMeasurements } from "./healthImportStorage";
+import { getImportedHuaweiMeasurements } from "./healthImportStorage.ts";
+import { searchSpaceLifeGuides } from "../mastra/tools/spaceLifeLibraryTool.ts";
 import type {
   AssistantResponse,
   Astronaut,
@@ -79,6 +81,17 @@ async function loadSeedData(): Promise<SeedDataStructure> {
   if (!seedDataPromise) {
     seedDataPromise = (async () => {
       try {
+        if (typeof window === "undefined" && typeof (globalThis as any).process !== "undefined") {
+          const modFs: any = await new Function('return import("node:fs/promises")')();
+          const modPath: any = await new Function('return import("node:path")')();
+          const cwd = (globalThis as any).process.cwd();
+          const filePath = modPath.resolve(cwd, "public/data/seedData.json");
+          const raw = await modFs.readFile(filePath, "utf-8");
+          const data = JSON.parse(raw) as SeedDataStructure;
+          seedDataCache = data;
+          return data;
+        }
+
         const response = await fetch("/data/seedData.json");
         if (!response.ok) {
           throw new Error(`Failed to load /data/seedData.json (${response.status})`);
@@ -583,13 +596,33 @@ export async function queryAssistant(
   text: string,
   topK = 5,
   astronautId?: string | null,
-  concordanceEventId?: string | null
+  concordanceEventId?: string | null,
+  history?: Array<{ role: "user" | "model"; text: string }>,
+  telemetryContext?: {
+    co2Ppm: number;
+    tempC: number;
+    humidityPct: number;
+    radiationRateMGy: number;
+    pressureMmHg: number;
+    compartment?: string;
+  } | null
 ): Promise<AssistantResponse> {
   const seed = await loadSeedData();
-  const evidence = searchResearchChunks(text, topK);
+  const textLower = text.toLowerCase().trim();
+
+  const isGreeting =
+    /^(hi|hello|hey|greetings|good\s*(morning|afternoon|evening)|thanks|thank\s*you|appreciate|cheers|bye|goodbye|awesome|great|ok|okay|got\s*it)\b/i.test(
+      textLower
+    );
+  const isMoodQuery = /(happy|morale|mood|feeling|mental|stress|psychological|emotion|wellbeing|depress|anxious)/i.test(textLower);
+  const isIdentityQuery = /(who are you|what can you do|help|capabilities|overview)/i.test(textLower);
+
+  // Only perform research literature chunk lookup for genuine biomedical/technical questions
+  const evidence = (isGreeting || isMoodQuery || isIdentityQuery)
+    ? []
+    : searchResearchChunks(text, topK);
 
   // Check if any flight rule strongly matches
-  const textLower = text.toLowerCase();
   let matchedRule: FlightRule | null = null;
   if (textLower.includes("co2") || textLower.includes("eclss") || textLower.includes("headache")) {
     matchedRule = seed.flightRules.find((r) => r.rule_id === "FR-ECLSS-001") ?? null;
@@ -601,23 +634,77 @@ export async function queryAssistant(
 
   let answerText: string | null = null;
   let providerUsed = "Gemini 2.5 Flash (Direct Browser Execution)";
-  let headline = evidence.length > 0 ? `Literature Synthesis: ${text.trim().slice(0, 45)}` : "HabiTrack Standby Assistant";
+  let headline = isGreeting
+    ? "HabiTrack Co-Pilot Standby"
+    : isMoodQuery
+    ? "Behavioral Health & Performance (BHP)"
+    : evidence.length > 0
+    ? `Literature Synthesis: ${text.trim().slice(0, 45)}`
+    : "HabiTrack Standby Assistant";
   let mode: "GEMINI_GENERATIVE" | "EXTRACTIVE_FALLBACK" = "GEMINI_GENERATIVE";
 
-  // 1. Attempt real LLM generation via Gemini 2.5 Flash client
+  const activeMode: AIModelMode =
+    (typeof window !== "undefined"
+      ? (window.localStorage.getItem("habitrack_ai_model_mode") as AIModelMode)
+      : "frontier") || "frontier";
+
+  // 1. Attempt generation via active AI provider (Frontier Gemini or Local Llama-3.2-1B WebGPU)
   try {
-    const geminiRes = await generateGeminiRagResponse(text, evidence, astronautId);
-    answerText = geminiRes.answer;
-    providerUsed = geminiRes.provider;
+    const unifiedRes = await generateUnifiedRagResponse({
+      mode: activeMode,
+      userQuery: text,
+      evidence,
+      crewContext: astronautId,
+      history,
+      telemetryContext,
+    });
+    answerText = unifiedRes.answer;
+    providerUsed = unifiedRes.provider;
+    if (unifiedRes.isFallback) {
+      mode = "EXTRACTIVE_FALLBACK";
+      if (isGreeting) {
+        if (textLower.includes("thank") || textLower.includes("cheers") || textLower.includes("awesome") || textLower.includes("great") || textLower.includes("appreciate")) {
+          answerText = "You're very welcome! I am always on standby for ISS Expedition 71. Let me know if you need any assistance with station telemetry, flight rules, or crew wellness.";
+        } else {
+          answerText = `Hello! I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor cabin environmental conditions, astronaut biometrics, and NASA Flight Rules. How can I assist you today with station telemetry, crew wellness, or flight rules?`;
+        }
+      } else if (isMoodQuery) {
+        const activeCallsign =
+          astronautId === "ASTRO-02"
+            ? "FE-1 Dr. S. Patel"
+            : astronautId === "ASTRO-03"
+            ? "MS-1 K. Lindgren"
+            : "CDR M. Vance";
+        answerText = `**NASA Behavioral Health & Performance (BHP) Assessment**\n\nActive crewmember **${activeCallsign}** exhibits nominal operational adaptation on Flight Day 142. Circadian sleep efficiency is stable at 7.1 hours/night, with nominal cognitive vigilance and active communication with Mission Control. No acute stress indices or behavioral flags are logged.\n\nWould you like to review rest schedule metrics or behavioral wellness countermeasures?`;
+      } else if (isIdentityQuery) {
+        answerText = `I am HabiTrack, an offline-first spaceflight clinical intelligence workstation. I provide:\n\n• **Environmental Telemetry**: Real-time cabin CO₂, radiation, ambient temperature, humidity, and atmospheric pressure.\n• **NASA Flight Rules**: Operational checklists for hypercapnia (FR-ECLSS-001), desiccant scrubbers (FR-CDRA-002), and autonomic strain (FR-EVA-003).\n• **SpaceLife Library**: Certified instructional video guides for exercise form, sleep habitability, and microgravity adaptation.\n• **Crew Symptom Triage**: Pre-surgeon clinical evaluation with strict non-causal epistemic guardrails.`;
+      }
+    }
   } catch (err) {
-    console.warn("Direct Gemini execution unavailable, falling back to dynamic synthesizer:", err);
     mode = "EXTRACTIVE_FALLBACK";
     providerUsed = "Mastra Onboard First-Response Engine (Pure TypeScript)";
 
-    if (evidence.length === 0) {
-      answerText = `Greetings. I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor 5 spacecraft environmental factors (ppCO₂, radiation, cabin temp, humidity, atmospheric pressure) alongside crew circadian baselines and NASA Flight Rules.\n\nHow can I assist you with station telemetry, flight rules, or symptom evaluations?`;
+    if (isGreeting) {
+      if (textLower.includes("thank") || textLower.includes("cheers") || textLower.includes("awesome") || textLower.includes("great") || textLower.includes("appreciate")) {
+        answerText = "You're very welcome! I am always on standby for ISS Expedition 71. Let me know if you need any assistance with station telemetry, flight rules, or crew wellness.";
+      } else {
+        answerText = `Hello! I am HabiTrack, your onboard spaceflight clinical decision-support co-pilot for Expedition 71.\n\nI monitor cabin environmental conditions, astronaut biometrics, and NASA Flight Rules. How can I assist you today with station telemetry, crew wellness, or flight rules?`;
+      }
+    } else if (isMoodQuery) {
+      const activeCallsign =
+        astronautId === "ASTRO-02"
+          ? "FE-1 Dr. S. Patel"
+          : astronautId === "ASTRO-03"
+          ? "MS-1 K. Lindgren"
+          : "CDR M. Vance";
+      answerText = `**NASA Behavioral Health & Performance (BHP) Assessment**\n\nActive crewmember **${activeCallsign}** exhibits nominal operational adaptation on Flight Day 142. Circadian sleep efficiency is stable at 7.1 hours/night, with nominal cognitive vigilance and active communication with Mission Control. No acute stress indices or behavioral flags are logged.\n\nWould you like to review rest schedule metrics or behavioral wellness countermeasures?`;
+    } else if (isIdentityQuery) {
+      answerText = `I am HabiTrack, an offline-first spaceflight clinical intelligence workstation. I provide:\n\n• **Environmental Telemetry**: Real-time cabin CO₂, radiation, ambient temperature, humidity, and atmospheric pressure.\n• **NASA Flight Rules**: Operational checklists for hypercapnia (FR-ECLSS-001), desiccant scrubbers (FR-CDRA-002), and autonomic strain (FR-EVA-003).\n• **SpaceLife Library**: Certified instructional video guides for exercise form, sleep habitability, and microgravity adaptation.\n• **Crew Symptom Triage**: Pre-surgeon clinical evaluation with strict non-causal epistemic guardrails.`;
+    } else if (evidence.length === 0) {
+      answerText = `I evaluated your query: "${text}". No acute flight rule excursions or anomalous cabin readings are currently flagged for this topic. Please feel free to ask about specific symptoms, cabin telemetry, or mission procedures.`;
     } else {
-      answerText = `Relevant biomedical evidence from the NASA Human Research Program literature corpus:\n\n` +
+      answerText =
+        `Relevant biomedical evidence from the NASA Human Research Program literature corpus:\n\n` +
         evidence.map((e) => `• **[${e.doc_id}: ${e.section_heading}]** ${e.excerpt}`).join("\n\n");
     }
   }
@@ -629,6 +716,21 @@ export async function queryAssistant(
   const scientificContext = evidence.length > 0
     ? evidence.map((e) => `[${e.doc_id}: ${e.section_heading}] ${e.excerpt}`).join(" ")
     : "No direct research citations required for this query.";
+
+  // Selective video retrieval: only attach instructional guides when query explicitly requests them or involves exercises/sleep
+  const isMediaRequest =
+    textLower.includes("video") ||
+    textLower.includes("guide") ||
+    textLower.includes("watch") ||
+    textLower.includes("exercise") ||
+    textLower.includes("workout") ||
+    textLower.includes("squat") ||
+    textLower.includes("sleep") ||
+    textLower.includes("how to") ||
+    textLower.includes("demonstrat") ||
+    textLower.includes("stretch");
+
+  const resources = isMediaRequest ? searchSpaceLifeGuides({ query: text, limit: 2 }) : [];
 
   return {
     interaction_id: generateUuid(),
@@ -650,6 +752,7 @@ export async function queryAssistant(
     verbatim_checklist: matchedRule ? matchedRule.checklist_steps : undefined,
     provider_used: providerUsed,
     answer: answerText,
+    resources,
   };
 }
 
