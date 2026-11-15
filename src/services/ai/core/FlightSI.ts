@@ -24,6 +24,7 @@ import type {
 import {
   ExtractiveFallbackAdapter,
   GeminiFrontierAdapter,
+  SargalayAdapter,
   WebGpuLocalAdapter,
 } from "./adapters/index.ts";
 import type {
@@ -178,11 +179,10 @@ export class FlightSIImpl implements FlightSI {
     if (this.adapter) return this.adapter;
     if (typeof window === "undefined") return this.fallbackAdapter;
 
-    const mode = (localStorage.getItem("habitrack_ai_model_mode") as "frontier" | "local") || "frontier";
-    if (mode === "local") {
-      const localAdapter = new WebGpuLocalAdapter();
-      if (localAdapter.isReady()) return localAdapter;
-    }
+    // Prioritize Sargalay Multi-Model Gateway
+    const sargalayAdapter = new SargalayAdapter();
+    if (sargalayAdapter.isReady()) return sargalayAdapter;
+
     const frontierAdapter = new GeminiFrontierAdapter();
     if (frontierAdapter.isReady()) return frontierAdapter;
 

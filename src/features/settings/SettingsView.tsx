@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Cpu,
+  Eye,
+  EyeOff,
   HardDrive,
   Key,
   Layers,
@@ -40,12 +42,14 @@ import {
 import { useAssistantStore } from "../../stores/assistantStore";
 import { getAvailableVoices, type VoicePersona } from "../../lib/speech";
 import {
-  getGeminiApiKey,
-  getGeminiModelLabel,
-  setGeminiApiKey,
-  testGeminiApiKey,
-} from "../../services/ai/geminiClient";
-import { purgeCorruptedWebLLMCache } from "../../services/ai/localModelService";
+  getSargalayApiKey,
+  getSargalayModel,
+  getSargalayModelLabel,
+  setSargalayApiKey,
+  setSargalayModel,
+  testSargalayApiKey,
+  SARGALAY_CURATED_MODELS,
+} from "../../services/ai/sargalayClient";
 import { useBiomedicalSettings } from "./SettingsModule";
 import { useSimulationSandbox } from "../simulation";
 
@@ -92,29 +96,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     speakMessage,
     isSpeaking,
     openVoiceModal,
-    aiModelMode,
-    setAiModelMode,
-    localModelStatus,
-    localModelProgress,
-    localModelStatusText,
-    localModelError,
-    loadLocalModel,
-    unloadLocalModel,
-    checkWebGpu,
-    isWebGpuSupported,
   } = useAssistantStore();
 
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>("profile");
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey() || "");
+  const [sargalayKeyInput, setSargalayKeyInput] = useState(getSargalayApiKey() || "");
+  const [selectedModel, setSelectedModel] = useState(getSargalayModel());
+  const [showKey, setShowKey] = useState(false);
   const [isTestingKey, setIsTestingKey] = useState(false);
-  const [keyTestResult, setKeyTestResult] = useState<{ success: boolean; message: string } | null>(
-    null,
-  );
-
-  useEffect(() => {
-    checkWebGpu();
-  }, [checkWebGpu]);
+  const [keyTestResult, setKeyTestResult] = useState<{
+    success: boolean;
+    message: string;
+    latencyMs?: number;
+  } | null>(null);
 
   useEffect(() => {
     const updateVoices = () => {
@@ -667,7 +661,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {/* 4. SI Intelligence & Execution Engine */}
+      {/* 4. Sargalay AI Gateway & Multi-Model Fallback Engine */}
       {showSection("intelligence") && (
         <section className="rounded-[32px] border border-slate-200/90 bg-white p-6 sm:p-7 shadow-2xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -677,312 +671,172 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  SI Intelligence &amp; Execution Engine
+                  Sargalay AI Multi-Model Gateway
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Select between Frontier Cloud reasoning and 100% In-Browser Local WebGPU.
+                  OpenAI-compatible AI agent gateway with automatic 4-tier model fallback cascade
                 </p>
               </div>
             </div>
 
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-auto ${
-                aiModelMode === "local"
-                  ? localModelStatus === "ready"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                    : "bg-amber-50 text-amber-800 border-amber-300"
-                  : "bg-sky-50 text-sky-800 border-sky-300"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  aiModelMode === "local"
-                    ? localModelStatus === "ready"
-                      ? "bg-emerald-500 animate-pulse"
-                      : "bg-amber-500"
-                    : "bg-sky-500 animate-pulse"
-                }`}
-              />
-              {aiModelMode === "frontier"
-                ? "Frontier Cloud Active"
-                : localModelStatus === "ready"
-                ? "Local Offline Ready"
-                : "Local (Needs Init)"}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-300 self-start sm:self-auto">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Multi-Model Fallback Resilient
             </span>
           </div>
 
-          {/* Engine Choice Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Frontier */}
-            <button
-              type="button"
-              onClick={() => setAiModelMode("frontier")}
-              className={`p-4 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 ${
-                aiModelMode === "frontier"
-                  ? "bg-white border-sky-500 shadow-xs ring-2 ring-sky-500/20"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>Frontier Cloud</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">
-                        {getGeminiModelLabel()}
-                      </span>
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Deep biomedical RAG synthesis via Google Gemini
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                    aiModelMode === "frontier"
-                      ? "border-sky-600 bg-sky-600 text-white"
-                      : "border-slate-300 bg-white"
-                  }`}
-                >
-                  {aiModelMode === "frontier" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 pt-1.5 border-t border-slate-100">
-                <span>Latency: ~600ms</span>
-                <span>•</span>
-                <span>Internet: Required</span>
-              </div>
-            </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Primary Model Selection */}
+            <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Primary Agent Model</span>
+                </span>
+                <span className="text-[10px] text-sky-700 font-mono">Top-tier Reasoning</span>
+              </label>
 
-            {/* Local WebGPU */}
-            <button
-              type="button"
-              onClick={() => setAiModelMode("local")}
-              className={`p-4 rounded-2xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 ${
-                aiModelMode === "local"
-                  ? "bg-white border-sky-500 shadow-xs ring-2 ring-sky-500/20"
-                  : "bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Zap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <span>Local WebGPU</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                        Llama-3.2-1B
-                      </span>
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      100% In-Browser &amp; Zero-Server Offline Flight
-                    </p>
-                  </div>
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  setSargalayModel(e.target.value);
+                  setKeyTestResult(null);
+                }}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-sky-500 shadow-2xs cursor-pointer"
+              >
+                {SARGALAY_CURATED_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} — {m.description}
+                  </option>
+                ))}
+              </select>
+
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                When an astronaut asks questions or reports symptoms, this model is prioritized for reasoning, tool execution, and biomedical RAG.
+              </p>
+            </div>
+
+            {/* Active Fallback Cascade Chain */}
+            <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Automated Fallback Cascade</span>
+                </span>
+                <span className="text-[10px] text-emerald-700 font-mono font-bold">Zero-Downtime</span>
+              </div>
+
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
+                  <span className="flex items-center gap-1.5 text-sky-900 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    Tier 1 (Main):
+                  </span>
+                  <span className="truncate max-w-[200px] font-semibold text-slate-900">{getSargalayModelLabel(selectedModel)}</span>
                 </div>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                    aiModelMode === "local"
-                      ? "border-sky-600 bg-sky-600 text-white"
-                      : "border-slate-300 bg-white"
-                  }`}
-                >
-                  {aiModelMode === "local" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
+                  <span className="flex items-center gap-1.5 text-amber-900 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Tier 2 (Fallback):
+                  </span>
+                  <span className="truncate max-w-[200px]">google/gemini-2.5-flash-lite</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
+                  <span className="flex items-center gap-1.5 text-purple-900 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    Tier 3 (Fallback):
+                  </span>
+                  <span className="truncate max-w-[200px]">deepseek/deepseek-chat</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/70 text-slate-700">
+                  <span className="flex items-center gap-1.5 text-emerald-900 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Tier 4 (Offline):
+                  </span>
+                  <span className="truncate max-w-[200px]">Deterministic Extractive Engine</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 pt-1.5 border-t border-slate-100">
-                <span>Latency: ~120ms</span>
-                <span>•</span>
-                <span>Offline: 100% Standalone</span>
-              </div>
-            </button>
+            </div>
           </div>
 
-          {/* Frontier Config Drawer */}
-          {aiModelMode === "frontier" && (
-            <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Gemini API Key Authentication</span>
-                </label>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  Stored securely in browser localStorage
-                </span>
-              </div>
+          {/* Sargalay Gateway API Key Configuration & Test */}
+          <div className="p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-sky-600" />
+                <span>Sargalay API Key Authentication</span>
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">
+                OpenAI-Compatible endpoint: api.sargalay.com/v1
+              </span>
+            </div>
 
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
                 <input
-                  type="password"
-                  value={apiKeyInput}
+                  type={showKey ? "text" : "password"}
+                  value={sargalayKeyInput}
                   onChange={(e) => {
-                    setApiKeyInput(e.target.value);
-                    setGeminiApiKey(e.target.value);
+                    setSargalayKeyInput(e.target.value);
+                    setSargalayApiKey(e.target.value);
                     setKeyTestResult(null);
                   }}
-                  placeholder="AIzaSy..."
-                  aria-label="Gemini API Key"
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-sky-500"
+                  placeholder="sk-..."
+                  aria-label="Sargalay API Key"
+                  className="w-full px-3 py-2 pr-9 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 shadow-2xs"
                 />
                 <button
                   type="button"
-                  disabled={!apiKeyInput.trim() || isTestingKey}
-                  onClick={async () => {
-                    setIsTestingKey(true);
-                    setKeyTestResult(null);
-                    const res = await testGeminiApiKey(apiKeyInput);
-                    setKeyTestResult(res);
-                    setIsTestingKey(false);
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  title={showKey ? "Hide API Key" : "Show API Key"}
                 >
-                  {isTestingKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isTestingKey ? "Testing..." : "Test Key"}</span>
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              {keyTestResult && (
-                <div
-                  className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${
-                    keyTestResult.success
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                >
+              <button
+                type="button"
+                disabled={!sargalayKeyInput.trim() || isTestingKey}
+                onClick={async () => {
+                  setIsTestingKey(true);
+                  setKeyTestResult(null);
+                  const res = await testSargalayApiKey(sargalayKeyInput, selectedModel);
+                  setKeyTestResult(res);
+                  setIsTestingKey(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0"
+              >
+                {isTestingKey && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{isTestingKey ? "Testing..." : "Test Connection"}</span>
+              </button>
+            </div>
+
+            {keyTestResult && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-center justify-between border ${
+                  keyTestResult.success
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : "bg-rose-50 text-rose-800 border-rose-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
                   {keyTestResult.success ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : (
                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                   )}
-                  <span>{keyTestResult.message}</span>
+                  <span className="font-medium">{keyTestResult.message}</span>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Local WebGPU Config Drawer */}
-          {aiModelMode === "local" && (
-            <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3.5 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-200/70">
-                <div className="flex items-center gap-2.5">
-                  <HardDrive className="w-4 h-4 text-emerald-600" />
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900">
-                      Llama-3.2-1B-Instruct-q4f16_1-MLC
-                    </h3>
-                    <span className="text-[10px] text-slate-500 font-mono block">
-                      677.9 MB quantized weights in /public/models/
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {localModelStatus === "ready" ? (
-                    <button
-                      type="button"
-                      onClick={unloadLocalModel}
-                      className="px-3 py-1 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                      title="Free GPU VRAM memory"
-                    >
-                      <Power className="w-3 h-3" />
-                      <span>Unload</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={localModelStatus === "loading"}
-                      onClick={loadLocalModel}
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                    >
-                      {localModelStatus === "loading" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      <span>
-                        {localModelStatus === "loading" ? "Initializing..." : "Load into VRAM"}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* WebGPU Status */}
-              <div className="flex items-center justify-between text-xs py-0.5">
-                <span className="text-slate-600">WebGPU Acceleration:</span>
-                <span
-                  className={`font-mono font-bold flex items-center gap-1.5 ${
-                    isWebGpuSupported === false ? "text-rose-600" : "text-emerald-700"
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isWebGpuSupported === false ? "bg-rose-500" : "bg-emerald-500"
-                    }`}
-                  />
-                  {isWebGpuSupported === false ? "Unsupported" : "Hardware Active"}
-                </span>
-              </div>
-
-              {/* Progress bar */}
-              {localModelStatus === "loading" && (
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-700 font-medium">{localModelStatusText}</span>
-                    <span className="font-mono font-bold text-sky-700">{localModelProgress}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-300"
-                      style={{ width: `${localModelProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Error banner */}
-              {localModelStatus === "error" && localModelError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Initialization Error</p>
-                      <p className="text-[11px] mt-0.5 font-mono break-all">{localModelError}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1.5 border-t border-rose-200/70">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await purgeCorruptedWebLLMCache(true);
-                        await loadLocalModel();
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      <span>Clear Cache &amp; Retry</span>
-                    </button>
-                    <span className="text-[10px] text-rose-600">
-                      Purges cached model files from CacheStorage
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Ready banner */}
-              {localModelStatus === "ready" && (
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Model active in WebGPU memory. Offline queries enabled.</span>
-                  </div>
-                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                    Zero Server
+                {keyTestResult.latencyMs && (
+                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    {keyTestResult.latencyMs} ms
                   </span>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </section>
       )}
 
